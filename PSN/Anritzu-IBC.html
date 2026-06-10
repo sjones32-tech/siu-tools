@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S412E Map File Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:     #0f2240;
+  --navy-mid: #1a3f6f;
+  --navy-lit: #2563a8;
+  --ice:      #dce8f7;
+  --ice-deep: #b8d4ef;
+  --ink:      #0d1117;
+  --ink-mid:  #3a4150;
+  --ink-faint:#6b7585;
+  --rule:     #d0d5de;
+  --paper:    #f5f6f8;
+  --white:    #ffffff;
+  --green:    #1a7a40;
+  --green-bg: #d4edda;
+  --amber:    #b35800;
+  --amber-bg: #fff3cd;
+  --red:      #8b1a1a;
+  --red-bg:   #f8d7da;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'IBM Plex Sans', sans-serif;
+  --cond:     'Barlow Condensed', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--navy);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── SCANLINE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.012) 2px,
+    rgba(255,255,255,0.012) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── HEADER ── */
+header {
+  background: linear-gradient(135deg, #0a1929 0%, #0f2240 60%, #1a3f6f 100%);
+  border-bottom: 2px solid rgba(255,255,255,0.06);
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.header-logo {
+  height: 34px;
+  width: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+.header-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+.header-text { flex: 1; }
+.header-title {
+  font-family: var(--cond);
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+  line-height: 1.1;
+}
+.header-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.header-badge {
+  background: var(--navy-lit);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+/* ── TABS ── */
+.tabs-wrap {
+  background: #0a1929;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.tabs {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 28px;
+  display: flex;
+  gap: 0;
+}
+.tab {
+  padding: 12px 22px;
+  font-family: var(--cond);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.tab:hover { color: rgba(255,255,255,0.7); }
+.tab.active {
+  color: #fff;
+  border-bottom-color: var(--navy-lit);
+  background: rgba(255,255,255,0.03);
+}
+
+/* ── MAIN CONTENT ── */
+main {
+  flex: 1;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 28px 56px;
+  position: relative;
+  z-index: 1;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--white);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+}
+.card-header {
+  background: var(--navy-mid);
+  color: #fff;
+  padding: 11px 20px;
+  font-family: var(--cond);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-header .tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  padding: 2px 7px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.card-body { padding: 22px 24px; }
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  border: 2px dashed var(--ice-deep);
+  border-radius: 6px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--paper);
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--navy-lit);
+  background: var(--ice);
+}
+.drop-zone.loaded {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+.drop-zone.warn {
+  border-color: var(--amber);
+  background: var(--amber-bg);
+}
+.drop-zone input[type=file] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+  /* Shrink right side so the clear button (top-right) remains clickable */
+  right: 30px; width: calc(100% - 30px);
+}
+.dz-icon { font-size: 38px; display: block; margin-bottom: 10px; }
+.dz-title {
+  font-family: var(--cond);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--navy-mid);
+  margin-bottom: 4px;
+}
+.dz-hint { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+.dz-status { font-family: var(--mono); font-size: 11px; margin-top: 8px; }
+.dz-status.ok    { color: var(--green); }
+.dz-status.warn  { color: var(--amber); }
+.dz-status.error { color: var(--red); }
+
+/* ── PREVIEW PANEL ── */
+.preview-panel {
+  display: none;
+  margin-top: 18px;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+.preview-panel.visible { display: flex; }
+.preview-img-wrap {
+  flex: 1;
+  min-height: 200px;
+  max-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+}
+.preview-img-wrap img {
+  max-width: 100%;
+  max-height: 256px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.preview-meta {
+  width: 200px;
+  flex-shrink: 0;
+  background: #111;
+  padding: 16px 14px;
+  border-left: 1px solid #222;
+  font-family: var(--mono);
+}
+.meta-row {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #222;
+}
+.meta-row:last-child { border-bottom: none; margin-bottom: 0; }
+.meta-label { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.meta-value { font-size: 12px; color: #ccc; font-weight: 500; word-break: break-all; }
+.meta-value.ok   { color: #4ade80; }
+.meta-value.warn { color: #fbbf24; }
+
+/* ── FORM ELEMENTS ── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.form-row.single { grid-template-columns: 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label {
+  font-family: var(--cond);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--ink-faint);
+}
+.form-input {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 9px 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus {
+  border-color: var(--navy-lit);
+  box-shadow: 0 0 0 3px rgba(37,99,168,0.12);
+}
+.form-hint {
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  margin-top: 2px;
+}
+
+/* ── MODE SELECTOR ── */
+.mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.mode-btn {
+  padding: 14px 16px;
+  border: 2px solid var(--rule);
+  border-radius: 5px;
+  background: var(--paper);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.mode-btn:hover { border-color: var(--navy-lit); background: var(--ice); }
+.mode-btn.active { border-color: var(--navy-mid); background: var(--ice); }
+.mode-btn .mb-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+.mode-btn .mb-title {
+  font-family: var(--cond);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy-mid);
+  margin-bottom: 2px;
+}
+.mode-btn .mb-desc { font-size: 11px; color: var(--ink-faint); line-height: 1.4; }
+.mode-btn.active .mb-title { color: var(--navy-mid); }
+
+/* ── GPS SECTION ── */
+.gps-section {
+  display: none;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.gps-section.visible { display: block; }
+.gps-notice {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--ink-faint);
+  background: var(--ice);
+  border-radius: 3px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+.gps-point-header {
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+  margin-top: 14px;
+}
+.gps-point-header:first-of-type { margin-top: 0; }
+
+/* ── CONVERT BUTTON ── */
+.btn-convert {
+  width: 100%;
+  padding: 16px 24px;
+  background: var(--navy-mid);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-family: var(--cond);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-convert:hover:not(:disabled) { background: var(--navy-lit); }
+.btn-convert:disabled { background: var(--ink-faint); cursor: not-allowed; }
+.btn-convert .arrow { font-size: 20px; }
+
+/* ── RESULT BANNER ── */
+.result-banner {
+  display: none;
+  margin-top: 14px;
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+  border-radius: 4px;
+  padding: 14px 16px;
+}
+.result-banner.visible { display: block; }
+.result-banner .rb-title {
+  font-family: var(--cond);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 6px;
+}
+.result-banner .rb-detail {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-mid);
+  line-height: 1.7;
+}
+.result-banner .rb-steps {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #c3e6cb;
+}
+.rb-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--ink-mid);
+}
+.rb-step-num {
+  width: 18px; height: 18px;
+  background: var(--green);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── INSTRUCTIONS TAB ── */
+.instr-section { margin-bottom: 24px; }
+.instr-section h3 {
+  font-family: var(--cond);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy-mid);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--ice);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.instr-step {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+.instr-num {
+  width: 28px; height: 28px;
+  background: var(--navy-mid);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cond);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.instr-text { font-size: 13px; color: var(--ink-mid); line-height: 1.6; padding-top: 3px; }
+.instr-text strong { color: var(--ink); }
+.instr-text code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.tip-box {
+  background: var(--ice);
+  border-left: 3px solid var(--navy-lit);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--ink-mid);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  font-family: var(--sans);
+}
+.tip-box strong { color: var(--navy-mid); }
+.warn-box {
+  background: var(--amber-bg);
+  border-left: 3px solid var(--amber);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--amber);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+/* ── FORMAT TAB ── */
+.format-card {
+  background: #0d1117;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.format-card-header {
+  background: #161b22;
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #8b949e;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #21262d;
+}
+.format-card-body {
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.8;
+  color: #e6edf3;
+}
+.fc-comment { color: #8b949e; }
+.fc-key     { color: #79c0ff; }
+.fc-value   { color: #a5d6ff; }
+.fc-special { color: #d2a8ff; }
+.fc-string  { color: #a8d8a8; }
+.format-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.format-table th {
+  background: var(--navy-mid);
+  color: #fff;
+  padding: 7px 12px;
+  text-align: left;
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 600;
+}
+.format-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-mid);
+}
+.format-table tr:nth-child(even) td { background: var(--paper); }
+
+/* ── FOOTER ── */
+footer {
+  background: #080f1a;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 12px 28px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+/* ── REPORT GENERATOR STYLES ── */
+.rg-steps {
+  display: flex; gap: 0; margin-bottom: 22px;
+  border: 1px solid var(--rule); border-radius: 5px; overflow: hidden;
+  background: var(--white);
+}
+.rg-step {
+  flex: 1; padding: 11px 14px; border-right: 1px solid var(--rule);
+  display: flex; align-items: center; gap: 10px; transition: background 0.2s;
+}
+.rg-step:last-child { border-right: none; }
+.rg-step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--rule); color: var(--ink-faint);
+  font-family: var(--cond); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rg-step.active .rg-step-num  { background: var(--navy-mid); color: #fff; }
+.rg-step.done .rg-step-num    { background: var(--green); color: #fff; }
+.rg-step.active                { background: var(--ice); }
+.rg-step-label { font-size: 11px; font-weight: 500; color: var(--ink-faint); }
+.rg-step.active .rg-step-label, .rg-step.done .rg-step-label { color: var(--ink); }
+
+.rg-file-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+.rg-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 14px; }
+.rg-stat {
+  background: var(--paper); border: 1px solid var(--rule);
+  border-radius: 4px; padding: 10px 12px;
+}
+.rg-stat-label { font-size: 9px; font-family: var(--cond); font-weight: 600; color: var(--ink-faint); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+.rg-stat-val   { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--navy-mid); }
+.rg-stat-sub   { font-size: 9px; color: var(--ink-faint); margin-top: 1px; }
+
+.rg-data-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+.rg-data-table th { background: var(--navy-mid); color: #fff; padding: 7px 10px; text-align: left; font-weight: 500; }
+.rg-data-table td { padding: 5px 10px; border-bottom: 1px solid var(--rule); }
+.rg-data-table tr:nth-child(even) td { background: var(--paper); }
+
+.badge { display: inline-block; padding: 1px 7px; border-radius: 2px; font-size: 10px; font-family: var(--cond); font-weight: 600; letter-spacing: 0.5px; }
+.badge-fair { background: #fff3cd; color: #b35800; }
+.badge-good { background: #d4edda; color: #1a7a40; }
+.badge-vgood { background: #c8f0da; color: #0d5c2e; }
+.badge-exc  { background: #b8f0cc; color: #074d1f; }
+.badge-poor { background: #f8d7da; color: #8b1a1a; }
+
+.rg-progress-outer { height: 3px; background: var(--rule); border-radius: 2px; margin: 12px 0 8px; }
+.rg-progress-inner { height: 100%; background: var(--navy-lit); border-radius: 2px; width: 0; transition: width 0.4s ease; }
+.rg-log { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); line-height: 1.9; }
+.rg-log .ok  { color: var(--green); }
+.rg-log .err { color: #c0392b; }
+
+.rg-output { display: none; }
+.rg-output.visible { display: block; }
+.rg-output-header {
+  background: var(--green); color: #fff; padding: 12px 20px;
+  font-family: var(--cond); font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+}
+.rg-output-actions { padding: 16px 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-sm {
+  padding: 9px 18px; border-radius: 4px; border: none;
+  font-family: var(--cond); font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.btn-pdf  { background: var(--navy-mid); color: #fff; }
+.btn-pdf:hover  { background: var(--navy-lit); }
+.btn-edit-rg { background: var(--paper); color: var(--ink); border: 1px solid var(--rule); }
+.btn-edit-rg:hover { background: #fff8e1; border-color: #f0c040; }
+.btn-edit-rg.active { background: #fff3cd; color: var(--amber); border-color: var(--amber); }
+.btn-toggle-preview { background: var(--paper); color: var(--ink); border: 1px solid var(--rule); }
+.btn-toggle-preview:hover { background: var(--ice); }
+
+.rg-edit-bar { display: none; }
+.rg-edit-bar.visible {
+  margin: 0 20px 4px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff8e1; border: 1.5px solid #f0c040;
+  border-radius: 4px; padding: 9px 14px; gap: 12px;
+}
+.rg-edit-indicator { font-size: 11px; font-family: var(--mono); color: var(--amber); font-weight: 500; }
+.btn-done-edit { padding: 6px 14px; background: var(--green); color: #fff; border: none; border-radius: 4px; font-family: var(--cond); font-size: 12px; font-weight: 600; cursor: pointer; }
+
+.rg-preview-wrap { display: none; padding: 0 20px 20px; }
+.rg-preview-wrap.visible { display: block; }
+#rg-preview {
+  border: 1px solid var(--rule); border-radius: 4px; padding: 28px 36px;
+  background: #fff; font-family: var(--sans); font-size: 13px; line-height: 1.6;
+  max-height: 600px; overflow-y: auto;
+}
+#rg-preview h1 { font-family: var(--cond); font-size: 26px; font-weight: 800; color: var(--navy-mid); margin-bottom: 3px; }
+#rg-preview .rp-sub { font-size: 11px; color: var(--ink-faint); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--navy-lit); font-family: var(--mono); }
+#rg-preview h2 { font-family: var(--cond); font-size: 15px; font-weight: 700; color: var(--navy-mid); margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid var(--ice); text-transform: uppercase; letter-spacing: 0.5px; }
+#rg-preview table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 12px; }
+#rg-preview th { background: var(--navy-mid); color: #fff; padding: 6px 9px; text-align: left; }
+#rg-preview td { padding: 5px 9px; border-bottom: 1px solid var(--rule); }
+#rg-preview tr:nth-child(even) td { background: var(--paper); }
+#rg-preview .tfoot td { background: var(--ice); font-weight: 600; }
+#rg-preview p { margin: 6px 0; }
+#rg-preview ul { margin: 5px 0 5px 18px; }
+#rg-preview li { margin-bottom: 3px; }
+#rg-preview .rp-footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 10px; color: var(--ink-faint); font-family: var(--mono); }
+#rg-preview.edit-mode [contenteditable]:hover { background: rgba(255,243,205,0.6); cursor: text; border-left: 2px solid #f0c040; padding-left: 5px; margin-left: -7px; }
+#rg-preview.edit-mode [contenteditable]:focus { background: #fffde7; outline: none; box-shadow: 0 0 0 2px #f0c040; }
+
+.rg-notice {
+  background: var(--amber-bg); border-left: 3px solid var(--amber);
+  padding: 9px 13px; border-radius: 0 4px 4px 0;
+  font-size: 12px; color: var(--amber); margin-bottom: 14px; font-family: var(--sans);
+}
+
+/* ── ANNOTATE MAP STYLES ── */
+.annotate-card { display: none; margin-bottom: 18px; }
+.annotate-card.visible { display: block; }
+.annotate-controls {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;
+  margin-bottom: 14px; align-items: end;
+}
+.annotate-canvas-wrap {
+  background: #111; border-radius: 4px; overflow: auto;
+  margin-bottom: 12px; max-height: 500px; text-align: center;
+  border: 1px solid #333;
+}
+#rg-annotate-canvas { max-width: 100%; display: block; margin: 0 auto; cursor: crosshair; }
+.annotate-legend {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+  padding: 9px 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+}
+.legend-dot { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--ink-mid); }
+.legend-dot span { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex-shrink: 0; border: 1.5px solid rgba(0,0,0,0.25); }
+.annotate-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.btn-ann-use { padding: 9px 18px; background: var(--green); color: #fff; border: none; border-radius: 4px; font-family: var(--cond); font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-ann-use:hover { background: #145d30; }
+.btn-ann-use.used { background: var(--ink-faint); cursor: default; }
+.btn-ann-dl  { padding: 9px 18px; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; font-family: var(--cond); font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-ann-dl:hover { background: var(--ice); }
+.annotate-note { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-top: 8px; line-height: 1.6; }
+
+/* ── DROP ZONE CLEAR BUTTON ── */
+.dz-clear {
+  position: absolute; top: 7px; right: 7px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(139,26,26,0.85); color: #fff;
+  border: none; font-size: 13px; font-weight: 700;
+  line-height: 1; cursor: pointer; display: none;
+  align-items: center; justify-content: center;
+  z-index: 10; transition: background 0.15s;
+  pointer-events: all;
+}
+.dz-clear:hover { background: var(--red); }
+.drop-zone.loaded .dz-clear { display: flex; }
+.drop-zone.warn .dz-clear   { display: flex; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <img
+      src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
+      alt="BAI" class="header-logo"
+      onerror="this.style.display='none'">
+    <div class="header-divider"></div>
+    <div class="header-text">
+      <div class="header-title">S412E Survey Tools</div>
+      <div class="header-sub">Anritsu LMR Master · easyMap Tools · BAI SIU</div>
+    </div>
+    <div class="header-badge">PSN · S412E</div>
+  </div>
+</header>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <div class="tab active" data-tab="convert">🗺 Map Converter</div>
+    <div class="tab" data-tab="report">📊 Report Generator</div>
+    <div class="tab" data-tab="siu">📖 SIU Instructions</div>
+    <div class="tab" data-tab="instructions">📋 How-To</div>
+    <div class="tab" data-tab="format">🔬 File Format</div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 1: CONVERTER                                   -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="tab-convert">
+
+    <!-- FILE UPLOAD -->
+    <div class="card">
+      <div class="card-header">
+        1 — Upload Floor Plan Image
+        <span class="tag">Source</span>
+      </div>
+      <div class="card-body">
+        <div class="drop-zone" id="dz">
+          <input type="file" id="file-input" accept="image/*,.jpg,.jpeg,.png,.gif,.bmp">
+          <span class="dz-icon">🖼️</span>
+          <div class="dz-title">Drop image here or click to browse</div>
+          <div class="dz-hint">JPG recommended · PNG supported · max ~2 MB for reliable S412E loading</div>
+          <div class="dz-status" id="dz-status"></div>
+        </div>
+
+        <div class="preview-panel" id="preview-panel">
+          <div class="preview-img-wrap">
+            <img id="preview-img" src="" alt="preview">
+          </div>
+          <div class="preview-meta">
+            <div class="meta-row">
+              <div class="meta-label">Filename</div>
+              <div class="meta-value" id="meta-name">—</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Dimensions</div>
+              <div class="meta-value" id="meta-dims">—</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">File size</div>
+              <div class="meta-value" id="meta-size">—</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Type</div>
+              <div class="meta-value" id="meta-type">—</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">S412E status</div>
+              <div class="meta-value" id="meta-compat">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODE & FILENAME -->
+    <div class="card">
+      <div class="card-header">
+        2 — Configure Map Settings
+        <span class="tag">Options</span>
+      </div>
+      <div class="card-body">
+
+        <div class="mode-selector">
+          <div class="mode-btn active" id="mode-indoor" onclick="setMode('indoor')">
+            <span class="mb-icon">🏢</span>
+            <div class="mb-title">Indoor Survey</div>
+            <div class="mb-desc">No GPS required. Points placed manually by tapping the screen. Use for buildings, tunnels, car parks.</div>
+          </div>
+          <div class="mode-btn" id="mode-outdoor" onclick="setMode('outdoor')">
+            <span class="mb-icon">🌏</span>
+            <div class="mb-title">Outdoor Survey</div>
+            <div class="mb-desc">GPS-calibrated. Requires two reference points with known coordinates. Use for aerial/satellite images.</div>
+          </div>
+        </div>
+
+        <!-- GPS CALIBRATION (outdoor only) -->
+        <div class="gps-section" id="gps-section">
+          <div class="gps-notice">
+            Enter two reference points on the image and their real-world GPS coordinates.<br>
+            Choose easily identifiable locations (building corners, road intersections, etc.).
+          </div>
+          <div class="gps-point-header">📍 Reference Point 1 — Top-left area of the image</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Latitude</label>
+              <input class="form-input" id="pt1-lat" type="number" step="0.000001" placeholder="-33.868820">
+              <div class="form-hint">Negative = South (Sydney ~-33.8)</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Longitude</label>
+              <input class="form-input" id="pt1-lon" type="number" step="0.000001" placeholder="151.209295">
+              <div class="form-hint">Positive = East (Sydney ~151.2)</div>
+            </div>
+          </div>
+          <div class="gps-point-header">📍 Reference Point 2 — Bottom-right area of the image</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Latitude</label>
+              <input class="form-input" id="pt2-lat" type="number" step="0.000001" placeholder="-33.869500">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Longitude</label>
+              <input class="form-input" id="pt2-lon" type="number" step="0.000001" placeholder="151.210100">
+            </div>
+          </div>
+        </div>
+
+        <!-- OUTPUT FILENAME -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Output filename (no extension)</label>
+            <input class="form-input" id="out-name" type="text" placeholder="e.g. RouseHill_GF_Level1">
+            <div class="form-hint">The .map extension will be added automatically</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes (optional)</label>
+            <input class="form-input" id="out-notes" type="text" placeholder="e.g. Ground floor, east wing">
+            <div class="form-hint">For your reference only — not written to file</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CONVERT -->
+    <div class="card">
+      <div class="card-header">
+        3 — Convert &amp; Download
+        <span class="tag">Output</span>
+      </div>
+      <div class="card-body">
+        <button class="btn-convert" id="btn-convert" disabled>
+          <span>Convert to .map</span>
+          <span class="arrow">→</span>
+        </button>
+
+        <div class="result-banner" id="result-banner">
+          <div class="rb-title">✓ File downloaded successfully</div>
+          <div class="rb-detail" id="rb-detail"></div>
+          <div class="rb-steps">
+            <div class="rb-step">
+              <div class="rb-step-num">1</div>
+              <span>Copy the <strong>.map</strong> file to the <strong>root directory</strong> of a FAT32-formatted USB stick (not inside any folder)</span>
+            </div>
+            <div class="rb-step">
+              <div class="rb-step-num">2</div>
+              <span>Insert USB into the S412E and press <strong>Measurements → Over-the-Air → Mapping → Mapping</strong></span>
+            </div>
+            <div class="rb-step">
+              <div class="rb-step-num">3</div>
+              <span>Press <strong>Save/Recall Points/Map → Recall a Map</strong> and navigate to your file</span>
+            </div>
+            <div class="rb-step">
+              <div class="rb-step-num">4</div>
+              <span>The floor plan will appear on screen. Tap to place measurement points as you walk the survey area</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tab-convert -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 2: REPORT GENERATOR                           -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-report">
+
+    <!-- STEP INDICATORS -->
+    <div class="rg-steps">
+      <div class="rg-step active" id="rg-s1"><div class="rg-step-num">1</div><div class="rg-step-label">Upload Files</div></div>
+      <div class="rg-step" id="rg-s2"><div class="rg-step-num">2</div><div class="rg-step-label">Survey Details</div></div>
+      <div class="rg-step" id="rg-s3"><div class="rg-step-num">3</div><div class="rg-step-label">Review Data</div></div>
+      <div class="rg-step" id="rg-s4"><div class="rg-step-num">4</div><div class="rg-step-label">Generate</div></div>
+    </div>
+
+    <!-- STEP 1: FILES -->
+    <div class="card">
+      <div class="card-header">1 — Upload Survey Files <span class="tag">S412E OUTPUT</span></div>
+      <div class="card-body">
+        <div class="rg-file-grid">
+          <div class="drop-zone" id="rg-dz-mtd">
+            <input type="file" id="rg-file-mtd" accept=".mtd">
+            <button class="dz-clear" id="rg-clear-mtd" title="Clear MTD file">✕</button>
+            <span class="dz-icon">📊</span>
+            <div class="dz-title">MTD Data File</div>
+            <div class="dz-hint">.mtd (tab delimited)</div>
+            <div class="dz-status" id="rg-mtd-name"></div>
+          </div>
+          <div class="drop-zone" id="rg-dz-map">
+            <input type="file" id="rg-file-map" accept="image/*">
+            <button class="dz-clear" id="rg-clear-map" title="Clear map image">✕</button>
+            <span class="dz-icon">🗺️</span>
+            <div class="dz-title">Coverage Map Image</div>
+            <div class="dz-hint">S412E screenshot (.jpg/.png)</div>
+            <div class="dz-status" id="rg-map-name"></div>
+          </div>
+          <div class="drop-zone" id="rg-dz-floor">
+            <input type="file" id="rg-file-floor" accept="image/*">
+            <button class="dz-clear" id="rg-clear-floor" title="Clear floor plan">✕</button>
+            <span class="dz-icon">🏢</span>
+            <div class="dz-title">Floor Plan (optional)</div>
+            <div class="dz-hint">standalone floor plan image</div>
+            <div class="dz-status" id="rg-floor-name"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANNOTATE MAP (shown once MTD + map image loaded) -->
+    <div class="card annotate-card" id="rg-annotate-card">
+      <div class="card-header">
+        🗺 Annotated Coverage Map
+        <span class="tag">POINT OVERLAY</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--ink-mid);margin-bottom:14px;line-height:1.6;">
+          Overlays measurement point markers onto the coverage map using the X/Y pixel coordinates from the MTD file.
+          The S412E records tap positions in its own display coordinate space — adjust the scale values below
+          until the markers align with the visible points on your map.
+        </p>
+
+        <div class="annotate-controls">
+          <div class="form-group">
+            <label class="form-label">S412E Map Width (px)</label>
+            <input class="form-input" id="rg-ann-w" type="number" value="640" min="100" max="2000">
+            <div class="form-hint">S412E map grid = 640px wide</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">S412E Map Height (px)</label>
+            <input class="form-input" id="rg-ann-h" type="number" value="420" min="100" max="2000">
+            <div class="form-hint">S412E map grid = 420px tall</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Marker Size</label>
+            <input class="form-input" id="rg-ann-r" type="number" value="14" min="6" max="40">
+            <div class="form-hint">Radius in pixels</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn-convert" id="rg-btn-rerender" style="padding:9px 16px;font-size:13px;height:38px;">
+              ↺ Re-render
+            </button>
+          </div>
+        </div>
+
+        <div class="annotate-legend">
+          <div class="legend-dot"><span style="background:#1e8449;"></span> Excellent ≥−70</div>
+          <div class="legend-dot"><span style="background:#27ae60;"></span> Very Good ≥−80</div>
+          <div class="legend-dot"><span style="background:#d4ac0d;"></span> Good ≥−90</div>
+          <div class="legend-dot"><span style="background:#e67e22;"></span> Fair ≥−100</div>
+          <div class="legend-dot"><span style="background:#922b21;"></span> Poor &lt;−100</div>
+          <div class="legend-dot" style="margin-left:auto;"><span style="background:#2563a8;border:2px solid #1a3f6f;"></span> Duplicate position</div>
+        </div>
+
+        <div class="annotate-canvas-wrap">
+          <canvas id="rg-annotate-canvas"></canvas>
+        </div>
+
+        <div class="annotate-actions">
+          <button class="btn-ann-use" id="rg-btn-ann-use">✓ Use Annotated Map in Report</button>
+          <button class="btn-ann-dl"  id="rg-btn-ann-dl">⬇ Download PNG</button>
+        </div>
+        <div class="annotate-note" id="rg-ann-status">
+          Adjust the S412E map width/height until markers align with the tap points visible on your coverage screenshot, then click Re-render.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: DETAILS -->
+    <div class="card">
+      <div class="card-header">2 — Survey Details <span class="tag">METADATA</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Site Name / Location</label><input class="form-input" id="rg-site" placeholder="e.g. Rouse Hill Town Centre"></div>
+          <div class="form-group"><label class="form-label">Survey Date</label><input class="form-input" id="rg-date" type="date"></div>
+          <div class="form-group"><label class="form-label">Surveyed By</label><input class="form-input" id="rg-surveyor" placeholder="e.g. S. Jones"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Frequency (MHz)</label><input class="form-input" id="rg-freq" placeholder="e.g. 422.112 500 MHz"></div>
+          <div class="form-group"><label class="form-label">PSN Site ID</label><input class="form-input" id="rg-siteid" placeholder="e.g. PSN-SYD-0042"></div>
+          <div class="form-group"><label class="form-label">Instrument Serial No.</label><input class="form-input" id="rg-serial" placeholder="e.g. 2143044"></div>
+        </div>
+        <div class="form-row" style="grid-template-columns:1fr;">
+          <div class="form-group"><label class="form-label">Notes / Additional Context</label><input class="form-input" id="rg-notes" placeholder="Building type, floor level, access constraints, etc."></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: DATA PREVIEW -->
+    <div class="card">
+      <div class="card-header">3 — Parsed Measurement Data <span class="tag" id="rg-pt-tag">NO FILE</span></div>
+      <div class="card-body">
+        <div id="rg-no-data" style="color:var(--ink-faint);font-size:13px;padding:6px 0;">Load an MTD file above to preview measurement data.</div>
+        <div id="rg-data-wrap" style="display:none;">
+          <div class="rg-stats" id="rg-stats"></div>
+          <div style="margin-top:10px;overflow-x:auto;">
+            <table class="rg-data-table">
+              <thead><tr><th>Pt#</th><th>Time</th><th>RSSI (dBm)</th><th>Rating</th><th>BER (%)</th><th>Mod Fidelity (%)</th></tr></thead>
+              <tbody id="rg-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: GENERATE -->
+    <div class="card">
+      <div class="card-header">4 — Generate Report <span class="tag">AUTO ANALYSIS</span></div>
+      <div class="card-body">
+        <div class="rg-notice" id="rg-notice">⚠ Load an MTD file and coverage map image before generating.</div>
+        <button class="btn-convert" id="rg-btn-gen" disabled>Generate PDF Report <span class="arrow">→</span></button>
+        <div id="rg-progress-wrap" style="display:none;margin-top:14px;">
+          <div class="rg-progress-outer"><div class="rg-progress-inner" id="rg-progress"></div></div>
+          <div class="rg-log" id="rg-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="rg-output" id="rg-output">
+      <div class="card" style="overflow:hidden;">
+        <div class="rg-output-header">✓ Report Generated Successfully</div>
+        <div class="rg-output-actions">
+          <button class="btn-sm btn-pdf" id="rg-btn-pdf">🖨 Save as PDF</button>
+          <button class="btn-sm btn-edit-rg" id="rg-btn-edit">✏️ Edit Report</button>
+          <button class="btn-sm btn-toggle-preview" id="rg-btn-preview">👁 Toggle Preview</button>
+        </div>
+        <div class="rg-edit-bar" id="rg-edit-bar">
+          <span class="rg-edit-indicator">✏ EDIT MODE — click any text to edit</span>
+          <button class="btn-done-edit" id="rg-btn-done-edit">✓ Done</button>
+        </div>
+        <div class="rg-preview-wrap" id="rg-preview-wrap">
+          <div id="rg-preview"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tab-report -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 3: SIU INSTRUCTIONS                           -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-siu">
+
+    <!-- DOCUMENT HEADER -->
+    <div class="card">
+      <div class="card-header">
+        PSN IBC Coverage Survey — Field Procedure
+        <span class="tag">BAI SIU · TTN-001</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--ink-mid);line-height:1.7;margin-bottom:12px;">
+          Technical Training Note for obtaining repeatable PSN radio coverage measurements inside buildings using the Anritsu S412E LMR Master.
+          Covers software preparation, map creation, instrument setup, walk-survey deployment, and result compilation.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;">
+            <div style="font-family:var(--cond);font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Document Ref</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink);">XX–TTN–001</div>
+          </div>
+          <div style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;">
+            <div style="font-family:var(--cond);font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Authors</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink);">Phil Spencer · Murray Lynch</div>
+          </div>
+          <div style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;">
+            <div style="font-family:var(--cond);font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Classification</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink);">PROTECTED · BAI Internal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EQUIPMENT -->
+    <div class="card">
+      <div class="card-header">Equipment Required</div>
+      <div class="card-body">
+        <div class="instr-section" style="margin-bottom:0;">
+          <div class="instr-step">
+            <div class="instr-num">💻</div>
+            <div class="instr-text"><strong>BAI laptop</strong> or suitable laptop with local admin access (LAPS). Required for easyMap Tools software installation.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">📡</div>
+            <div class="instr-text">
+              <strong>Anritsu S412E LMR Master</strong> — ensure battery is fully charged. Required options:
+              <br>• <strong>Option 521</strong> — P25 / P25 Phase 2 Analyser Measurements
+              <br>• <strong>Option 522</strong> — P25 / P25 Phase 2 Coverage Measurements (requires Options 31 and 521)
+              <br><em style="color:var(--green);font-size:11px;">All BAI S412E units observed to date have these options already enabled.</em>
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">📶</div>
+            <div class="instr-text">
+              <strong>UHF whip antenna</strong> — FLEXI-BNC90-433 with BNC-to-N adaptor for the S412E RF In port.
+              <br><a href="https://au.mouser.com/ProductDetail/RF-Solutions/FLEXI-BNC90-433" target="_blank" style="font-size:11px;color:var(--navy-lit);">RF Solutions FLEXI-BNC90-433 — Mouser Australia ↗</a>
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">🎒</div>
+            <div class="instr-text"><strong>Carry strap</strong> for hands-free walking surveys.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">📻</div>
+            <div class="instr-text"><strong>Handheld PSN radio</strong> (optional) — for voice tests if required alongside coverage measurements.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">💾</div>
+            <div class="instr-text"><strong>USB thumb drive</strong> — FAT32 formatted, <em>small capacity</em>. Large capacity drives can cause problems with the S412E file browser.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 1: PREPARE -->
+    <div class="card">
+      <div class="card-header">Stage 1 — Prepare</div>
+      <div class="card-body">
+
+        <div class="instr-section">
+          <h3>1A — Obtain floor plan drawings</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">Contact the building manager, check online, or source from the site "For Construction" document package.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Create <strong>one drawing per floor</strong> for multi-storey buildings. Break up large floor plans into workable sections if the building is extensive.</div>
+          </div>
+          <div class="tip-box">
+            <strong>Tip:</strong> Landscape orientation (wider than tall) makes better use of the S412E screen. Crop or rotate floor plans before converting.
+          </div>
+        </div>
+
+        <div class="instr-section">
+          <h3>1B — Install easyMap Tools (PC)</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">
+              Download the Anritsu Software Tool Box (Full Installer):
+              <br><a href="https://www.anritsu.com/en-AU/test-measurement/support/downloads/software/dwl19049" target="_blank" style="font-size:11px;color:var(--navy-lit);">Anritsu Software Tool Box — Anritsu Asia Pacific ↗</a>
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text"><strong>Secured laptop users:</strong> Copy the downloaded installer into your local admin folder (LAPS) and install using your local admin credentials — e.g. User: <code>./ladmin</code> Password: <em>[your LAPS password]</em>.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">Run <strong>Anritsu Tool Box</strong> and select <strong>easyMAP Tools</strong> from the Applications list.</div>
+          </div>
+        </div>
+
+        <div class="instr-section">
+          <h3>1C — Create the .map file in easyMap Tools</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">Open easyMap Tools and create a <strong>legacy indoor map with no GPS</strong>:<br>
+            <code>File → Open Image File (MAP)…</code> → select your floor plan image → save changes.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Boundary GPS coordinates can be added if known, but are <em>not mandatory</em> for indoor surveys.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">Copy the generated <code>.map</code> file to the <strong>root directory</strong> of a FAT32 USB thumb drive (not inside any folder).</div>
+          </div>
+          <div class="tip-box" style="background:#e8f5e9;border-color:#2e7d32;">
+            <strong>Alternative:</strong> Use the <strong>Map Converter tab</strong> in this tool to create a compatible <code>.map</code> file directly from any floor plan JPG or PNG — no easyMap Tools install required.
+          </div>
+        </div>
+
+        <div class="instr-section">
+          <h3>1D — Load map onto the S412E</h3>
+          <div style="background:#0d1117;border-radius:5px;padding:14px 16px;margin-bottom:12px;font-family:var(--mono);font-size:11px;line-height:2;color:#e6edf3;">
+            <span style="color:#8b949e;">// Navigate to coverage mapping</span><br>
+            <span style="color:#79c0ff;">Menu</span> → <span style="color:#a5d6ff;">P25 2 Analyzer</span><br>
+            → <span style="color:#79c0ff;">Measurement</span> → <span style="color:#a5d6ff;">P25p2 Coverage</span><br>
+            → <span style="color:#a5d6ff;">P25p2 Coverage</span> (press again)<br>
+            → <span style="color:#79c0ff;">Save/Recall Points/Map</span> → <span style="color:#a5d6ff;">Recall a Map</span><br>
+            → Select <strong style="color:#d2a8ff;">Map</strong> as file type → navigate to USB → select your <code>.map</code> file
+          </div>
+          <div class="tip-box">
+            <strong>If the file doesn't appear:</strong> Press <strong>Refresh Directories</strong>. If still not visible, eject and re-insert the USB, or reformat the drive as FAT32 and retry. Large capacity or exFAT/NTFS drives will not be recognised.
+          </div>
+        </div>
+
+        <div class="instr-section">
+          <h3>1E — Configure frequency and amplitude</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">Research the signal source — identify whether coverage is from an external site or in-building repeater. Note the <strong>control channel frequency (Channel 1)</strong> or initiate a continuous transmit test for a specific channel.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Set receive frequency to the base station transmit frequency:<br>
+            <code>Frequency → Rx Freq</code></div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">Connect whip antenna to the <strong>RF In</strong> port. Configure amplitude:<br>
+            <code>Amplitude → Rx Power Offset</code> (enter attenuation if used) → <code>Auto Rx Range: ON</code></div>
+          </div>
+        </div>
+
+        <div class="instr-section" style="margin-bottom:0;">
+          <h3>1F — Configure measurement timing</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">
+              Navigate to timing setup:<br>
+              <code>Measurement → P25p2 Coverage → Point Distance/Time Setup</code>
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Set <strong>Repeat Type: Time</strong> and configure the <strong>Repeat Time</strong> to match your walking speed.<br>
+            Example: if it takes 10 seconds to walk between locations, <strong>300 ms</strong> is a suitable interval.</div>
+          </div>
+          <div class="warn-box">
+            ⚠ For indoor surveys there is no GPS — measurement points are placed by <strong>manual screen tap</strong>, not distance-based triggering. Always use Time mode for indoor work.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STAGE 2: DEPLOY -->
+    <div class="card">
+      <div class="card-header">Stage 2 — Deployment (Walk Survey)</div>
+      <div class="card-body">
+
+        <div class="instr-section">
+          <h3>Walk-path method (recommended for corridors)</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">Press the screen at your <strong>current location</strong> on the floor plan map (indicated by the black crosshair).</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Press <strong>Start Data Collection</strong>. Data points will begin plotting at the configured time interval.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">Walk to your next destination in a <strong>straight line</strong>.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">4</div>
+            <div class="instr-text">Upon arrival, <strong>tap your new location</strong> on the map. Data points will populate along the walked path. Press <strong>Stop Data Collection</strong>.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">5</div>
+            <div class="instr-text">Repeat for each segment, changing axis/direction as needed.</div>
+          </div>
+          <div class="tip-box">
+            <strong>Example timing:</strong> A vertical corridor segment taking 10 seconds to walk at 300 ms capture rate will generate approximately 33 data points. A 3-second horizontal segment generates approximately 10 points.
+          </div>
+        </div>
+
+        <div class="instr-section" style="margin-bottom:0;">
+          <h3>Stationary point method (for spot checks)</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">Touch the map at your exact location.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Press <strong>Start Data Collection</strong>, wait for <strong>at least 1 data point</strong> to register, then press <strong>Stop</strong>.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">Move to the next location and repeat.</div>
+          </div>
+          <div class="tip-box">
+            Plot point colours change automatically to reflect current RSSI levels — green (Excellent) through to dark red (Poor).
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STAGE 3: SAVE -->
+    <div class="card">
+      <div class="card-header">Stage 3 — Save Results</div>
+      <div class="card-body">
+        <div class="instr-step">
+          <div class="instr-num">1</div>
+          <div class="instr-text">Insert USB thumb drive. Touch the <strong>floppy disk icon</strong> at the top of the screen.</div>
+        </div>
+        <div class="instr-step">
+          <div class="instr-num">2</div>
+          <div class="instr-text">Press <strong>Change Save Location</strong> and select the USB drive before saving.</div>
+        </div>
+        <div class="instr-step">
+          <div class="instr-num">3</div>
+          <div class="instr-text">Enter a filename, then save <strong>two file types</strong> using the dropdown:</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 14px 40px;">
+          <div style="background:var(--ice);border:1px solid var(--ice-deep);border-radius:4px;padding:10px 14px;">
+            <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--navy-mid);margin-bottom:3px;">JPEG</div>
+            <div style="font-size:11px;color:var(--ink-mid);">Screen capture of the coverage map with colour-coded RSSI overlay. Used in reports and for visual presentation.</div>
+          </div>
+          <div style="background:var(--ice);border:1px solid var(--ice-deep);border-radius:4px;padding:10px 14px;">
+            <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--navy-mid);margin-bottom:3px;">Mapping Tab Delimited (.mtd)</div>
+            <div style="font-size:11px;color:var(--ink-mid);">Raw measurement data with point coordinates, RSSI, BER, ModFid, and timestamps. Used for analysis and report generation.</div>
+          </div>
+        </div>
+        <div class="tip-box">
+          <strong>Map grid reference:</strong> The S412E map display area is <strong>640 × 420 pixels</strong>. The X/Y coordinates in the Tab Delimited file correspond directly to pixel positions within this grid, and can be cross-referenced to the original floor plan map.
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 4: COMPILE -->
+    <div class="card">
+      <div class="card-header">Stage 4 — Compile Results</div>
+      <div class="card-body">
+        <div class="instr-step">
+          <div class="instr-num">1</div>
+          <div class="instr-text">Add the saved JPEG coverage screenshots to the coverage testing report document.</div>
+        </div>
+        <div class="instr-step">
+          <div class="instr-num">2</div>
+          <div class="instr-text">Import the <code>.mtd</code> Tab Delimited file into the <strong>Report Generator tab</strong> of this tool to automatically produce an annotated map and PDF report.</div>
+        </div>
+        <div class="instr-step">
+          <div class="instr-num">3</div>
+          <div class="instr-text">Cross-reference data points to the floor plan grid using the 640×420 coordinate system if manual analysis is required.</div>
+        </div>
+        <div class="tip-box" style="background:#e8f5e9;border-color:#2e7d32;">
+          <strong>This tool automates Step 2:</strong> Upload the <code>.mtd</code> file + JPEG to the Report Generator tab → generates analysis, annotated map overlay, and a print-ready PDF report in under a minute.
+        </div>
+      </div>
+    </div>
+
+    <!-- BACKGROUND -->
+    <div class="card">
+      <div class="card-header">Background — S412E Measurement Types</div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+
+          <div style="border:1px solid var(--rule);border-radius:4px;padding:14px;">
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--navy-mid);margin-bottom:6px;">RSSI</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6;">Received Signal Strength Indication. Determines RF signal power at each location to identify coverage gaps and dead zones. Primary metric for coverage surveys.</div>
+          </div>
+
+          <div style="border:1px solid var(--rule);border-radius:4px;padding:14px;">
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--navy-mid);margin-bottom:6px;">BER / Modulation Fidelity</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6;">Bit Error Rate and ModFid measure the quality of the received digital signal for P25/DMR/NXDN systems. Validates reliable communication even at low signal levels.</div>
+          </div>
+
+          <div style="border:1px solid var(--rule);border-radius:4px;padding:14px;">
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--navy-mid);margin-bottom:6px;">SINAD</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6;">Signal-to-Noise and Distortion ratio. Used for analogue NBFM systems to assess voice quality. Not applicable for P25 digital surveys.</div>
+          </div>
+
+          <div style="border:1px solid var(--rule);border-radius:4px;padding:14px;">
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--navy-mid);margin-bottom:6px;">OBW / Emission Mask</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6;">Occupied Bandwidth and Emission Mask spectrum analysis. Verifies transmission compliance with regulatory masks and absence of adjacent channel interference.</div>
+          </div>
+
+        </div>
+
+        <div style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:14px;">
+          <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--navy-mid);margin-bottom:8px;">RSSI Quality Thresholds (BAI Standard)</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;font-family:var(--mono);font-size:11px;">
+            <div style="background:#1e8449;color:#fff;padding:6px 4px;border-radius:3px;"><strong>Excellent</strong><br>≥ −70 dBm</div>
+            <div style="background:#27ae60;color:#fff;padding:6px 4px;border-radius:3px;"><strong>Very Good</strong><br>≥ −80 dBm</div>
+            <div style="background:#d4ac0d;color:#fff;padding:6px 4px;border-radius:3px;"><strong>Good</strong><br>≥ −90 dBm</div>
+            <div style="background:#e67e22;color:#fff;padding:6px 4px;border-radius:3px;"><strong>Fair</strong><br>≥ −100 dBm</div>
+            <div style="background:#922b21;color:#fff;padding:6px 4px;border-radius:3px;"><strong>Poor</strong><br>&lt; −100 dBm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tab-siu -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 4: HOW-TO (formerly Instructions)             -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-instructions">
+
+    <div class="card">
+      <div class="card-header">How to Use This Tool</div>
+      <div class="card-body">
+
+        <div class="instr-section">
+          <h3>Preparing your floor plan image</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">
+              <strong>Get a floor plan image.</strong> Source it from the building manager, Google Maps screenshot, a scanned document, or draw your own. Any JPG or PNG works.
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">
+              <strong>Resize if needed.</strong> Images over 2 MB may cause slow loading on the S412E. Use Windows Paint, Photos, or an online resizer to reduce to approximately 800–1200px wide before converting.
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">
+              <strong>Save as JPG.</strong> The S412E's easyMap format natively stores JPEG data. PNG files will work too, but JPG is recommended for smaller file size.
+            </div>
+          </div>
+          <div class="tip-box">
+            <strong>Tip:</strong> Landscape orientation (wider than tall) makes better use of the S412E's screen real estate. If your floor plan is portrait, rotate or crop it before converting.
+          </div>
+        </div>
+
+        <div class="instr-section">
+          <h3>Indoor vs Outdoor mode</h3>
+          <div class="instr-step">
+            <div class="instr-num">🏢</div>
+            <div class="instr-text">
+              <strong>Indoor mode</strong> — GPS coordinates are set to <code>0.00,0.00</code>. The S412E will not attempt to use GPS to position the cursor. You manually tap the screen to place your position as you walk. This is correct for PSN in-building coverage surveys.
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">🌏</div>
+            <div class="instr-text">
+              <strong>Outdoor mode</strong> — You provide two GPS calibration anchor points (e.g. top-left and bottom-right corners of the image). The S412E uses these to translate your live GPS position into a pixel location on the map image. Use this for satellite/aerial imagery of outdoor sites.
+            </div>
+          </div>
+          <div class="warn-box">
+            ⚠ For outdoor GPS mapping to work correctly, the two reference point coordinates must match the exact real-world locations visible in your image at those pixel positions. Inaccurate calibration will show the cursor offset from your actual position.
+          </div>
+        </div>
+
+        <div class="instr-section">
+          <h3>Loading the .map file onto the S412E</h3>
+          <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">Format a USB stick as <strong>FAT32</strong> (not exFAT or NTFS — the S412E will not see drives in other formats).</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">Copy the <strong>.map file to the root of the drive</strong> — not inside any folder.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">3</div>
+            <div class="instr-text">On the S412E, press <strong>Measurements</strong> (bottom bar) → <strong>Over-the-Air</strong> → <strong>Mapping</strong> → press <strong>Mapping</strong> again to open the Coverage Mapping menu.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">4</div>
+            <div class="instr-text">Press <strong>Save/Recall Points/Map</strong> → <strong>Recall a Map</strong>. Navigate to the USB drive and select your file.</div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-num">5</div>
+            <div class="instr-text">The floor plan will load and display on screen. Set your <strong>frequency</strong>, <strong>Rx Pattern</strong>, and <strong>Repeat Time</strong>, then press <strong>Start Data Collection</strong> and begin your walk survey.</div>
+          </div>
+          <div class="tip-box">
+            <strong>If the file doesn't appear:</strong> Press <strong>Refresh Directories</strong> in the recall menu. If still not visible, re-seat the USB drive, or reformat to FAT32 and try again.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end tab-instructions -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 3: FILE FORMAT                                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-format">
+
+    <div class="card">
+      <div class="card-header">Anritsu .map File Format — Reverse Engineered</div>
+      <div class="card-body">
+
+        <p style="font-size:13px;color:var(--ink-mid);margin-bottom:18px;line-height:1.6;">
+          The <code style="font-family:var(--mono);background:var(--paper);border:1px solid var(--rule);border-radius:3px;padding:1px 5px;">.map</code> file format used by easyMap Tools and the Anritsu S412E LMR Master is a simple binary+text composite. It consists of a standard JPEG image with a small text footer appended directly after the JPEG end-of-image marker.
+        </p>
+
+        <div class="format-card">
+          <div class="format-card-header">📄 .map file structure (byte layout)</div>
+          <div class="format-card-body">
+            <span class="fc-comment">// ─── Section 1: JPEG image data ───────────────────────</span><br>
+            <span class="fc-key">Bytes 0 … N-2</span>  <span class="fc-value">Standard JPEG binary (SOI to EOI)</span><br>
+            <span class="fc-key">Byte  N-1, N</span>   <span class="fc-value">0xFF 0xD9  (JPEG End-Of-Image marker)</span><br><br>
+            <span class="fc-comment">// ─── Section 2: Text footer (appended immediately after EOI) ───</span><br>
+            <span class="fc-string">&lt;JPG&gt;</span><br>
+            <span class="fc-special">lat1,lon1</span>   <span class="fc-comment">// Reference point 1 (top-left GPS anchor)</span><br>
+            <span class="fc-special">lat2,lon2</span>   <span class="fc-comment">// Reference point 2 (bottom-right GPS anchor)</span><br>
+            <span class="fc-string">&lt;\JPG&gt;</span>    <span class="fc-comment">// Note: backslash, not forward slash</span><br>
+          </div>
+        </div>
+
+        <table class="format-table">
+          <thead>
+            <tr><th>Field</th><th>Value (indoor)</th><th>Value (outdoor GPS)</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Section 1</td><td colspan="2">Raw JPEG binary data</td><td>Standard JFIF/Exif JPEG</td></tr>
+            <tr><td>EOI Marker</td><td colspan="2"><code>0xFF 0xD9</code></td><td>Standard JPEG terminator</td></tr>
+            <tr><td>Opening tag</td><td colspan="2"><code>&lt;JPG&gt;</code></td><td>Immediately after 0xD9</td></tr>
+            <tr><td>Coord pair 1</td><td><code>0.00,0.00</code></td><td><code>-33.8688,151.2093</code></td><td>Lat,Lon of top-left anchor</td></tr>
+            <tr><td>Coord pair 2</td><td><code>0.00,0.00</code></td><td><code>-33.8695,151.2101</code></td><td>Lat,Lon of bottom-right anchor</td></tr>
+            <tr><td>Closing tag</td><td colspan="2"><code>&lt;\JPG&gt;</code></td><td>Backslash (not forward slash)</td></tr>
+          </tbody>
+        </table>
+
+        <div class="tip-box">
+          <strong>Indoor surveys:</strong> Both coordinate pairs are <code>0.00,0.00</code>. The S412E detects this and disables GPS-based cursor positioning, switching to manual touchscreen tap mode.
+        </div>
+        <div class="tip-box">
+          <strong>PNG images:</strong> The S412E can load PNG data in the .map container — the tool appends the same text footer regardless of image format. The instrument reads the raw bytes and decodes them as an image.
+        </div>
+        <div class="tip-box" style="background:#fff8e1;border-color:#f0c040;">
+          <strong>The .azm format</strong> is a newer Anritsu format used by current versions of easyMap Tools. It supports pan-and-zoom. This tool generates the legacy <code>.map</code> format (single panel, compatible with all S412E firmware versions).
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end tab-format -->
+
+</main>
+
+<footer>
+  BAI Communications · Site Infrastructure Unit · Anritsu S412E LMR Master Coverage Survey Tools
+</footer>
+
+<script>
+// ── TAB SWITCHING ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── STATE ──
+let fileBuffer  = null;
+let fileObject  = null;
+let currentMode = 'indoor';
+
+// ── FILE HANDLING ──
+const dz        = document.getElementById('dz');
+const fileInput = document.getElementById('file-input');
+
+function handleFile(file) {
+  fileObject = file;
+  const dzStatus  = document.getElementById('dz-status');
+  const prePanel  = document.getElementById('preview-panel');
+  const preImg    = document.getElementById('preview-img');
+
+  dz.classList.remove('loaded', 'warn');
+  dzStatus.textContent = '⏳ Loading…';
+  dzStatus.className = 'dz-status';
+
+  // Set default output name
+  const nameInput = document.getElementById('out-name');
+  if (!nameInput.value) {
+    nameInput.value = file.name.replace(/\.[^.]+$/, '');
+  }
+
+  // DataURL for preview + dimension detection
+  const readerUrl = new FileReader();
+  readerUrl.onload = e => {
+    const dataUrl = e.target.result;
+    preImg.src = dataUrl;
+    preImg.onload = () => {
+      document.getElementById('meta-dims').textContent =
+        `${preImg.naturalWidth} × ${preImg.naturalHeight} px`;
+    };
+    prePanel.classList.add('visible');
+  };
+  readerUrl.readAsDataURL(file);
+
+  // ArrayBuffer for conversion
+  const readerAB = new FileReader();
+  readerAB.onload = e => {
+    fileBuffer = e.target.result;
+    const kb = (fileBuffer.byteLength / 1024).toFixed(1);
+    const mb = (fileBuffer.byteLength / (1024*1024)).toFixed(2);
+
+    document.getElementById('meta-name').textContent = file.name;
+    document.getElementById('meta-type').textContent = file.type || 'image/jpeg';
+
+    const sizeEl   = document.getElementById('meta-size');
+    const compatEl = document.getElementById('meta-compat');
+    sizeEl.textContent = `${kb} KB (${mb} MB)`;
+
+    if (fileBuffer.byteLength > 3 * 1024 * 1024) {
+      sizeEl.className = 'meta-value warn';
+      compatEl.textContent = '⚠ Large — may load slowly';
+      compatEl.className = 'meta-value warn';
+      dz.classList.add('warn');
+      dzStatus.textContent = `⚠ ${file.name} — file is large (${mb} MB). Consider resizing to < 2 MB.`;
+      dzStatus.className = 'dz-status warn';
+    } else {
+      sizeEl.className = 'meta-value ok';
+      compatEl.textContent = '✓ Ready';
+      compatEl.className = 'meta-value ok';
+      dz.classList.add('loaded');
+      dzStatus.textContent = `✓ ${file.name}  (${kb} KB)`;
+      dzStatus.className = 'dz-status ok';
+    }
+
+    document.getElementById('btn-convert').disabled = false;
+  };
+  readerAB.readAsArrayBuffer(file);
+}
+
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// ── MODE SWITCHING ──
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-indoor').classList.toggle('active', mode === 'indoor');
+  document.getElementById('mode-outdoor').classList.toggle('active', mode === 'outdoor');
+  document.getElementById('gps-section').classList.toggle('visible', mode === 'outdoor');
+}
+
+// ── CONVERT ──
+document.getElementById('btn-convert').addEventListener('click', () => {
+  if (!fileBuffer) return;
+
+  // Build GPS coordinate pairs
+  let coord1 = '0.00,0.00';
+  let coord2 = '0.00,0.00';
+
+  if (currentMode === 'outdoor') {
+    const lat1 = parseFloat(document.getElementById('pt1-lat').value) || 0;
+    const lon1 = parseFloat(document.getElementById('pt1-lon').value) || 0;
+    const lat2 = parseFloat(document.getElementById('pt2-lat').value) || 0;
+    const lon2 = parseFloat(document.getElementById('pt2-lon').value) || 0;
+    coord1 = `${lat1.toFixed(6)},${lon1.toFixed(6)}`;
+    coord2 = `${lat2.toFixed(6)},${lon2.toFixed(6)}`;
+  }
+
+  // Build footer  — note: closing tag uses backslash \  not forward slash /
+  const footer      = `<JPG>\n${coord1}\n${coord2}\n<\\JPG>\n`;
+  const footerBytes = new TextEncoder().encode(footer);
+
+  // Concatenate JPEG bytes + footer
+  const combined = new Uint8Array(fileBuffer.byteLength + footerBytes.byteLength);
+  combined.set(new Uint8Array(fileBuffer), 0);
+  combined.set(footerBytes, fileBuffer.byteLength);
+
+  // Filename
+  const rawName = document.getElementById('out-name').value.trim()
+    || (fileObject ? fileObject.name.replace(/\.[^.]+$/, '') : 'map');
+  const outName = rawName + '.map';
+
+  // Download
+  const blob = new Blob([combined], { type: 'application/octet-stream' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = outName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+
+  // Show result
+  const kb = (combined.byteLength / 1024).toFixed(1);
+  const banner  = document.getElementById('result-banner');
+  const detail  = document.getElementById('rb-detail');
+  detail.textContent =
+    `${outName}  ·  ${kb} KB  ·  Mode: ${currentMode === 'indoor' ? 'Indoor (no GPS)' : 'Outdoor GPS'}` +
+    (currentMode === 'outdoor' ? `  ·  P1: ${coord1}  ·  P2: ${coord2}` : '');
+  banner.classList.add('visible');
+  banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+
+// ══════════════════════════════════════════════════════════
+// REPORT GENERATOR MODULE
+// ══════════════════════════════════════════════════════════
+(function() {
+  // ── STATE ──
+  const rg = {
+    points: [], mapDataUrl: null, mapBuffer: null,
+    mapFile: null, floorDataUrl: null, analysis: null, editMode: false
+  };
+
+  // ── HELPERS ──
+  const el = id => document.getElementById(id);
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  const fmtN = (n,d=2) => n == null ? '—' : n.toFixed(d);
+  const ratingOf = rssi => {
+    if (rssi >= -70)  return ['Excellent','badge-exc'];
+    if (rssi >= -80)  return ['Very Good','badge-vgood'];
+    if (rssi >= -90)  return ['Good','badge-good'];
+    if (rssi >= -100) return ['Fair','badge-fair'];
+    return ['Poor','badge-poor'];
+  };
+  const setStep = n => {
+    for (let i=1;i<=4;i++) {
+      const s = el(`rg-s${i}`);
+      s.classList.remove('active','done');
+      if (i < n) s.classList.add('done');
+      else if (i === n) s.classList.add('active');
+    }
+  };
+  const log = (msg, cls='') => {
+    const d = document.createElement('div');
+    d.className = cls; d.textContent = msg;
+    el('rg-log').appendChild(d);
+    el('rg-log').scrollTop = 9999;
+  };
+  const setProgress = pct => { el('rg-progress').style.width = pct+'%'; };
+
+  // ── DROP ZONE SETUP ──
+  function setupDrop(dzId, inputId, handler) {
+    const dz = el(dzId), inp = el(inputId);
+    inp.addEventListener('change', e => { if(e.target.files[0]) handler(e.target.files[0], dz); });
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0], dz); });
+  }
+
+  // ── MTD FILE ──
+  setupDrop('rg-dz-mtd','rg-file-mtd', (file, dz) => {
+    const nameEl = el('rg-mtd-name');
+    nameEl.textContent = '⏳ ' + file.name; nameEl.className = 'dz-status';
+    const reader = new FileReader();
+    reader.onload = e => {
+      parseMTD(e.target.result);
+      dz.classList.add('loaded');
+      nameEl.textContent = '✓ ' + file.name; nameEl.className = 'dz-status ok';
+      checkReady();
+      // Auto-fill date
+      if (!el('rg-date').value) el('rg-date').value = new Date().toISOString().slice(0,10);
+    };
+    reader.readAsText(file);
+  });
+
+  // ── MAP IMAGE ──
+  setupDrop('rg-dz-map','rg-file-map', (file, dz) => {
+    const nameEl = el('rg-map-name');
+    rg.mapFile = file;
+    dz.classList.add('loaded');
+    nameEl.textContent = '⏳ ' + file.name; nameEl.className = 'dz-status';
+    const ab = new FileReader();
+    ab.onload = e => {
+      rg.mapBuffer = e.target.result;
+      const bytes = new Uint8Array(rg.mapBuffer);
+      let bin=''; for(let i=0;i<bytes.byteLength;i++) bin+=String.fromCharCode(bytes[i]);
+      rg.mapDataUrl = 'data:'+(file.type||'image/jpeg')+';base64,'+btoa(bin);
+      nameEl.textContent = '✓ ' + file.name; nameEl.className = 'dz-status ok';
+      checkReady();
+    };
+    ab.readAsArrayBuffer(file);
+  });
+
+  // ── FLOOR PLAN ──
+  setupDrop('rg-dz-floor','rg-file-floor', (file, dz) => {
+    const nameEl = el('rg-floor-name');
+    dz.classList.add('loaded');
+    const r = new FileReader();
+    r.onload = e => { rg.floorDataUrl = e.target.result; };
+    r.readAsDataURL(file);
+    nameEl.textContent = '✓ ' + file.name; nameEl.className = 'dz-status ok';
+  });
+  // ── MTD PARSER ──
+  function parseMTD(text) {
+    const points = [];
+    for (const line of text.split('\n')) {
+      if (!line.startsWith('Point#')) continue;
+      const parts = line.split('\t');
+      if (parts.length < 10) continue;
+      const pt = parseInt(parts[0].replace('Point# ','').trim());
+      const sysTime = (parts[8]||'').trim();
+      const px = parseInt(parts[2]) || 0;   // X pixel coord (Longitude column)
+      const py = parseInt(parts[3]) || 0;   // Y pixel coord (Latitude column)
+      const rest = parts.slice(9).join('\t');
+      const rssiM = rest.match(/RSSI\(dBm\)\s+([\-\d\.]+)/);
+      const berM  = rest.match(/BER\(Percent\)\s+([\d\.]+)/);
+      const modM  = rest.match(/MODFID\(Percent\)\s+([\d\.]+)/);
+      const freqM = rest.match(/Frequency\s+([\d\.\s]+MHz)/);
+      if (!rssiM) continue;
+      const rssi = parseFloat(rssiM[1]);
+      const ber  = berM  ? parseFloat(berM[1])  : null;
+      const mod  = modM  ? parseFloat(modM[1])  : null;
+      points.push({ pt, time: sysTime, rssi, ber, modfid: mod, px, py });
+      if (points.length===1 && freqM && !el('rg-freq').value)
+        el('rg-freq').value = freqM[1].trim();
+    }
+    const snM = text.match(/SN=(\d+)/);
+    if (snM && !el('rg-serial').value) el('rg-serial').value = snM[1];
+    rg.points = points;
+    renderDataPreview(points);
+  }
+
+  function renderDataPreview(points) {
+    if (!points.length) return;
+    el('rg-no-data').style.display = 'none';
+    el('rg-data-wrap').style.display = 'block';
+    el('rg-pt-tag').textContent = points.length + ' POINTS';
+    const rv = points.map(p=>p.rssi);
+    const bv = points.filter(p=>p.ber!=null).map(p=>p.ber);
+    const mv = points.filter(p=>p.modfid!=null).map(p=>p.modfid);
+    el('rg-stats').innerHTML = [
+      {l:'Total Points', v:points.length, s:'measurements'},
+      {l:'RSSI Avg', v:fmtN(avg(rv))+' dBm', s:'average signal'},
+      {l:'RSSI Min', v:fmtN(Math.min(...rv))+' dBm', s:'weakest'},
+      {l:'RSSI Max', v:fmtN(Math.max(...rv))+' dBm', s:'strongest'},
+      {l:'BER Avg',  v:bv.length?fmtN(avg(bv))+' %':'—', s:'bit error rate'},
+      {l:'ModFid Avg',v:mv.length?fmtN(avg(mv))+' %':'—', s:'mod fidelity'},
+    ].map(s=>`<div class="rg-stat"><div class="rg-stat-label">${s.l}</div><div class="rg-stat-val">${s.v}</div><div class="rg-stat-sub">${s.s}</div></div>`).join('');
+    el('rg-tbody').innerHTML = points.map(p=>{
+      const [r,cls]=ratingOf(p.rssi);
+      return `<tr><td>${p.pt}</td><td>${p.time}</td><td><strong>${fmtN(p.rssi)}</strong></td><td><span class="badge ${cls}">${r}</span></td><td>${fmtN(p.ber)}</td><td>${fmtN(p.modfid)}</td></tr>`;
+    }).join('');
+    setStep(3);
+  }
+
+  function checkReady() {
+    const ready = rg.points.length > 0 && rg.mapBuffer;
+    el('rg-btn-gen').disabled = !ready;
+    if (ready) { el('rg-notice').style.display='none'; setStep(4); showAnnotateCard(); }
+    else if (rg.points.length>0) el('rg-notice').textContent = '⚠ Please also load a coverage map image.';
+    else if (rg.mapBuffer) el('rg-notice').textContent = '⚠ Please also load an MTD data file.';
+  }
+
+  // ── LOCAL ANALYSIS ──
+  function buildAnalysis(points, meta) {
+    const rv = points.map(p=>p.rssi);
+    const bv = points.filter(p=>p.ber!=null).map(p=>p.ber);
+    const mv = points.filter(p=>p.modfid!=null).map(p=>p.modfid);
+    const ra=avg(rv), ba=bv.length?avg(bv):null, ma=mv.length?avg(mv):null;
+    const bd={exc:points.filter(p=>p.rssi>=-70).length,vg:points.filter(p=>p.rssi>=-80&&p.rssi<-70).length,g:points.filter(p=>p.rssi>=-90&&p.rssi<-80).length,f:points.filter(p=>p.rssi>=-100&&p.rssi<-90).length,p:points.filter(p=>p.rssi<-100).length};
+    const anom=points.filter(p=>p.modfid!=null&&p.modfid>40);
+    let oRating,oSum;
+    if(ra>=-80){oRating='Good';oSum=`Average RSSI of ${ra.toFixed(1)} dBm indicates good P25 signal coverage.`}
+    else if(ra>=-90){oRating='Marginal';oSum=`Average RSSI of ${ra.toFixed(1)} dBm indicates marginal coverage; borderline for reliable P25 operation.`}
+    else if(ra>=-100){oRating='Poor';oSum=`Average RSSI of ${ra.toFixed(1)} dBm indicates poor coverage resulting in unreliable P25 performance.`}
+    else{oRating='No Coverage';oSum=`Average RSSI of ${ra.toFixed(1)} dBm is insufficient for P25 operation.`}
+    const pct=n=>Math.round(n/points.length*100);
+    const rssiA=`RSSI measurements across ${points.length} points ranged from ${Math.min(...rv).toFixed(1)} to ${Math.max(...rv).toFixed(1)} dBm (average ${ra.toFixed(1)} dBm). Rating breakdown: ${bd.exc} Excellent, ${bd.vg} Very Good, ${bd.g} Good, ${bd.f} Fair, ${bd.p} Poor. ${pct(bd.f+bd.p)}% of locations fall below the Good threshold of −90.0 dBm.`;
+    let berA;
+    if(ba!=null){
+      if(ba<1) berA=`BER averaged ${ba.toFixed(2)}% — within acceptable limits for P25 operation.`;
+      else if(ba<5) berA=`BER averaged ${ba.toFixed(2)}% — elevated but may permit marginal P25 voice operation. Data throughput will be degraded.`;
+      else berA=`BER averaged ${ba.toFixed(2)}% — characteristic of a signal at the margin of decodability. P25 voice quality will be significantly degraded with frequent data errors.`;
+    } else berA='BER data not available in dataset.';
+    let modA;
+    if(ma!=null){
+      if(anom.length>0) modA=`ModFid averaged ${ma.toFixed(1)}%. Anomalous readings detected at Point${anom.length>1?'s':''} ${anom.map(p=>p.pt).join(', ')} (${anom.map(p=>p.modfid.toFixed(1)+'%').join(', ')}). These may indicate localised multipath or interference and should be re-surveyed.`;
+      else modA=`ModFid averaged ${ma.toFixed(1)}% consistently across all points — no significant anomalies detected.`;
+    } else modA='Modulation Fidelity data not available.';
+    const findings=`Indoor coverage survey at ${meta.site||'site'} on ${meta.date||'survey date'} — ${points.length} measurement points at ${meta.freq||'configured frequency'}. ${oSum}${ba!=null&&ba>5?' The elevated BER confirms insufficient signal quality for reliable P25 Phase 2 operation.':''}`;
+    const recs=[];
+    if(ra<-90) recs.push('Investigate deployment of an in-building DAS or PSN repeater to improve RSSI above the −90.0 dBm Good threshold.');
+    recs.push('Perform an outdoor perimeter survey to establish baseline coverage from the serving PSN base station.');
+    if(ba!=null&&ba>5) recs.push(`Investigate co-channel or adjacent-channel interference contributing to the elevated BER of ~${ba.toFixed(0)}%.`);
+    if(anom.length>0) recs.push(`Re-survey Point${anom.length>1?'s':''} ${anom.map(p=>p.pt).join(', ')} to confirm anomalous ModFid readings and identify potential multipath sources.`);
+    recs.push('Re-survey following any infrastructure changes using the same map file for direct before/after comparison.');
+    recs.push('Flag this site in the PSN site register as requiring coverage improvement action.');
+    return {oRating,oSum,rssiA,berA,modA,findings,recs};
+  }
+
+  // ── BUILD HTML PREVIEW ──
+  function buildPreview(points, meta, analysis) {
+    const rv=points.map(p=>p.rssi), bv=points.filter(p=>p.ber!=null).map(p=>p.ber), mv=points.filter(p=>p.modfid!=null).map(p=>p.modfid);
+    const af=arr=>arr.length?(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2):'—';
+    const rows=points.map(p=>{const[r,c]=ratingOf(p.rssi);return`<tr><td>${p.pt}</td><td style="font-family:var(--mono)">${p.time}</td><td><strong style="font-family:var(--mono)">${p.rssi.toFixed(2)}</strong></td><td><span class="badge ${c}">${r}</span></td><td style="font-family:var(--mono)">${fmtN(p.ber)}</td><td style="font-family:var(--mono)">${fmtN(p.modfid)}</td></tr>`;}).join('');
+    const recs=(analysis.recs||[]).map(r=>`<li>${r}</li>`).join('');
+
+    // Coverage map (S412E screenshot with data overlay)
+    const mapImg=rg.mapDataUrl
+      ?`<img src="${rg.mapDataUrl}" style="max-width:100%;border:1px solid #ddd;border-radius:3px;margin:8px 0;display:block;" alt="Coverage Map">`
+      :'<p style="color:#888;font-style:italic">No map image loaded.</p>';
+
+    // Floor plan section — only shown if a standalone floor plan was uploaded
+    const floorSection=rg.floorDataUrl?`
+      <h2>${rg.mapDataUrl ? '3.' : '2.'} Floor Plan</h2>
+      <img src="${rg.floorDataUrl}" style="max-width:100%;border:1px solid #ddd;border-radius:3px;margin:8px 0;display:block;" alt="Floor Plan">
+      <p style="font-size:10px;color:#888;font-style:italic;text-align:center;margin-top:2px;">Figure ${rg.mapDataUrl ? '2' : '1'} — Site Floor Plan (${meta.site||''})</p>`:'';
+
+    // Section numbering shifts if floor plan is present
+    const hasFloor = !!rg.floorDataUrl;
+    const hasMap   = !!rg.mapDataUrl;
+    const sn = n => n + (hasFloor && hasMap ? 1 : 0); // offset sections after map if both present
+
+    el('rg-preview').innerHTML=`
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px;">
+        <h1>PSN Indoor Coverage Mapping Report</h1>
+        <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" style="height:32px;opacity:0.9;" onerror="this.style.display='none'" alt="BAI">
+      </div>
+      <div class="rp-sub">Anritsu LMR Master S412E &nbsp;|&nbsp; BAI Communications SIU &nbsp;|&nbsp; ${meta.site||''} &nbsp;|&nbsp; ${meta.date||''}</div>
+      <h2>1. Survey Details</h2>
+      <table><tbody>
+        <tr><td><strong>Site</strong></td><td>${meta.site||'—'}</td><td><strong>Date</strong></td><td>${meta.date||'—'}</td></tr>
+        <tr><td><strong>Surveyed By</strong></td><td>${meta.surveyor||'—'}</td><td><strong>PSN Site ID</strong></td><td>${meta.siteid||'—'}</td></tr>
+        <tr><td><strong>Frequency</strong></td><td>${meta.freq||'—'}</td><td><strong>Instrument S/N</strong></td><td>${meta.serial||'—'}</td></tr>
+        <tr><td><strong>Total Points</strong></td><td>${points.length}</td><td><strong>Overall Rating</strong></td><td><strong>${analysis.oRating||'—'}</strong></td></tr>
+        <tr><td><strong>RSSI Average</strong></td><td>${af(rv)} dBm</td><td><strong>GPS Status</strong></td><td>Not Locked (Indoor)</td></tr>
+      </tbody></table>
+      <h2>2. Indoor Coverage Map</h2>
+      ${mapImg}
+      <p style="font-size:10px;color:#888;font-style:italic;text-align:center;margin-top:2px;">Figure 1 — S412E Coverage Map Capture with RSSI Overlay (${meta.date||''})</p>
+      ${floorSection}
+      <h2>${sn(3)}. Measurement Data</h2>
+      <table>
+        <thead><tr><th>Pt#</th><th>Time</th><th>RSSI (dBm)</th><th>Rating</th><th>BER (%)</th><th>Mod Fidelity (%)</th></tr></thead>
+        <tbody>${rows}<tr class="tfoot"><td>Avg</td><td></td><td>${af(rv)}</td><td></td><td>${af(bv)}</td><td>${af(mv)}</td></tr></tbody>
+      </table>
+      <h2>${sn(4)}. Analysis &amp; Findings</h2>
+      <p><strong>Overall:</strong> ${analysis.oSum||''}</p>
+      <p><strong>RSSI:</strong> ${analysis.rssiA||''}</p>
+      <p><strong>BER:</strong> ${analysis.berA||''}</p>
+      <p><strong>Modulation Fidelity:</strong> ${analysis.modA||''}</p>
+      <h2>${sn(5)}. Conclusions &amp; Recommendations</h2>
+      <p>${analysis.findings||''}</p>
+      <ul>${recs}</ul>
+      <div class="rp-footer">Report generated from Anritsu S412E LMR Master data &nbsp;|&nbsp; BAI Communications SIU &nbsp;|&nbsp; ${meta.date||''}</div>`;
+    el('rg-preview-wrap').classList.add('visible');
+  }
+
+  // ── PDF PRINT ──
+  function openPDF(site, date) {
+    if(rg.editMode) disableEdit();
+    const content = el('rg-preview').innerHTML;
+    const win = window.open('','_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PSN Coverage Report — ${site} — ${date}</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'IBM Plex Sans',Arial,sans-serif;font-size:10pt;color:#0d1117;background:#fff}
+@page{size:A4;margin:18mm 16mm 16mm 16mm}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
+.report-wrap{max-width:175mm;margin:0 auto;padding-bottom:16mm}
+h1{font-family:'Barlow Condensed',sans-serif;font-size:25pt;font-weight:800;color:#1a3f6f;line-height:1;margin-bottom:2mm}
+.rp-sub{font-family:'IBM Plex Mono',monospace;font-size:8pt;color:#6b7585;padding-bottom:4mm;border-bottom:2pt solid #2563a8;margin-bottom:6mm}
+h2{font-family:'Barlow Condensed',sans-serif;font-size:12pt;font-weight:700;color:#1a3f6f;text-transform:uppercase;letter-spacing:.5pt;padding-bottom:2mm;border-bottom:1.5pt solid #dce8f7;margin:7mm 0 3mm}
+table{width:100%;border-collapse:collapse;font-size:8.5pt;margin:2mm 0 4mm}
+th{background:#1a3f6f;color:#fff;padding:3pt 6pt;text-align:left;font-weight:600;font-size:8pt}
+td{padding:3.5pt 6pt;border-bottom:.5pt solid #d0d5de;vertical-align:middle}
+tr:nth-child(even) td{background:#f5f6f8}.tfoot td{background:#dce8f7!important;font-weight:600}
+.badge{display:inline-block;padding:1pt 5pt;border-radius:2pt;font-size:7.5pt;font-weight:600}
+.badge-fair{background:#fff3cd;color:#b35800}.badge-good{background:#d4edda;color:#1a7a40}
+.badge-vgood{background:#c8f0da;color:#0d5c2e}.badge-exc{background:#b8f0cc;color:#074d1f}.badge-poor{background:#f8d7da;color:#8b1a1a}
+p{font-size:9pt;line-height:1.55;margin:2mm 0}p strong{color:#1a3f6f}ul{margin:2mm 0 2mm 5mm}li{font-size:9pt;line-height:1.55;margin-bottom:1.5mm}
+img{max-width:100%;max-height:110mm;object-fit:contain;border:.5pt solid #d0d5de;display:block;margin:2mm 0}
+.rp-footer{margin-top:8mm;padding-top:3mm;border-top:.5pt solid #d0d5de;font-size:7.5pt;color:#888;font-family:'IBM Plex Mono',monospace}
+.print-bar{position:fixed;bottom:0;left:0;right:0;background:#1a3f6f;padding:10px 20px;display:flex;align-items:center;gap:12px;z-index:999}
+.print-bar button{padding:8px 20px;border:none;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer}
+.pb-print{background:#fff;color:#1a3f6f}.pb-close{background:rgba(255,255,255,.15);color:#fff}
+.pb-hint{color:rgba(255,255,255,.6);font-size:11px}@media print{.print-bar{display:none}}
+</style></head><body>
+<div class="print-bar no-print">
+  <button class="pb-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <button class="pb-close" onclick="window.close()">✕ Close</button>
+  <span class="pb-hint">Select "Save as PDF" · Paper: A4</span>
+</div>
+<div class="report-wrap">${content}</div></body></html>`);
+    win.document.close();
+  }
+
+  // ── EDIT MODE ──
+  function getEditEls() {
+    return el('rg-preview').querySelectorAll('p,li,h2,.rp-sub,.rp-footer');
+  }
+  function enableEdit() {
+    rg.editMode=true;
+    el('rg-preview').classList.add('edit-mode');
+    el('rg-preview-wrap').classList.add('visible');
+    getEditEls().forEach(e=>{e.setAttribute('contenteditable','true');e.setAttribute('spellcheck','true');});
+    el('rg-edit-bar').classList.add('visible');
+    el('rg-btn-edit').textContent='✏️ Editing…'; el('rg-btn-edit').classList.add('active');
+  }
+  function disableEdit() {
+    rg.editMode=false;
+    el('rg-preview').classList.remove('edit-mode');
+    getEditEls().forEach(e=>{e.removeAttribute('contenteditable');e.removeAttribute('spellcheck');});
+    el('rg-edit-bar').classList.remove('visible');
+    el('rg-btn-edit').textContent='✏️ Edit Report'; el('rg-btn-edit').classList.remove('active');
+  }
+
+  // ── GENERATE ──
+  el('rg-btn-gen').addEventListener('click', async () => {
+    const btn = el('rg-btn-gen');
+    btn.disabled=true; btn.innerHTML='Generating… <span class="arrow">⏳</span>';
+    el('rg-progress-wrap').style.display='block';
+    el('rg-output').classList.remove('visible');
+    el('rg-log').innerHTML=''; setProgress(5);
+    const meta={site:el('rg-site').value,date:el('rg-date').value,surveyor:el('rg-surveyor').value,freq:el('rg-freq').value,siteid:el('rg-siteid').value,serial:el('rg-serial').value,notes:el('rg-notes').value};
+    try {
+      log('→ Parsing measurement data…'); setProgress(25);
+      log('→ Generating analysis…'); setProgress(50);
+      rg.analysis = buildAnalysis(rg.points, meta);
+      log('✓ Analysis complete','ok'); setProgress(75);
+      log('→ Building report…');
+      buildPreview(rg.points, meta, rg.analysis);
+      setProgress(100); log('✓ Report ready — click Save as PDF','ok');
+      el('rg-output').classList.add('visible');
+      el('rg-output').scrollIntoView({behavior:'smooth',block:'nearest'});
+      setStep(4);
+      el('rg-s4').classList.remove('active'); el('rg-s4').classList.add('done');
+    } catch(e) {
+      log('✗ Error: '+e.message,'err'); console.error(e);
+    }
+    btn.disabled=false; btn.innerHTML='Generate PDF Report <span class="arrow">→</span>';
+  });
+
+  // ── OUTPUT BUTTONS ──
+  el('rg-btn-pdf').addEventListener('click', () => {
+    const site=(el('rg-site').value||'survey').replace(/\s+/g,'_');
+    openPDF(site, el('rg-date').value);
+  });
+  el('rg-btn-edit').addEventListener('click', () => { rg.editMode?disableEdit():enableEdit(); });
+  el('rg-btn-done-edit').addEventListener('click', disableEdit);
+  el('rg-btn-preview').addEventListener('click', () => {
+    el('rg-preview-wrap').classList.toggle('visible');
+  });
+
+  // ── CLEAR BUTTONS ──
+  function clearMTD() {
+    rg.points = [];
+    el('rg-file-mtd').value = '';
+    el('rg-dz-mtd').classList.remove('loaded','warn');
+    el('rg-mtd-name').textContent = ''; el('rg-mtd-name').className = 'dz-status';
+    // Reset data preview
+    el('rg-no-data').style.display = 'block';
+    el('rg-data-wrap').style.display = 'none';
+    el('rg-pt-tag').textContent = 'NO FILE';
+    // Hide annotate card
+    el('rg-annotate-card').classList.remove('visible');
+    // Reset auto-filled fields
+    el('rg-freq').value = ''; el('rg-serial').value = '';
+    el('rg-output').classList.remove('visible');
+    setStep(1); checkReady();
+  }
+
+  function clearMap() {
+    rg.mapDataUrl = null; rg.mapBuffer = null; rg.mapFile = null;
+    el('rg-file-map').value = '';
+    el('rg-dz-map').classList.remove('loaded','warn');
+    el('rg-map-name').textContent = ''; el('rg-map-name').className = 'dz-status';
+    el('rg-annotate-card').classList.remove('visible');
+    el('rg-output').classList.remove('visible');
+    checkReady();
+  }
+
+  function clearFloor() {
+    rg.floorDataUrl = null;
+    el('rg-file-floor').value = '';
+    el('rg-dz-floor').classList.remove('loaded','warn');
+    el('rg-floor-name').textContent = ''; el('rg-floor-name').className = 'dz-status';
+  }
+
+  el('rg-clear-mtd').addEventListener('click',  e => { e.stopPropagation(); clearMTD();   });
+  el('rg-clear-map').addEventListener('click',  e => { e.stopPropagation(); clearMap();   });
+  el('rg-clear-floor').addEventListener('click',e => { e.stopPropagation(); clearFloor(); });
+
+  // ── INIT DATE ──
+  el('rg-date').value = new Date().toISOString().slice(0,10);
+
+  // ── ANNOTATE MAP ──
+  const RATING_COLORS = {
+    'Excellent': { fill:'#1e8449', text:'#fff' },
+    'Very Good': { fill:'#27ae60', text:'#fff' },
+    'Good':      { fill:'#d4ac0d', text:'#fff' },
+    'Fair':      { fill:'#e67e22', text:'#fff' },
+    'Poor':      { fill:'#922b21', text:'#fff' },
+  };
+
+  function getRatingColor(rssi) {
+    if (rssi >= -70) return RATING_COLORS['Excellent'];
+    if (rssi >= -80) return RATING_COLORS['Very Good'];
+    if (rssi >= -90) return RATING_COLORS['Good'];
+    if (rssi >= -100)return RATING_COLORS['Fair'];
+    return RATING_COLORS['Poor'];
+  }
+
+  function renderAnnotation() {
+    if (!rg.mapDataUrl || !rg.points.length) return;
+
+    const canvas  = el('rg-annotate-canvas');
+    const ctx     = canvas.getContext('2d');
+    const dispW   = parseFloat(el('rg-ann-w').value) || 532;
+    const dispH   = parseFloat(el('rg-ann-h').value) || 400;
+    const radius  = parseFloat(el('rg-ann-r').value) || 14;
+    const statusEl = el('rg-ann-status');
+
+    const img = new Image();
+    img.onload = () => {
+      canvas.width  = img.width;
+      canvas.height = img.height;
+
+      // Scale factor: MTD coords (screen space) → image pixel space
+      const sx = img.width  / dispW;
+      const sy = img.height / dispH;
+
+      // Draw base map image
+      ctx.drawImage(img, 0, 0);
+
+      // Slight darkening overlay for contrast
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Detect duplicate positions (same px,py) to mark differently
+      const posKey = p => `${p.px},${p.py}`;
+      const posCounts = {};
+      rg.points.forEach(p => { const k=posKey(p); posCounts[k]=(posCounts[k]||0)+1; });
+
+      // Draw drop shadow pass first
+      rg.points.forEach(p => {
+        const cx = Math.round(p.px * sx);
+        const cy = Math.round(p.py * sy);
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius + 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+      });
+
+      // Draw markers
+      rg.points.forEach(p => {
+        const cx = Math.round(p.px * sx);
+        const cy = Math.round(p.py * sy);
+        const isDuplicate = posCounts[posKey(p)] > 1;
+        const col = isDuplicate ? { fill:'#2563a8', text:'#fff' } : getRatingColor(p.rssi);
+
+        // Circle fill
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = col.fill;
+        ctx.fill();
+
+        // White border
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Point number
+        const fontSize = radius > 12 ? Math.floor(radius * 0.85) : 10;
+        ctx.font = `bold ${fontSize}px 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = col.text;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(p.pt), cx, cy);
+      });
+
+      // Stats summary
+      const counts = {Excellent:0,'Very Good':0,Good:0,Fair:0,Poor:0};
+      rg.points.forEach(p => {
+        const[r]=ratingOf(p.rssi); counts[r]++;
+      });
+      const dups = Object.values(posCounts).filter(v=>v>1).length;
+      statusEl.textContent =
+        `${rg.points.length} points plotted · Scale ${sx.toFixed(2)}x / ${sy.toFixed(2)}x · ` +
+        `Exc:${counts.Excellent} VGood:${counts['Very Good']} Good:${counts.Good} ` +
+        `Fair:${counts.Fair} Poor:${counts.Poor}` +
+        (dups > 0 ? ` · ${dups} duplicate position${dups>1?'s':''} (shown blue)` : '');
+
+      // Reset use-button if re-rendering
+      el('rg-btn-ann-use').textContent = '✓ Use Annotated Map in Report';
+      el('rg-btn-ann-use').classList.remove('used');
+    };
+    img.src = rg.mapDataUrl;
+  }
+
+  function showAnnotateCard() {
+    if (rg.points.length && rg.mapDataUrl) {
+      el('rg-annotate-card').classList.add('visible');
+      renderAnnotation();
+    }
+  }
+
+  el('rg-btn-rerender').addEventListener('click', renderAnnotation);
+
+  // Use annotated map in report
+  el('rg-btn-ann-use').addEventListener('click', () => {
+    const canvas = el('rg-annotate-canvas');
+    if (!canvas.width) { renderAnnotation(); return; }
+    rg.mapDataUrl = canvas.toDataURL('image/png');
+    const btn = el('rg-btn-ann-use');
+    btn.textContent = '✓ Annotated map will be used in report';
+    btn.classList.add('used');
+  });
+
+  // Download annotated image
+  el('rg-btn-ann-dl').addEventListener('click', () => {
+    const canvas = el('rg-annotate-canvas');
+    if (!canvas.width) return;
+    const site = el('rg-site').value.replace(/\s+/g,'_') || 'survey';
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `${site}_annotated_map.png`;
+    a.click();
+  });
+
+  // Also trigger annotation when map image loads (done via checkReady)
+
+})(); // end report module
+</script>
+</body>
+</html>
