@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
 <Document>
-	<name>SIU Borders FY24 Update.kml</name>
-	<StyleMap id="msn_ylw-pushpin005">
+	<name>SIU Borders FY25 Update 2026-03-16.kml</name>
+	<StyleMap id="msn_ylw-pushpin0050">
 		<Pair>
 			<key>normal</key>
 			<styleUrl>#sn_ylw-pushpin006</styleUrl>
@@ -12,7 +12,7 @@
 			<styleUrl>#sh_ylw-pushpin204</styleUrl>
 		</Pair>
 	</StyleMap>
-	<StyleMap id="msn_ylw-pushpin103">
+	<StyleMap id="msn_ylw-pushpin10310">
 		<Pair>
 			<key>normal</key>
 			<styleUrl>#sn_ylw-pushpin12</styleUrl>
@@ -22,7 +22,17 @@
 			<styleUrl>#sh_ylw-pushpin004</styleUrl>
 		</Pair>
 	</StyleMap>
-	<StyleMap id="msn_ylw-pushpin213">
+	<StyleMap id="msn_ylw-pushpin1032">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#sn_ylw-pushpin124</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#sh_ylw-pushpin0040</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="msn_ylw-pushpin2130">
 		<Pair>
 			<key>normal</key>
 			<styleUrl>#sn_ylw-pushpin216</styleUrl>
@@ -32,7 +42,27 @@
 			<styleUrl>#sh_ylw-pushpin103</styleUrl>
 		</Pair>
 	</StyleMap>
-	<StyleMap id="msn_ylw-pushpin8">
+	<StyleMap id="msn_ylw-pushpin44">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#sn_ylw-pushpin56</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#sh_ylw-pushpin47</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="msn_ylw-pushpin47">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#sn_ylw-pushpin59</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#sh_ylw-pushpin49</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="msn_ylw-pushpin86">
 		<Pair>
 			<key>normal</key>
 			<styleUrl>#sn_ylw-pushpin38</styleUrl>
@@ -43,6 +73,19 @@
 		</Pair>
 	</StyleMap>
 	<Style id="sh_ylw-pushpin004">
+		<IconStyle>
+			<scale>1.3</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+		<LineStyle>
+			<color>ff0055ff</color>
+			<width>3</width>
+		</LineStyle>
+	</Style>
+	<Style id="sh_ylw-pushpin0040">
 		<IconStyle>
 			<scale>1.3</scale>
 			<Icon>
@@ -79,6 +122,32 @@
 		<LineStyle>
 			<color>ffff55ff</color>
 			<width>3</width>
+		</LineStyle>
+	</Style>
+	<Style id="sh_ylw-pushpin47">
+		<IconStyle>
+			<scale>1.3</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+		<LineStyle>
+			<color>ff0055ff</color>
+			<width>3</width>
+		</LineStyle>
+	</Style>
+	<Style id="sh_ylw-pushpin49">
+		<IconStyle>
+			<scale>1.3</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+		<LineStyle>
+			<color>ff0055ff</color>
+			<width>3.5</width>
 		</LineStyle>
 	</Style>
 	<Style id="sh_ylw-pushpin70">
@@ -120,6 +189,19 @@
 			<width>3</width>
 		</LineStyle>
 	</Style>
+	<Style id="sn_ylw-pushpin124">
+		<IconStyle>
+			<scale>1.1</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+		<LineStyle>
+			<color>ff0055ff</color>
+			<width>3</width>
+		</LineStyle>
+	</Style>
 	<Style id="sn_ylw-pushpin216">
 		<IconStyle>
 			<scale>1.1</scale>
@@ -146,41 +228,68 @@
 			<width>3.5</width>
 		</LineStyle>
 	</Style>
+	<Style id="sn_ylw-pushpin56">
+		<IconStyle>
+			<scale>1.1</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+		<LineStyle>
+			<color>ff0055ff</color>
+			<width>3</width>
+		</LineStyle>
+	</Style>
+	<Style id="sn_ylw-pushpin59">
+		<IconStyle>
+			<scale>1.1</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+		<LineStyle>
+			<color>ff0055ff</color>
+			<width>3.5</width>
+		</LineStyle>
+	</Style>
 	<Folder>
-		<name>SIU Borders FY24 Update</name>
+		<name>SIU Borders FY25 Update</name>
+		<open>1</open>
 		<Placemark>
 			<name>Canberra Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin8</styleUrl>
+			<styleUrl>#msn_ylw-pushpin47</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
-					147.4085877896796,-33.86698450808476,0 149.1232658936112,-33.9610670906649,0 149.1662076706388,-33.95590462274465,0 149.2761535201635,-33.85565896297459,0 150.007635500456,-34.39278630980631,0 150.1144686961884,-35.31618692764615,0 150.3912467106209,-35.49640345803734,0 
+					147.4085877896796,-33.86698450808476,0 149.1232658936112,-33.9610670906649,0 149.1662076706388,-33.95590462274465,0 149.2761535201635,-33.85565896297459,0 150.007635500456,-34.39278630980631,0 150.1144686961884,-35.31618692764615,0 150.3925997363048,-35.4672129806686,0 150.0079140963192,-37.50143074276228,0 
 				</coordinates>
 			</LineString>
 		</Placemark>
 		<Placemark>
 			<name>SYD-NWC New Border 2 FY24</name>
-			<styleUrl>#msn_ylw-pushpin213</styleUrl>
+			<styleUrl>#msn_ylw-pushpin44</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
-					150.3040826712507,-32.90156596891384,0 151.1576443778217,-33.40281352028857,0 151.1046886490495,-33.50583524527523,0 151.3298345473663,-33.58342281732449,0 
+					150.4410231176071,-32.95660158304315,0 151.0901403918315,-33.38020559027061,0 151.1046886490495,-33.50583524527523,0 151.3679232442758,-33.59204651259383,0 151.3433975132697,-33.96988971485877,0 150.9822938806314,-34.33560781460226,0 150.8380241038396,-35.05286496863594,0 150.7586167508786,-35.17974864903243,0 150.3874632609173,-35.4613383371845,0 
 				</coordinates>
 			</LineString>
 		</Placemark>
 		<Placemark>
 			<name>SYD-NWC New Border 1 FY24</name>
-			<styleUrl>#msn_ylw-pushpin213</styleUrl>
+			<styleUrl>#msn_ylw-pushpin44</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
-					146.5582443343528,-32.56131033238937,0 150.6951486178422,-32.53127935498586,0 150.3046291266964,-32.90190717288709,0 
+					146.5586993445469,-32.56159241663222,0 148.8825272569216,-32.60200947603401,0 150.713443348325,-32.549201071489,0 150.4442992594299,-32.95658613125711,0 
 				</coordinates>
 			</LineString>
 		</Placemark>
 		<Placemark>
 			<name>Victoria Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin8</styleUrl>
+			<styleUrl>#msn_ylw-pushpin86</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
@@ -189,28 +298,28 @@
 			</LineString>
 		</Placemark>
 		<Placemark>
-			<name>Newcastle West Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin103</styleUrl>
+			<name>Newcastle West Border FY26</name>
+			<styleUrl>#msn_ylw-pushpin1032</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
-					144.6770314904275,-32.62223869936699,0 144.2040058419057,-29.0475826131126,0 
+					144.6770314904275,-32.62223869936699,0 144.3709296479937,-30.10207736627677,0 143.484461235484,-30.02527163592255,0 143.2912388767808,-29.05963965954436,0 
 				</coordinates>
 			</LineString>
 		</Placemark>
 		<Placemark>
 			<name>South QLD Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin103</styleUrl>
+			<styleUrl>#msn_ylw-pushpin44</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
-					153.2615704723962,-29.93592879232373,0 149.6093368170813,-29.87111657599339,0 148.4906969523323,-28.99513632392638,0 141.0000180610608,-28.99960568545521,0 140.9610311247331,-25.95831647224741,0 152.4945012583478,-24.9867064997948,0 
+					151.3679403386357,-33.59311306697912,0 151.9534194496192,-32.96032177089319,0 152.5598261066843,-32.46697811342819,0 152.9814377806698,-31.58720952477786,0 153.3162003127887,-29.8619508716045,0 149.6093368170813,-29.87111657599339,0 148.4906969523323,-28.99513632392638,0 141.0000180610608,-28.99960568545521,0 140.9610311247331,-25.95831647224741,0 152.4945012583478,-24.9867064997948,0 
 				</coordinates>
 			</LineString>
 		</Placemark>
 		<Placemark>
 			<name>North QLD Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin103</styleUrl>
+			<styleUrl>#msn_ylw-pushpin10310</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
@@ -220,7 +329,7 @@
 		</Placemark>
 		<Placemark>
 			<name>Rocky North Fuzzy Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin005</styleUrl>
+			<styleUrl>#msn_ylw-pushpin0050</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
@@ -230,7 +339,7 @@
 		</Placemark>
 		<Placemark>
 			<name>Adelaide Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin213</styleUrl>
+			<styleUrl>#msn_ylw-pushpin2130</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
@@ -240,7 +349,7 @@
 		</Placemark>
 		<Placemark>
 			<name>Darwin Border FY24</name>
-			<styleUrl>#msn_ylw-pushpin213</styleUrl>
+			<styleUrl>#msn_ylw-pushpin2130</styleUrl>
 			<LineString>
 				<tessellate>1</tessellate>
 				<coordinates>
