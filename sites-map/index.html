@@ -2332,6 +2332,32 @@ button:disabled {
                 <button class="modal-close" onclick="closeImportModal()">✕</button>
             </div>
             
+            <!-- ── SIU Site List Quick Import ──────────────────────── -->
+            <div style="margin-bottom:20px; background:rgba(33,150,243,0.08); border:1px solid rgba(33,150,243,0.3); border-radius:8px; padding:15px;">
+                <label style="color:#64B5F6; font-weight:600; font-size:13px; display:block; margin-bottom:10px;">
+                    🔗 SIU Site List — Quick Import
+                </label>
+
+                <!-- Option 1: file picker pre-labelled for OneDrive path -->
+                <div style="margin-bottom:10px; padding:10px; background:rgba(76,175,80,0.08); border:1px solid rgba(76,175,80,0.3); border-radius:6px;">
+                    <div style="font-size:11px; color:#81C784; font-weight:600; margin-bottom:4px;">⚡ Select SIU Site List.xlsx from OneDrive</div>
+                    <div style="font-size:11px; color:#888; margin-bottom:8px;">
+                        OneDrive - BAI Communications › BAIBA – Service Integrity Eastern Area - PSN Daily Reports
+                    </div>
+                    <input type="file" id="siuFileInput" accept=".xlsx,.xls"
+                        onchange="handleSIUFileSelect(event)"
+                        style="width:100%; padding:8px; background:rgba(255,255,255,0.05);
+                               border:1px solid rgba(76,175,80,0.4); border-radius:4px;
+                               color:#fff; font-size:12px; cursor:pointer;">
+                </div>
+
+                <div id="sharepointStatus" style="margin-top:8px; font-size:12px; color:#aaa; min-height:16px;"></div>
+                <div style="margin-top:8px; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:11px; color:#777; line-height:1.6;">
+                    <strong style="color:#FFB74D;">ℹ️ Mapped columns:</strong>
+                    Site name · Site code (GRN) · Site status · PSN region · Supported by · Latitude · Longitude
+                </div>
+            </div>
+
             <!-- ── Other File Import ────────────────────────────────── -->
             <!-- ── Local File Import ────────────────────────────────── -->
             <div style="margin-bottom: 20px;">
@@ -10466,84 +10492,40 @@ function unhighlightContractorTerritory(contractor) {
 // =====================================================
 // COMPLETE INITIALIZATION FUNCTION
 // =====================================================
+async function loadSitesFromJSON() {
+    try {
+        const response = await fetch('sites.json');
+        if (!response.ok) return false;
+        const data = await response.json();
+        const loaded = Array.isArray(data) ? data : (data.sites || []);
+        if (loaded.length === 0) return false;
+        sites.length = 0;
+        sites.push(...loaded.map(site => ({
+            name: site.name || '',
+            grnId: site.grnId || '',
+            siteNumber: site.siteNumber || '0',
+            status: site.status || 'Operationally Accepted',
+            region: site.region || 'Unknown',
+            contractor: site.contractor || 'Unassigned',
+            siuCallout: site.siuCallout || '',
+            lat: parseFloat(site.lat) || 0,
+            lng: parseFloat(site.lng) || 0
+        })));
+        console.log(`✓ Loaded ${sites.length} sites from sites.json`);
+        return true;
+    } catch (e) {
+        console.log('No sites.json found, falling back to IndexedDB');
+        return false;
+    }
+}
+
 // =====================================================
 // COMPLETE FIXED INITIALIZATION FUNCTION
 // =====================================================
-async function loadSitesFromJSON() {
-    try {
-        const response = await fetch('sites.json');
-        if (!response.ok) return false;
-        const data = await response.json();
-        const loaded = Array.isArray(data) ? data : (data.sites || []);
-        if (loaded.length === 0) return false;
-        sites.length = 0;
-        sites.push(...loaded.map(site => ({
-            name: site.name || '',
-            grnId: site.grnId || '',
-            siteNumber: site.siteNumber || '0',
-            status: site.status || 'Operationally Accepted',
-            region: site.region || 'Unknown',
-            contractor: site.contractor || 'Unassigned',
-            siuCallout: site.siuCallout || '',
-            lat: parseFloat(site.lat) || 0,
-            lng: parseFloat(site.lng) || 0
-        })));
-        console.log(`✓ Loaded ${sites.length} sites from sites.json`);
-        return true;
-    } catch (e) {
-        console.log('No sites.json found, falling back to IndexedDB');
-        return false;
-    }
-}
-async function loadSitesFromJSON() {
-    try {
-        const response = await fetch('sites.json');
-        if (!response.ok) return false;
-        const data = await response.json();
-        const loaded = Array.isArray(data) ? data : (data.sites || []);
-        if (loaded.length === 0) return false;
-        sites.length = 0;
-        sites.push(...loaded.map(site => ({
-            name: site.name || '',
-            grnId: site.grnId || '',
-            siteNumber: site.siteNumber || '0',
-            status: site.status || 'Operationally Accepted',
-            region: site.region || 'Unknown',
-            contractor: site.contractor || 'Unassigned',
-            siuCallout: site.siuCallout || '',
-            lat: parseFloat(site.lat) || 0,
-            lng: parseFloat(site.lng) || 0
-        })));
-        console.log(`✓ Loaded ${sites.length} sites from sites.json`);
-        return true;
-    } catch (e) {
-        console.log('No sites.json found, falling back to IndexedDB');
-        return false;
-    }
-}		
+
 async function init() {
     try {
-// STEP 3: Load Data from Storage
-console.log('STEP 3: Loading saved data...');
-try {
-    // Try sites.json first (GitHub Pages / shared deployment)
-    const jsonLoaded = await loadSitesFromJSON();
-    if (!jsonLoaded) {
-        // Fall back to IndexedDB (local use)
-        const savedData = await loadFromIndexedDB();
-        if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
-            sites.length = 0;
-            sites.push(...savedData.sites);
-            console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
-        } else {
-            console.log('ℹ No saved data found');
-        }
-    }
-} catch (e) {
-    console.warn('⚠ Error loading data:', e);
-}
-		
-		console.log('═══════════════════════════════════════════════════════════');
+        console.log('═══════════════════════════════════════════════════════════');
         console.log('🚀 BAI SITES MAP - INITIALIZATION START');
         console.log('═══════════════════════════════════════════════════════════');
         
@@ -10572,16 +10554,21 @@ try {
         // STEP 3: Load Data from Storage
         console.log('STEP 3: Loading saved data...');
         try {
-            const savedData = await loadFromIndexedDB();
-            if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
-                sites.length = 0;
-                sites.push(...savedData.sites);
-                console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
-            } else {
-                console.log('ℹ No saved data found, using test sites');
+            // Try sites.json first (GitHub Pages / shared deployment)
+            const jsonLoaded = await loadSitesFromJSON();
+            if (!jsonLoaded) {
+                // Fall back to IndexedDB (local use)
+                const savedData = await loadFromIndexedDB();
+                if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
+                    sites.length = 0;
+                    sites.push(...savedData.sites);
+                    console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
+                } else {
+                    console.log('ℹ No saved data found');
+                }
             }
         } catch (e) {
-            console.warn('âš  Error loading from IndexedDB:', e);
+            console.warn('⚠ Error loading data:', e);
         }
         
         // STEP 4: Verify Map Instance
@@ -11495,6 +11482,9 @@ if (document.readyState === 'loading') {
         // Step 3: Setup listeners
         setupDimensionListeners();
         
+        // Auto-load KML layer from repo if present
+        await loadKMLFromFile('layers.kml');
+
         console.log('✅ All systems initialized successfully');
         console.log('📊 Stats:', {
             sites: sites.length,
@@ -11699,6 +11689,54 @@ function initKMLSystem() {
 // =====================================================
 // KML FILE UPLOAD & PARSING
 // =====================================================
+
+async function loadKMLFromFile(filename) {
+    try {
+        const response = await fetch(filename);
+        if (!response.ok) {
+            console.log(`No ${filename} found, skipping KML auto-load`);
+            return false;
+        }
+
+        const kmlText = await response.text();
+        const parser = new DOMParser();
+        const kmlDoc = parser.parseFromString(kmlText, 'text/xml');
+
+        if (kmlDoc.documentElement.nodeName === 'parsererror') {
+            console.warn('Auto-load KML: invalid file format');
+            return false;
+        }
+
+        const layerName = filename.replace('.kml', '').substring(0, 30);
+        const features = parseKMLDocument(kmlDoc);
+
+        if (features.length === 0) {
+            console.warn('Auto-load KML: no features found');
+            return false;
+        }
+
+        const layerId = `kml_${kmlLayerCounter++}`;
+        kmlLayers[layerId] = {
+            id: layerId,
+            name: layerName,
+            features: features,
+            visible: true,
+            color: generateRandomColor(),
+            featureCount: features.length,
+            file: filename,
+            uploadDate: new Date().toISOString()
+        };
+
+        renderKMLLayer(layerId);
+        updateKMLLegend();
+        console.log(`✓ Auto-loaded ${features.length} features from ${filename}`);
+        return true;
+
+    } catch (e) {
+        console.log(`KML auto-load skipped: ${e.message}`);
+        return false;
+    }
+}
 
 function handleKMLFileSelect(event) {
     const file = event.target.files[0];
