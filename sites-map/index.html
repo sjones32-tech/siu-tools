@@ -10495,7 +10495,32 @@ async function loadSitesFromJSON() {
         return false;
     }
 }
-		
+async function loadSitesFromJSON() {
+    try {
+        const response = await fetch('sites.json');
+        if (!response.ok) return false;
+        const data = await response.json();
+        const loaded = Array.isArray(data) ? data : (data.sites || []);
+        if (loaded.length === 0) return false;
+        sites.length = 0;
+        sites.push(...loaded.map(site => ({
+            name: site.name || '',
+            grnId: site.grnId || '',
+            siteNumber: site.siteNumber || '0',
+            status: site.status || 'Operationally Accepted',
+            region: site.region || 'Unknown',
+            contractor: site.contractor || 'Unassigned',
+            siuCallout: site.siuCallout || '',
+            lat: parseFloat(site.lat) || 0,
+            lng: parseFloat(site.lng) || 0
+        })));
+        console.log(`✓ Loaded ${sites.length} sites from sites.json`);
+        return true;
+    } catch (e) {
+        console.log('No sites.json found, falling back to IndexedDB');
+        return false;
+    }
+}		
 async function init() {
     try {
 // STEP 3: Load Data from Storage
