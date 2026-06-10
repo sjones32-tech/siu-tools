@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAI Key Tag Label Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .page-logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        label.instruction-text {
+            font-size: 11px;
+            font-weight: normal;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Print styles */
+        .label-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .label-container.show {
+            display: block;
+        }
+
+        .key-label {
+            margin: 2mm;
+            padding: 1mm;
+            border: 1px solid #000;
+            text-align: center;
+            background-color: white;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-shrink: 0;
+            flex-grow: 0;
+        }
+
+        .logo-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2mm;
+            margin-bottom: 0.5mm;
+        }
+
+        .logo-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-image {
+            object-fit: contain;
+        }
+
+        .key-label h2 {
+            margin: 0;
+            font-weight: bold;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .barcode-container {
+            margin: 0.5mm 0;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .barcode-container svg {
+            max-width: 100%;
+            max-height: 100%;
+            height: auto;
+            width: auto;
+        }
+
+        .key-info {
+            margin: 0;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .back-label {
+            margin: 2mm;
+            padding: 2mm;
+            border: 1px solid #000;
+            text-align: center;
+            background-color: white;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 1mm;
+            flex-shrink: 0;
+            flex-grow: 0;
+        }
+
+        .back-label-line {
+            margin: 0;
+            font-weight: normal;
+            line-height: 1.3;
+            word-wrap: break-word;
+            max-width: 95%;
+        }
+
+        .label-sheet {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-content: flex-start;
+            gap: 0;
+            width: 210mm;
+            max-width: 210mm;
+            min-width: 210mm;
+            margin: 20px auto;
+            padding: 5mm;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        .label-sheet.back-sheet {
+            margin-top: 30px;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+                margin: 0;
+            }
+
+            .container {
+                display: none !important;
+            }
+
+            .preview-section {
+                display: none !important;
+            }
+
+            .label-container {
+                display: block !important;
+                page-break-after: avoid;
+            }
+
+            .label-sheet {
+                width: 210mm !important;
+                max-width: 210mm !important;
+                margin: 0 !important;
+                padding: 5mm !important;
+                box-shadow: none !important;
+                page-break-after: avoid;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                justify-content: flex-start !important;
+                align-content: flex-start !important;
+                box-sizing: border-box;
+            }
+
+            .label-sheet:not(:last-child) {
+                page-break-after: always;
+            }
+
+            .label-sheet:last-child {
+                page-break-after: avoid;
+            }
+
+            .key-label, .back-label {
+                margin: 1mm !important;
+                padding: 1mm !important;
+                border: 1px solid #000 !important;
+                page-break-inside: avoid;
+                flex-shrink: 0;
+                box-sizing: border-box;
+            }
+
+            .key-label {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+            }
+
+            .back-label {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
+
+            .logo-image {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .barcode-svg {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            @page {
+                size: A4;
+                margin: 0;
+            }
+        }
+
+        .preview-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+        }
+
+        .preview-section h3 {
+            text-align: center;
+            color: #555;
+        }
+
+        .queue-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .queue-item-info {
+            flex: 1;
+        }
+
+        .queue-item-info strong {
+            color: #007bff;
+        }
+
+        .queue-item-remove {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .queue-item-remove:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <div class="logo-wrapper">
+                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" alt="Logo" class="page-logo" onerror="this.style.display='none'">
+                <!-- If logo fails to load, it will be hidden -->
+            </div>
+            BAI Key Tag Label Generator
+        </h1>
+        
+        <div class="input-group">
+            <label for="headerText">Header Text:</label>
+            <input type="text" id="headerText" placeholder="Enter header text" value="BAI KEY">
+        </div>
+
+        <div class="input-group">
+            <label for="keyCode">BAI Key Number:</label>
+            <input type="text" id="keyCode" placeholder="Enter key code (e.g., BAI001, K123, etc.)" value="BAI001">
+        </div>
+
+        <div class="input-group">
+            <label for="additionalText">Additional Info (Optional):</label>
+            <input type="text" id="additionalText" placeholder="Location, cabinet, etc.">
+			<label for="additionalText">1.For Cyberkey use Serial Number IE. K120007CA</label>
+			<label for="additionalText">2.For unique keys use Key Part Number - Serial number IE. 5AB434N2B8-494</label>
+			<label for="additionalText">3.For undefined keys use XXXX-AAAA-SSS-EE</label>
+			<label for="additionalText" class="instruction-text">.  .XXXX = Site number</label>
+			<label for="additionalText" class="instruction-text">.  .AAAA = Building </label>
+			<label for="additionalText" class="instruction-text">.  .SSSS = Cabinet</label>
+			<label for="additionalText" class="instruction-text">.  .EE   = Sequence number</label>
+        </div>
+
+        <div class="input-group">
+            <label>Label Size:</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="labelWidth" placeholder="Width" value="37" style="width: 80px;" min="10" max="100"> mm
+                <span style="margin: 0 5px;">×</span>
+                <input type="number" id="labelHeight" placeholder="Height" value="21" style="width: 80px;" min="10" max="100"> mm
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="numCopies">Number of Copies:</label>
+            <input type="number" id="numCopies" placeholder="Number of labels to print" value="1" min="1" max="100" style="width: 100px;">
+        </div>
+
+        <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border-left: 4px solid #007bff;">
+            <h3 style="margin-top: 0; color: #007bff;">Back Label (Optional)</h3>
+            
+            <div class="input-group">
+                <label for="backLine1">Line 1:</label>
+                <input type="text" id="backLine1" placeholder="Enter text for line 1">
+            </div>
+
+            <div class="input-group">
+                <label for="backLine2">Line 2:</label>
+                <input type="text" id="backLine2" placeholder="Enter text for line 2">
+            </div>
+
+            <div class="input-group">
+                <label for="backLine3">Line 3:</label>
+                <input type="text" id="backLine3" placeholder="Enter text for line 3">
+            </div>
+        </div>
+
+        <button onclick="addToQueue()" style="background-color: #28a745;">➕ Add to Queue</button>
+        <button onclick="generateAllLabels()" style="background-color: #007bff;">📄 Generate Preview</button>
+        <button onclick="printLabels()" style="background-color: #6c757d;">🖨️ Print All Labels</button>
+        <button onclick="clearQueue()" style="background-color: #dc3545;">🗑️ Clear Queue</button>
+
+        <div id="queueSection" style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; display: none;">
+            <h3 style="margin-top: 0; color: #007bff;">Label Queue (<span id="queueCount">0</span>)</h3>
+            <div id="queueList" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+
+        <div class="preview-section">
+            <h3>Preview (A4 Sheet Layout):</h3>
+            <div id="previewContainer"></div>
+        </div>
+    </div>
+
+    <div class="label-container" id="labelContainer"></div>
+
+    <script>
+        // Queue to store label configurations
+        let labelQueue = [];
+        let queueIdCounter = 0;
+
+        function addToQueue() {
+            const keyCode = document.getElementById('keyCode').value.trim() || 'BAI001';
+            const headerText = document.getElementById('headerText').value.trim() || 'BAI KEY';
+            const labelWidth = parseInt(document.getElementById('labelWidth').value) || 37;
+            const labelHeight = parseInt(document.getElementById('labelHeight').value) || 21;
+            const numCopies = parseInt(document.getElementById('numCopies').value) || 1;
+            const additionalText = document.getElementById('additionalText').value.trim();
+            const backLine1 = document.getElementById('backLine1').value.trim();
+            const backLine2 = document.getElementById('backLine2').value.trim();
+            const backLine3 = document.getElementById('backLine3').value.trim();
+
+            // Validate key code
+            const cleanKeyCode = keyCode.replace(/[^a-zA-Z0-9\-]/g, '');
+            if (cleanKeyCode.length === 0) {
+                alert('Please enter a valid key code (letters, numbers, and hyphens only)');
+                return;
+            }
+
+            // Add to queue
+            const queueItem = {
+                id: queueIdCounter++,
+                keyCode: cleanKeyCode,
+                headerText: headerText,
+                labelWidth: labelWidth,
+                labelHeight: labelHeight,
+                numCopies: numCopies,
+                additionalText: additionalText,
+                backLine1: backLine1,
+                backLine2: backLine2,
+                backLine3: backLine3,
+                hasBackLabel: !!(backLine1 || backLine2 || backLine3)
+            };
+
+            labelQueue.push(queueItem);
+            updateQueueDisplay();
+            
+            // Show success feedback
+            alert(`Added ${numCopies} label(s) for "${cleanKeyCode}" to queue`);
+        }
+
+        function removeFromQueue(id) {
+            labelQueue = labelQueue.filter(item => item.id !== id);
+            updateQueueDisplay();
+            generateAllLabels();
+        }
+
+        function clearQueue() {
+            if (labelQueue.length === 0) {
+                alert('Queue is already empty');
+                return;
+            }
+            if (confirm('Are you sure you want to clear all labels from the queue?')) {
+                labelQueue = [];
+                updateQueueDisplay();
+                document.getElementById('labelContainer').innerHTML = '';
+                document.getElementById('previewContainer').innerHTML = '';
+            }
+        }
+
+        function printLabels() {
+            const labelContainer = document.getElementById('labelContainer');
+            
+            if (!labelContainer.innerHTML || labelContainer.innerHTML.trim() === '') {
+                alert('Please generate labels first by clicking "Generate Preview"');
+                return;
+            }
+
+            // Check if barcodes are rendered
+            const allBarcodes = labelContainer.querySelectorAll('.barcode-svg');
+            let barcodesReady = true;
+            
+            allBarcodes.forEach(svg => {
+                if (!svg.querySelector('rect') && !svg.querySelector('g')) {
+                    barcodesReady = false;
+                }
+            });
+
+            if (!barcodesReady) {
+                alert('Barcodes are still loading. Please wait a moment and try again.');
+                return;
+            }
+
+            // Small delay to ensure everything is rendered
+            setTimeout(() => {
+                window.print();
+            }, 100);
+        }
+
+        function updateQueueDisplay() {
+            const queueSection = document.getElementById('queueSection');
+            const queueList = document.getElementById('queueList');
+            const queueCount = document.getElementById('queueCount');
+
+            if (labelQueue.length === 0) {
+                queueSection.style.display = 'none';
+                return;
+            }
+
+            queueSection.style.display = 'block';
+            queueCount.textContent = labelQueue.length;
+
+            let html = '';
+            labelQueue.forEach(item => {
+                html += `
+                    <div class="queue-item">
+                        <div class="queue-item-info">
+                            <strong>${item.headerText}</strong>: ${item.keyCode} 
+                            (${item.numCopies} copies, ${item.labelWidth}×${item.labelHeight}mm)
+                            ${item.hasBackLabel ? ' [Has back label]' : ''}
+                        </div>
+                        <button class="queue-item-remove" onclick="removeFromQueue(${item.id})">Remove</button>
+                    </div>
+                `;
+            });
+
+            queueList.innerHTML = html;
+        }
+
+        function generateAllLabels() {
+            if (labelQueue.length === 0) {
+                alert('Queue is empty. Add labels to the queue first.');
+                return;
+            }
+
+            let allFrontLabels = '';
+            let allBackLabels = '';
+            let barcodeConfigs = [];
+
+            labelQueue.forEach((item, queueIndex) => {
+                const headerFontSize = Math.max(6, Math.min(10, item.labelHeight * 0.4));
+                const keyInfoFontSize = Math.max(5, Math.min(8, item.labelHeight * 0.3));
+                const backLabelFontSize = Math.max(5, Math.min(8, item.labelHeight * 0.35));
+                // Adjusted barcode height to better fit small labels
+                const barcodeHeight = Math.max(15, Math.min(40, item.labelHeight * 1.2));
+                const logoSize = Math.max(3, Math.min(5, item.labelHeight * 0.2));
+                // Adjusted barcode width for better scanning
+                const barcodeWidth = Math.max(0.8, Math.min(1.5, item.labelWidth / 35));
+
+                for (let i = 0; i < item.numCopies; i++) {
+                    const uniqueId = `q${queueIndex}-c${i}`;
+                    
+                    // Front label
+                    allFrontLabels += `
+                        <div class="key-label" style="width: ${item.labelWidth}mm !important; height: ${item.labelHeight}mm !important;">
+                            <div class="logo-header">
+                                <div class="logo-wrapper">
+                                    <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" alt="Logo" class="logo-image" style="width: ${logoSize}mm; height: ${logoSize}mm;" onerror="this.style.display='none'">
+                                </div>
+                                <h2 style="font-size: ${headerFontSize}pt;">${item.headerText}</h2>
+                            </div>
+                            <div class="barcode-container">
+                                <svg class="barcode-svg" data-barcode-id="${uniqueId}"></svg>
+                            </div>
+                            <div class="key-info" style="font-size: ${keyInfoFontSize}pt;">${item.keyCode}</div>
+                            ${item.additionalText ? `<div class="key-info" style="font-size: ${keyInfoFontSize * 0.8}pt; margin-top: 0.5mm;">${item.additionalText}</div>` : ''}
+                        </div>
+                    `;
+
+                    // Store barcode config
+                    barcodeConfigs.push({
+                        id: uniqueId,
+                        code: item.keyCode,
+                        width: barcodeWidth,
+                        height: barcodeHeight
+                    });
+
+                    // Back label
+                    if (item.hasBackLabel) {
+                        allBackLabels += `
+                            <div class="back-label" style="width: ${item.labelWidth}mm !important; height: ${item.labelHeight}mm !important;">
+                                ${item.backLine1 ? `<div class="back-label-line" style="font-size: ${backLabelFontSize}pt;">${item.backLine1}</div>` : ''}
+                                ${item.backLine2 ? `<div class="back-label-line" style="font-size: ${backLabelFontSize}pt;">${item.backLine2}</div>` : ''}
+                                ${item.backLine3 ? `<div class="back-label-line" style="font-size: ${backLabelFontSize}pt;">${item.backLine3}</div>` : ''}
+                            </div>
+                        `;
+                    }
+                }
+            });
+
+            // Wrap in sheets
+            const hasBackLabels = allBackLabels.length > 0;
+            const fullHTML = `
+                <div class="label-sheet">
+                    ${allFrontLabels}
+                </div>
+                ${hasBackLabels ? `<div class="label-sheet back-sheet">${allBackLabels}</div>` : ''}
+            `;
+
+            // Update both print container and preview
+            document.getElementById('labelContainer').innerHTML = fullHTML;
+            document.getElementById('previewContainer').innerHTML = fullHTML;
+            document.getElementById('labelContainer').classList.add('show');
+
+            // Generate all barcodes - need to wait for DOM to be fully ready
+            setTimeout(() => {
+                // Check if JsBarcode is available
+                if (typeof JsBarcode === 'undefined') {
+                    console.error('JsBarcode library not loaded!');
+                    alert('Barcode library not loaded. Please refresh the page.');
+                    return;
+                }
+                
+                console.log('Generating', barcodeConfigs.length, 'barcodes...');
+                
+                // Generate barcodes in both print container and preview container
+                const allBarcodes = document.querySelectorAll('.barcode-svg');
+                console.log('Found', allBarcodes.length, 'barcode SVG elements');
+                
+                let successCount = 0;
+                allBarcodes.forEach(barcodeSvg => {
+                    const barcodeId = barcodeSvg.getAttribute('data-barcode-id');
+                    const config = barcodeConfigs.find(c => c.id === barcodeId);
+                    
+                    if (config && barcodeSvg) {
+                        try {
+                            JsBarcode(barcodeSvg, config.code, {
+                                format: "CODE128",
+                                width: config.width,
+                                height: config.height,
+                                displayValue: false,
+                                margin: 1
+                            });
+                            successCount++;
+                        } catch (e) {
+                            console.error('Barcode error for', barcodeId, ':', e);
+                        }
+                    } else {
+                        console.warn('Missing config or element for:', barcodeId);
+                    }
+                });
+                
+                console.log('Successfully generated', successCount, 'barcodes');
+                
+                if (successCount === 0 && barcodeConfigs.length > 0) {
+                    alert('Warning: Barcodes failed to generate. Please check console for errors.');
+                }
+            }, 300);
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            updateQueueDisplay();
+        };
+    </script>
+</body>
+</html>
