@@ -756,7 +756,11 @@ footer {
   display: grid; grid-template-columns: 1fr 240px; gap: 14px; align-items: start;
 }
 #map-leaflet {
-  height: 480px; border-radius: 5px; border: 1px solid var(--rule); z-index: 0;
+  aspect-ratio: 640 / 420;
+  width: 100%;
+  border-radius: 5px;
+  border: 1px solid var(--rule);
+  z-index: 0;
 }
 .map-side-panel {
   display: flex; flex-direction: column; gap: 10px;
@@ -878,7 +882,7 @@ footer {
           <input type="file" id="file-input" accept="image/*,.jpg,.jpeg,.png,.gif,.bmp">
           <span class="dz-icon">🖼️</span>
           <div class="dz-title">Drop image here or click to browse</div>
-          <div class="dz-hint">JPG recommended · PNG supported · max ~2 MB for reliable S412E loading</div>
+          <div class="dz-hint">JPG or PNG · optimal: <strong style="font-family:var(--mono);color:var(--ink-mid);">640 × 420 px</strong> (S412E native grid) · max 2 MB</div>
           <div class="dz-status" id="dz-status"></div>
         </div>
 
@@ -1560,7 +1564,7 @@ footer {
           <div class="instr-step">
             <div class="instr-num">2</div>
             <div class="instr-text">
-              <strong>Resize if needed.</strong> Images over 2 MB may cause slow loading on the S412E. Use Windows Paint, Photos, or an online resizer to reduce to approximately 800–1200px wide before converting.
+              <strong>Resize to the S412E native grid.</strong> The S412E map display area is <strong>640 × 420 px</strong> — this is the optimal image size per Anritsu documentation. Images up to 1280 × 840 px (2×) are fine and give slightly sharper rendering; anything over ~2 MB will load slowly on the instrument. Use Windows Paint or an online resizer to crop/resize before converting.
             </div>
           </div>
           <div class="instr-step">
@@ -1758,8 +1762,8 @@ footer {
             <div class="map-capture-note">
               <strong>Workflow:</strong><br>
               1. Zoom to your survey area<br>
-              2. Click to set <strong>Ref 1</strong> (top-left corner of the area) and <strong>Ref 2</strong> (bottom-right)<br>
-              3. Press <strong>Capture Map &amp; Transfer</strong> — the visible map is captured automatically and loaded as the floor plan image with Outdoor GPS mode enabled<br>
+              2. Click to set <strong>Ref 1</strong> (top-left) and <strong>Ref 2</strong> (bottom-right)<br>
+              3. Press <strong>Capture &amp; Transfer</strong> — the map is resampled to <strong>640 × 420 px</strong> (S412E native grid) and loaded as the floor plan with GPS refs in Outdoor mode<br>
               4. Click <strong>Convert to .map</strong> and copy to USB
             </div>
 
@@ -2583,39 +2587,44 @@ img{max-width:100%;max-height:110mm;object-fit:contain;border:.5pt solid #d0d5de
     document.getElementById('btn-map-transfer').disabled = !(ref1 && ref2);
   }
 
-  // ── Composite visible tiles onto a canvas ──
+  // S412E native map display area — per Anritsu LMR Master documentation:
+  // "The image size should be close to 640 x 420 pixels (approximately a 1.6:1 ratio)"
+  const S412E_W = 640, S412E_H = 420;
+
+  // ── Composite visible tiles → resample to 640 × 420 ──
   async function captureMapCanvas() {
     const container = document.getElementById('map-leaflet');
     const size      = map.getSize();
-    const canvas    = document.createElement('canvas');
-    canvas.width    = size.x;
-    canvas.height   = size.y;
-    const ctx       = canvas.getContext('2d');
 
-    // OSM default background colour (avoids white gaps between tiles)
-    ctx.fillStyle = '#f0ede5';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Stage 1: composite tiles at screen resolution
+    const raw    = document.createElement('canvas');
+    raw.width    = size.x;
+    raw.height   = size.y;
+    const rawCtx = raw.getContext('2d');
+    rawCtx.fillStyle = '#f0ede5';
+    rawCtx.fillRect(0, 0, raw.width, raw.height);
 
-    const cRect = container.getBoundingClientRect();
-
-    // getBoundingClientRect handles all Leaflet CSS transforms automatically
+    const cRect  = container.getBoundingClientRect();
     const loaded = container.querySelectorAll('.leaflet-tile-loaded');
-    if (!loaded.length) throw new Error('no tiles loaded yet — wait and try again');
+    if (!loaded.length) throw new Error('no tiles loaded yet — wait a moment and try again');
 
     for (const tile of loaded) {
       const tr = tile.getBoundingClientRect();
       const x  = Math.round(tr.left - cRect.left);
       const y  = Math.round(tr.top  - cRect.top);
-      try {
-        ctx.drawImage(tile, x, y, Math.round(tr.width), Math.round(tr.height));
-      } catch (e) {
-        // Tainted — crossOrigin wasn't set before tile was cached.
-        // Force a fresh load (rare: only happens if the map was opened
-        // before this version of the tool was saved).
-        throw new Error('canvas tainted — reload the page and try again');
-      }
+      try { rawCtx.drawImage(tile, x, y, Math.round(tr.width), Math.round(tr.height)); }
+      catch (e) { throw new Error('canvas tainted — reload the page (Ctrl+Shift+R) and try again'); }
     }
-    return canvas;
+
+    // Stage 2: resample to exactly 640 × 420 — the S412E native map grid
+    const out    = document.createElement('canvas');
+    out.width    = S412E_W;
+    out.height   = S412E_H;
+    const outCtx = out.getContext('2d');
+    outCtx.imageSmoothingEnabled = true;
+    outCtx.imageSmoothingQuality = 'high';
+    outCtx.drawImage(raw, 0, 0, S412E_W, S412E_H);
+    return out;
   }
 
   // ── Load captured image into the Map Converter ──
