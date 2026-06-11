@@ -1748,19 +1748,19 @@ footer {
 
             <!-- Transfer button -->
             <button class="btn-map-transfer" id="btn-map-transfer" disabled>
-              → Transfer to Converter
+              📸 Capture Map &amp; Transfer
             </button>
             <div style="font-size:10px;color:var(--ink-faint);font-family:var(--mono);line-height:1.6;margin-top:-4px;">
-              Sends Ref 1 &amp; 2 to the outdoor GPS fields in the Map Converter tab and switches to Outdoor mode.
+              Captures the current map view, loads it as the floor plan, and sends GPS refs to the Map Converter in Outdoor mode.
             </div>
 
-            <!-- Capture instructions -->
+            <!-- Capture note -->
             <div class="map-capture-note">
-              <strong>To use this map as a floor plan:</strong><br>
-              1. Navigate and zoom to your survey area<br>
-              2. Set Ref 1 (top-left) and Ref 2 (bottom-right)<br>
-              3. Use <strong>Snipping Tool</strong> to capture the map area<br>
-              4. Upload the screenshot + transfer GPS refs to the <strong>Map Converter</strong> tab with Outdoor mode
+              <strong>Workflow:</strong><br>
+              1. Zoom to your survey area<br>
+              2. Click to set <strong>Ref 1</strong> (top-left corner of the area) and <strong>Ref 2</strong> (bottom-right)<br>
+              3. Press <strong>Capture Map &amp; Transfer</strong> — the visible map is captured automatically and loaded as the floor plan image with Outdoor GPS mode enabled<br>
+              4. Click <strong>Convert to .map</strong> and copy to USB
             </div>
 
           </div>
@@ -2505,6 +2505,7 @@ img{max-width:100%;max-height:110mm;object-fit:contain;border:.5pt solid #d0d5de
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
       maxZoom: 19,
+      crossOrigin: 'anonymous',   // required for canvas.toDataURL() export
     }).addTo(map);
 
     // Mousemove — show cursor coords
@@ -2582,30 +2583,130 @@ img{max-width:100%;max-height:110mm;object-fit:contain;border:.5pt solid #d0d5de
     document.getElementById('btn-map-transfer').disabled = !(ref1 && ref2);
   }
 
-  // ── Transfer to Converter ──
-  document.getElementById('btn-map-transfer').addEventListener('click', () => {
+  // ── Composite visible tiles onto a canvas ──
+  async function captureMapCanvas() {
+    const container = document.getElementById('map-leaflet');
+    const size      = map.getSize();
+    const canvas    = document.createElement('canvas');
+    canvas.width    = size.x;
+    canvas.height   = size.y;
+    const ctx       = canvas.getContext('2d');
+
+    // OSM default background colour (avoids white gaps between tiles)
+    ctx.fillStyle = '#f0ede5';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const cRect = container.getBoundingClientRect();
+
+    // getBoundingClientRect handles all Leaflet CSS transforms automatically
+    const loaded = container.querySelectorAll('.leaflet-tile-loaded');
+    if (!loaded.length) throw new Error('no tiles loaded yet — wait and try again');
+
+    for (const tile of loaded) {
+      const tr = tile.getBoundingClientRect();
+      const x  = Math.round(tr.left - cRect.left);
+      const y  = Math.round(tr.top  - cRect.top);
+      try {
+        ctx.drawImage(tile, x, y, Math.round(tr.width), Math.round(tr.height));
+      } catch (e) {
+        // Tainted — crossOrigin wasn't set before tile was cached.
+        // Force a fresh load (rare: only happens if the map was opened
+        // before this version of the tool was saved).
+        throw new Error('canvas tainted — reload the page and try again');
+      }
+    }
+    return canvas;
+  }
+
+  // ── Load captured image into the Map Converter ──
+  function loadCapturedImageIntoConverter(dataUrl, filename) {
+    // data URL → ArrayBuffer
+    const b64   = dataUrl.split(',')[1];
+    const bin   = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    fileBuffer = bytes.buffer;
+
+    // Preview image
+    const preImg = document.getElementById('preview-img');
+    preImg.src = dataUrl;
+    preImg.onload = () => {
+      document.getElementById('meta-dims').textContent =
+        `${preImg.naturalWidth} × ${preImg.naturalHeight} px`;
+    };
+    document.getElementById('preview-panel').classList.add('visible');
+
+    // Metadata panel
+    const kb = (fileBuffer.byteLength / 1024).toFixed(1);
+    document.getElementById('meta-name').textContent      = filename;
+    document.getElementById('meta-type').textContent      = 'image/jpeg';
+    document.getElementById('meta-size').textContent      = `${kb} KB`;
+    document.getElementById('meta-size').className        = 'meta-value ok';
+    document.getElementById('meta-compat').textContent    = '✓ Ready';
+    document.getElementById('meta-compat').className      = 'meta-value ok';
+    document.getElementById('dz-status').textContent      = `✓ ${filename}  (${kb} KB)`;
+    document.getElementById('dz-status').className        = 'dz-status ok';
+    document.getElementById('dz').classList.remove('warn');
+    document.getElementById('dz').classList.add('loaded');
+
+    // Default output filename
+    const nameInput = document.getElementById('out-name');
+    if (!nameInput.value) nameInput.value = filename.replace(/\.[^.]+$/, '');
+
+    document.getElementById('btn-convert').disabled = false;
+  }
+
+  // ── Capture Map & Transfer to Converter ──
+  document.getElementById('btn-map-transfer').addEventListener('click', async () => {
     if (!ref1 || !ref2) return;
 
-    // Populate GPS fields in converter
+    const btn = document.getElementById('btn-map-transfer');
+    btn.textContent = '⏳ Capturing…';
+    btn.disabled    = true;
+
+    // 1 — Capture the visible map tiles
+    let mapCaptured = false;
+    try {
+      const canvas  = await captureMapCanvas();
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const stamp   = new Date().toISOString().slice(0, 10);
+      const center  = map.getCenter();
+      const zoom    = map.getZoom();
+      const fname   = `OSM_${stamp}_z${zoom}.jpg`;
+      loadCapturedImageIntoConverter(dataUrl, fname);
+      mapCaptured = true;
+    } catch (e) {
+      // Non-fatal — GPS coords still transfer; show a brief warning
+      console.warn('Map capture:', e.message);
+      const note = document.querySelector('.map-capture-note');
+      if (note) {
+        note.innerHTML = `<strong style="color:var(--amber);">⚠ Capture failed:</strong> ${e.message}<br><br>GPS coordinates transferred. Upload a screenshot manually if needed.`;
+      }
+    }
+
+    // 2 — Populate GPS calibration fields
     document.getElementById('pt1-lat').value = ref1.lat.toFixed(6);
     document.getElementById('pt1-lon').value = ref1.lng.toFixed(6);
     document.getElementById('pt2-lat').value = ref2.lat.toFixed(6);
     document.getElementById('pt2-lon').value = ref2.lng.toFixed(6);
-
-    // Switch to outdoor mode
     if (typeof setMode === 'function') setMode('outdoor');
 
-    // Switch to converter tab
+    // 3 — Switch to Map Converter tab
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.querySelector('[data-tab="convert"]').classList.add('active');
     document.getElementById('tab-convert').classList.add('active');
 
-    // Scroll to GPS section
+    btn.textContent = '📸 Capture Map & Transfer';
+    btn.disabled    = false;
+
+    // 4 — Scroll to the right section
     setTimeout(() => {
-      const gps = document.getElementById('gps-section');
-      if (gps) gps.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
+      const target = mapCaptured
+        ? document.getElementById('preview-panel')   // show the captured image
+        : document.getElementById('gps-section');    // fallback: show GPS fields
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
   });
 
   // ── Quick preset buttons ──
