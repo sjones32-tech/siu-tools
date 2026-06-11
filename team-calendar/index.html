@@ -133,8 +133,12 @@ tr:hover{background:#f9fafb}
         <div class="controls">
           <label class="fl" style="margin:0">Route date:</label>
           <input type="date" class="inp" id="mapDate" onchange="drawRoutes()">
+          <select class="sel" id="routeStyle" onchange="drawRoutes()">
+            <option value="straight">Straight Lines (fast)</option>
+            <option value="road">🛣️ Road Routes (OSRM)</option>
+          </select>
           <button class="btn btn-p" onclick="drawRoutes()">Show Routes</button>
-          <span class="note">Lines = home → jobs → home per technician.</span>
+          <span class="note">Lines = home → jobs → home per technician. Road mode fetches real driving geometry + distance/time from OSRM (needs internet; run locally if blocked in preview). Click a route line for actual km and driving minutes.</span>
         </div>
         <div id="map"></div>
       </div>
