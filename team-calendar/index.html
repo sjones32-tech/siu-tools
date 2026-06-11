@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAI Dispatch Engine 2026</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#1e40af;--primary-dark:#1e3a8a;--ok:#10b981;--danger:#ef4444;--warn:#f59e0b;--info:#3b82f6;--purple:#9333ea;--dark:#1f2937;--gray:#6b7280;--light:#f3f4f6;--shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#1e3a8a,#312e81);min-height:100vh;color:var(--dark)}
+.container{max-width:1700px;margin:0 auto;padding:16px}
+.header{background:rgba(255,255,255,.97);border-radius:14px;padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.header h1{font-size:22px;color:var(--primary-dark);display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--info));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px}
+.btn{padding:8px 14px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn-p{background:var(--primary);color:#fff}.btn-s{background:#fff;color:var(--dark);border:2px solid var(--light)}.btn-g{background:var(--ok);color:#fff}.btn-w{background:var(--warn);color:#fff}.btn-d{background:var(--danger);color:#fff}.btn-i{background:var(--info);color:#fff}
+.btn-sm{padding:4px 8px;font-size:11px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:rgba(255,255,255,.97);border-radius:10px;padding:14px;box-shadow:var(--shadow);border-top:3px solid var(--primary)}
+.stat .v{font-size:26px;font-weight:700;color:var(--primary)}
+.stat .l{font-size:11px;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.stat .d{font-size:11px;color:var(--gray);margin-top:4px}
+.tabs-box{background:rgba(255,255,255,.97);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.tabs{display:flex;background:var(--light);padding:4px;gap:4px;overflow-x:auto}
+.tab{padding:10px 16px;background:transparent;border:none;cursor:pointer;font-weight:600;color:var(--gray);border-radius:8px;font-size:13px;white-space:nowrap}
+.tab.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab-content{padding:18px;min-height:560px}
+.panel{display:none}.panel.active{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.sel,.inp{padding:8px 12px;border:2px solid var(--light);border-radius:8px;font-size:13px;background:#fff}
+.sel:focus,.inp:focus{outline:none;border-color:var(--primary)}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+th{background:var(--light);padding:9px;text-align:left;font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:.4px}
+td{padding:9px;border-top:1px solid var(--light);font-size:13px}
+tr:hover{background:#f9fafb}
+.badge{display:inline-block;padding:3px 8px;border-radius:5px;font-weight:600;font-size:11px}
+.bg-pm{background:#dbeafe;color:#1e40af}.bg-fault{background:#fee2e2;color:#dc2626}
+.bg-planned{background:#e0e7ff;color:#4338ca}.bg-dispatched{background:#fef3c7;color:#b45309}.bg-inprogress{background:#ccfbf1;color:#0f766e}.bg-completed{background:#d1fae5;color:#065f46}.bg-preempted{background:#fce7f3;color:#be185d}
+.bg-metro{background:#dbeafe;color:#1d4ed8}.bg-regional{background:#fef3c7;color:#b45309}
+.bg-day{background:#fef9c3;color:#a16207}.bg-night{background:#e0e7ff;color:#4338ca}
+.board{display:grid;grid-template-columns:140px repeat(7,1fr);gap:1px;background:var(--light);border-radius:10px;overflow:hidden;overflow-x:auto}
+.bh{background:var(--primary);color:#fff;padding:8px;font-size:11px;font-weight:600;text-align:center}
+.bh.hol{background:#9d174d}
+.btech{background:#fff;padding:8px;font-weight:600;font-size:12px;display:flex;flex-direction:column;gap:3px}
+.bcell{background:#fff;padding:4px;min-height:90px;display:flex;flex-direction:column;gap:3px;transition:background .15s}
+.bcell.wknd{background:#fafafa}
+.bcell.hol{background:#fdf2f8}
+.bcell.dragover{background:#dbeafe;outline:2px dashed var(--primary);outline-offset:-2px}
+.job{border-radius:5px;padding:4px 6px;font-size:10px;cursor:grab;color:#fff;line-height:1.3}
+.job:active{cursor:grabbing}
+.job:hover{filter:brightness(1.1)}
+.j-pm{background:linear-gradient(135deg,#3b82f6,#6366f1)}
+.j-fault{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.j-preempted{background:#f3f4f6;color:#9d174d;border:1px dashed #be185d;text-decoration:line-through}
+.j-completed{opacity:.55;cursor:default}
+.j-flag{box-shadow:0 0 0 2px var(--warn)}
+#map{height:580px;border-radius:10px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000}
+.modal.show{display:flex;align-items:center;justify-content:center}
+.mc{background:#fff;border-radius:14px;padding:24px;max-width:620px;width:92%;max-height:85vh;overflow-y:auto}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.mh h2{font-size:19px}
+.mx{background:none;border:none;font-size:22px;color:var(--gray);cursor:pointer}
+.fg{margin-bottom:12px}
+.fl{display:block;margin-bottom:5px;font-weight:600;font-size:12px}
+.fi{width:100%;padding:8px 10px;border:2px solid var(--light);border-radius:8px;font-size:13px}
+.alertbox{position:fixed;top:14px;right:14px;z-index:3000;display:flex;flex-direction:column;gap:8px;max-width:380px}
+.alert{padding:11px 16px;border-radius:8px;font-size:13px;box-shadow:var(--shadow);white-space:pre-line;animation:fade .25s}
+.a-ok{background:#d1fae5;color:#065f46}.a-err{background:#fee2e2;color:#991b1b}.a-info{background:#dbeafe;color:#1e3a8a}.a-warn{background:#fef3c7;color:#92400e}
+.impact{background:var(--light);border-radius:10px;padding:14px;margin-top:12px}
+.impact-item{background:#fff;border-radius:7px;padding:8px 10px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.bar-wrap{height:18px;background:var(--light);border-radius:9px;overflow:hidden;display:flex}
+.note{font-size:11px;color:var(--gray);margin:8px 0}
+@media(max-width:768px){.board{grid-template-columns:100px repeat(7,minmax(110px,1fr))}}
+</style>
+</head>
+<body>
+<div class="alertbox" id="alerts"></div>
+<div class="container">
+  <div class="header">
+    <h1><div class="logo">BAI</div>Dispatch Engine v2 <span style="font-size:12px;color:var(--gray);font-weight:500">Workbook I/O · WO Tracking · Drag-Drop · NSW Holidays</span></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-d" onclick="openFaultModal()">🚨 Insert Fault</button>
+      <button class="btn btn-g" onclick="runAutoSchedule()">⚙️ Generate Schedule</button>
+      <button class="btn btn-i" onclick="downloadWorkbook()">📘 Excel Workbook</button>
+      <button class="btn btn-w" onclick="importAll()">📤 Import Workbook</button>
+      <button class="btn btn-s" onclick="exportAll()">💾 JSON Backup</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="v" id="stSites">0</div><div class="l">Sites</div><div class="d" id="stSitesD">-</div></div>
+    <div class="stat"><div class="v" id="stTechs">0</div><div class="l">Technicians</div><div class="d" id="stTechsD">-</div></div>
+    <div class="stat"><div class="v" id="stPlanned">0</div><div class="l">Planned PMs</div><div class="d">4-month horizon</div></div>
+    <div class="stat"><div class="v" id="stFaults">0</div><div class="l">Active Faults</div><div class="d">Dispatched / In Progress</div></div>
+    <div class="stat"><div class="v" id="stPreempt">0</div><div class="l">Preempted</div><div class="d">Awaiting reschedule</div></div>
+    <div class="stat"><div class="v" id="stRatio">-</div><div class="l">Wrench : Travel</div><div class="d" id="stRatioD">-</div></div>
+    <div class="stat" style="border-top-color:var(--warn)"><div class="v" id="stFlags">0</div><div class="l">Approval Flags</div><div class="d">Fatigue / compliance</div></div>
+  </div>
+
+  <div class="tabs-box">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(event,'board')">📋 Dispatch Board</button>
+      <button class="tab" onclick="switchTab(event,'maptab')">🗺️ Routes Map</button>
+      <button class="tab" onclick="switchTab(event,'ledger')">📒 Schedule Ledger</button>
+      <button class="tab" onclick="switchTab(event,'analytics')">📈 Analytics</button>
+      <button class="tab" onclick="switchTab(event,'sites')">📍 Sites</button>
+      <button class="tab" onclick="switchTab(event,'techs')">👷 Technicians</button>
+      <button class="tab" onclick="switchTab(event,'tasks')">🧰 Task Master</button>
+      <button class="tab" onclick="switchTab(event,'holidays')">📆 Holidays</button>
+    </div>
+    <div class="tab-content">
+
+      <!-- DISPATCH BOARD -->
+      <div id="board" class="panel active">
+        <div class="controls">
+          <button class="btn btn-s" onclick="shiftWeek(-7)">◀ Prev</button>
+          <input type="date" class="inp" id="weekStart" onchange="renderBoard()">
+          <button class="btn btn-s" onclick="shiftWeek(7)">Next ▶</button>
+          <button class="btn btn-s" onclick="goToday()">Today</button>
+          <span class="note">🟦 PM · 🟥 Fault · ⚠️ needs approval · dashed = preempted · pink columns = NSW public holiday.<br><strong>Drag any job</strong> to another tech/day to reschedule — the engine re-validates geofence, skills, shift, fatigue and recalculates travel.</span>
+        </div>
+        <div class="board" id="boardGrid"></div>
+      </div>
+
+      <!-- MAP -->
+      <div id="maptab" class="panel">
+        <div class="controls">
+          <label class="fl" style="margin:0">Route date:</label>
+          <input type="date" class="inp" id="mapDate" onchange="drawRoutes()">
+          <button class="btn btn-p" onclick="drawRoutes()">Show Routes</button>
+          <span class="note">Lines = home → jobs → home per technician.</span>
+        </div>
+        <div id="map"></div>
+      </div>
+
+      <!-- LEDGER -->
+      <div id="ledger" class="panel">
+        <div class="controls">
+          <select class="sel" id="ledgerFilter" onchange="renderLedger()">
+            <option value="">All statuses</option>
+            <option>Planned</option><option>Dispatched</option><option>In Progress</option><option>Completed</option><option>Preempted</option>
+          </select>
+          <select class="sel" id="ledgerType" onchange="renderLedger()">
+            <option value="">All types</option><option>PM</option><option>Fault</option>
+          </select>
+          <button class="btn btn-w" onclick="exportLedgerExcel()">📥 Export Schedule (Excel)</button>
+          <button class="btn btn-d btn-sm" onclick="clearLedger()">Clear Ledger</button>
+        </div>
+        <table><thead><tr><th>WO #</th><th>Date / Time</th><th>Site</th><th>Task</th><th>Type</th><th>Tech(s)</th><th>Travel</th><th>Status</th><th>Flags</th><th>Actions</th></tr></thead>
+        <tbody id="ledgerBody"></tbody></table>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div id="analytics" class="panel">
+        <div class="card-grid" id="analyticsGrid"></div>
+      </div>
+
+      <!-- SITES -->
+      <div id="sites" class="panel">
+        <div class="controls">
+          <input class="inp" placeholder="Search..." style="flex:1;min-width:160px" onkeyup="renderSites(this.value)">
+          <button class="btn btn-p" onclick="openSiteModal()">➕ Add Site</button>
+          <button class="btn btn-g" onclick="importEntity('sites')">📤 Import Sheet</button>
+          <button class="btn btn-w" onclick="exportEntity('sites')">📥 Export Sheet</button>
+        </div>
+        <table><thead><tr><th>Site No</th><th>Name</th><th>Class</th><th>Region</th><th>Svc Count</th><th>PM Months</th><th>Actions</th></tr></thead>
+        <tbody id="sitesBody"></tbody></table>
+      </div>
+
+      <!-- TECHS -->
+      <div id="techs" class="panel">
+        <div class="controls">
+          <button class="btn btn-p" onclick="openTechModal()">➕ Add Technician</button>
+          <button class="btn btn-g" onclick="importEntity('technicians')">📤 Import Sheet</button>
+          <button class="btn btn-w" onclick="exportEntity('technicians')">📥 Export Sheet</button>
+        </div>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Region</th><th>Shift</th><th>Skills</th><th>Home (GPS)</th><th>Actions</th></tr></thead>
+        <tbody id="techsBody"></tbody></table>
+      </div>
+
+      <!-- TASK MASTER -->
+      <div id="tasks" class="panel">
+        <div class="controls">
+          <button class="btn btn-p" onclick="openTaskModal()">➕ Add Task</button>
+          <span class="note">Duration = base + (per-service × site service count). Personnel ≥2 locks two qualified techs to one slot.</span>
+        </div>
+        <table><thead><tr><th>Task ID</th><th>Name</th><th>Type</th><th>Base (min)</th><th>Per-Svc (min)</th><th>Personnel</th><th>Shift Req</th><th>Skills Req</th><th>Actions</th></tr></thead>
+        <tbody id="tasksBody"></tbody></table>
+      </div>
+
+      <!-- HOLIDAYS -->
+      <div id="holidays" class="panel">
+        <div class="controls">
+          <input type="date" class="inp" id="hDate">
+          <input class="inp" id="hName" placeholder="Holiday name">
+          <button class="btn btn-p" onclick="addHoliday()">➕ Add Holiday</button>
+          <span class="note">Auto-scheduler and preemption rescheduling skip these dates. Fault insertion is still allowed (emergencies).</span>
+        </div>
+        <table><thead><tr><th>Date</th><th>Day</th><th>Name</th><th>Actions</th></tr></thead>
+        <tbody id="holidaysBody"></tbody></table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FAULT MODAL -->
+<div class="modal" id="faultModal"><div class="mc">
+  <div class="mh"><h2>🚨 Insert Fault Repair</h2><button class="mx" onclick="hide('faultModal')">&times;</button></div>
+  <div class="fg"><label class="fl">Site</label><select class="fi" id="fSite"></select></div>
+  <div class="fg"><label class="fl">Fault Task</label><select class="fi" id="fTask"></select></div>
+  <div class="fg"><label class="fl">Insert Into</label><select class="fi" id="fDay"><option value="0">Today</option><option value="1">Tomorrow</option></select></div>
+  <div class="fg"><label class="fl">ServiceNow WO # (optional)</label><input class="fi" id="fWO" placeholder="WO0012345"></div>
+  <button class="btn btn-i" style="width:100%" onclick="previewFault()">🔍 Preview Impact (What-If)</button>
+  <div id="faultImpact"></div>
+</div></div>
+
+<!-- JOB MODAL -->
+<div class="modal" id="jobModal"><div class="mc">
+  <div class="mh"><h2>Job Details</h2><button class="mx" onclick="hide('jobModal')">&times;</button></div>
+  <div id="jobDetail"></div>
+</div></div>
+
+<!-- SITE MODAL -->
+<div class="modal" id="siteModal"><div class="mc">
+  <div class="mh"><h2 id="siteModalTitle">Add Site</h2><button class="mx" onclick="hide('siteModal')">&times;</button></div>
+  <form onsubmit="saveSite(event)">
+    <div class="fg"><label class="fl">Site No</label><input class="fi" id="sNo" required></div>
+    <div class="fg"><label class="fl">Site Name</label><input class="fi" id="sName" required></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label class="fl">Class</label><select class="fi" id="sClass"><option>A+</option><option>A</option><option>B</option><option>C</option><option selected>D</option><option>E</option><option>R</option></select></div>
+      <div class="fg"><label class="fl">Region</label><select class="fi" id="sRegion"><option>Metro</option><option>Regional</option></select></div>
+      <div class="fg"><label class="fl">Latitude</label><input class="fi" type="number" step="0.0001" id="sLat" required></div>
+      <div class="fg"><label class="fl">Longitude</label><input class="fi" type="number" step="0.0001" id="sLng" required></div>
+    </div>
+    <div class="fg"><label class="fl">Service Count (equipment items)</label><input class="fi" type="number" id="sSvc" value="1" min="1"></div>
+    <div class="fg"><label class="fl">PM Months (e.g. Mar:Quarterly, Sep:Annually)</label><input class="fi" id="sMonths" placeholder="Mar:Quarterly, Sep:Annually"></div>
+    <button class="btn btn-p" style="width:100%">💾 Save</button>
+  </form>
+</div></div>
+
+<!-- TECH MODAL -->
+<div class="modal" id="techModal"><div class="mc">
+  <div class="mh"><h2 id="techModalTitle">Add Technician</h2><button class="mx" onclick="hide('techModal')">&times;</button></div>
+  <form onsubmit="saveTech(event)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label class="fl">ID</label><input class="fi" id="tId" required></div>
+      <div class="fg"><label class="fl">Name</label><input class="fi" id="tName" required></div>
+      <div class="fg"><label class="fl">Region</label><select class="fi" id="tRegion"><option>Metro</option><option>Regional</option></select></div>
+      <div class="fg"><label class="fl">Shift</label><select class="fi" id="tShift"><option>Day</option><option>Night</option></select></div>
+      <div class="fg"><label class="fl">Home Lat</label><input class="fi" type="number" step="0.0001" id="tLat" required></div>
+      <div class="fg"><label class="fl">Home Lng</label><input class="fi" type="number" step="0.0001" id="tLng" required></div>
+    </div>
+    <div class="fg"><label class="fl">Skills (comma separated)</label><input class="fi" id="tSkills" placeholder="EPP, ACU, Electrical"></div>
+    <button class="btn btn-p" style="width:100%">💾 Save</button>
+  </form>
+</div></div>
+
+<!-- TASK MODAL -->
+<div class="modal" id="taskModal"><div class="mc">
+  <div class="mh"><h2 id="taskModalTitle">Add Task</h2><button class="mx" onclick="hide('taskModal')">&times;</button></div>
+  <form onsubmit="saveTask(event)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label class="fl">Task ID</label><input class="fi" id="kId" required></div>
+      <div class="fg"><label class="fl">Name</label><input class="fi" id="kName" required></div>
+      <div class="fg"><label class="fl">Type</label><select class="fi" id="kType"><option>PM</option><option>Fault</option></select></div>
+      <div class="fg"><label class="fl">Base Duration (min)</label><input class="fi" type="number" id="kBase" value="120" required></div>
+      <div class="fg"><label class="fl">Per-Service (min)</label><input class="fi" type="number" id="kPer" value="0"></div>
+      <div class="fg"><label class="fl">Personnel Required</label><input class="fi" type="number" id="kCrew" value="1" min="1" max="3"></div>
+      <div class="fg"><label class="fl">Shift Requirement</label><select class="fi" id="kShift"><option>Any</option><option>Day</option><option>Night</option></select></div>
+      <div class="fg"><label class="fl">Required Skills</label><input class="fi" id="kSkills" placeholder="EPP"></div>
+    </div>
+    <button class="btn btn-p" style="width:100%">💾 Save</button>
+  </form>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ============ DATABASE ============ */
+const DB_NAME='BAI_Dispatch_DB', DB_VER=2;
+let db=null, map=null, mapLayers=[];
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const STORES={sites:'siteNo',technicians:'id',tasks:'taskId',ledger:'scheduleId',settings:'key',holidays:'date'};
+
+function initDB(){return new Promise((res,rej)=>{
+  const r=indexedDB.open(DB_NAME,DB_VER);
+  r.onerror=()=>rej(r.error);
+  r.onsuccess=()=>{db=r.result;res(db)};
+  r.onupgradeneeded=e=>{const d=e.target.result;
+    Object.entries(STORES).forEach(([s,k])=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:k});});};
+})}
+function dbPut(s,x){return new Promise((res,rej)=>{const r=db.transaction([s],'readwrite').objectStore(s).put(x);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function dbAll(s){return new Promise(res=>{const r=db.transaction([s],'readonly').objectStore(s).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([])})}
+function dbGet(s,k){return new Promise(res=>{const r=db.transaction([s],'readonly').objectStore(s).get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null)})}
+function dbDel(s,k){return new Promise(res=>{const r=db.transaction([s],'readwrite').objectStore(s).delete(k);r.onsuccess=()=>res();r.onerror=()=>res()})}
+function dbClear(s){return new Promise(res=>{const r=db.transaction([s],'readwrite').objectStore(s).clear();r.onsuccess=()=>res();r.onerror=()=>res()})}
+
+/* ============ GEO + TIME ============ */
+function kmBetween(a,b){const R=6371,p=Math.PI/180;const dLa=(b.lat-a.lat)*p,dLn=(b.lng-a.lng)*p;
+  const x=Math.sin(dLa/2)**2+Math.cos(a.lat*p)*Math.cos(b.lat*p)*Math.sin(dLn/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x))*1.3;}
+function travelMin(a,b){return Math.max(5,Math.round(kmBetween(a,b)/50*60));}
+function pad(n){return String(n).padStart(2,'0')}
+function dateStr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function iso(d){return dateStr(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes())}
+function hm(s){return s.slice(11,16)}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function todayStr(){return dateStr(new Date())}
+
+let HOLIDAY_SET=new Set();
+async function loadHolidaySet(){HOLIDAY_SET=new Set((await dbAll('holidays')).map(h=>h.date));}
+function isHoliday(ds){return HOLIDAY_SET.has(ds);}
+function isWorkday(ds){const dow=new Date(ds+'T12:00').getDay();return dow!==0&&dow!==6&&!isHoliday(ds);}
+
+/* ============ CORE SCHEDULING LOGIC ============ */
+function jobDuration(task,site){return Math.round((task.baseDuration||60)+(task.perServiceMin||0)*((site.serviceCount||1)));}
+function geofenceOK(tech,site){return !(tech.region==='Regional'&&site.region==='Metro');}
+function geofencePenalty(tech,site){return (tech.region==='Metro'&&site.region==='Regional')?60:0;}
+function skillsOK(tech,task){if(!task.requiredSkills)return true;
+  const ts=(tech.skills||'').toLowerCase().split(',').map(s=>s.trim());
+  return task.requiredSkills.toLowerCase().split(',').map(s=>s.trim()).filter(Boolean).every(s=>ts.includes(s));}
+function shiftOK(tech,task){return !task.shiftReq||task.shiftReq==='Any'||tech.shift===task.shiftReq;}
+function shiftWindow(tech,ds){
+  if(tech.shift==='Night'){const st=new Date(ds+'T19:00');return{start:st,end:new Date(st.getTime()+10*3600e3)};}
+  return{start:new Date(ds+'T07:00'),end:new Date(ds+'T17:00')};}
+const MAX_WORK_MIN=9*60, MIN_REST_MIN=9*60;
+
+function techDayJobs(ledger,techId,ds){
+  return ledger.filter(j=>(j.techIds||[]).includes(techId)&&j.start.startsWith(ds)&&!['Preempted','Cancelled'].includes(j.status))
+    .sort((a,b)=>a.start.localeCompare(b.start));}
+
+function restOK(ledger,techId,ds,pStart,pEnd){
+  const prev=techDayJobs(ledger,techId,dateStr(addDays(new Date(ds),-1)));
+  if(prev.length&&(pStart-new Date(prev[prev.length-1].end))/60000<MIN_REST_MIN)return false;
+  const next=techDayJobs(ledger,techId,dateStr(addDays(new Date(ds),1)));
+  if(next.length&&(new Date(next[0].start)-pEnd)/60000<MIN_REST_MIN)return false;
+  return true;}
+
+function tryPlace(tech,site,task,ds,ledger,siteMap){
+  if(!geofenceOK(tech,site)||!skillsOK(tech,task)||!shiftOK(tech,task))return null;
+  const win=shiftWindow(tech,ds);
+  const jobs=techDayJobs(ledger,tech.id,ds);
+  const dur=jobDuration(task,site);
+  let prevLoc={lat:tech.lat,lng:tech.lng}, t=win.start;
+  if(jobs.length){const last=jobs[jobs.length-1];const ls=siteMap[last.siteId];
+    if(ls)prevLoc={lat:ls.lat,lng:ls.lng}; t=new Date(last.end);}
+  const tv=travelMin(prevLoc,{lat:site.lat,lng:site.lng});
+  const start=new Date(t.getTime()+tv*60000);
+  const end=new Date(start.getTime()+dur*60000);
+  const ret=travelMin({lat:site.lat,lng:site.lng},{lat:tech.lat,lng:tech.lng});
+  const dayEnd=new Date(end.getTime()+ret*60000);
+  if(dayEnd>win.end)return null;
+  let dayStart;
+  if(jobs.length){const fs=siteMap[jobs[0].siteId];
+    const dep=new Date(new Date(jobs[0].start).getTime()-travelMin({lat:tech.lat,lng:tech.lng},fs?{lat:fs.lat,lng:fs.lng}:prevLoc)*60000);
+    dayStart=dep<win.start?win.start:dep;}
+  else dayStart=new Date(start.getTime()-tv*60000);
+  const span=(dayEnd-dayStart)/60000;
+  const needsApproval=span>MAX_WORK_MIN;
+  if(!restOK(ledger,tech.id,ds,start,end))return null;
+  return{tech,start,end,travel:tv,ret,score:tv+geofencePenalty(tech,site)+(needsApproval?500:0),needsApproval,span:Math.round(span)};}
+
+function findPartner(primary,site,task,ds,start,end,ledger,techs){
+  for(const t of techs){
+    if(t.id===primary.id)continue;
+    if(!geofenceOK(t,site)||!skillsOK(t,task)||!shiftOK(t,task))continue;
+    const win=shiftWindow(t,ds);
+    if(start<win.start||end>win.end)continue;
+    const clash=techDayJobs(ledger,t.id,ds).some(j=>!(new Date(j.end)<=start||new Date(j.start)>=end));
+    if(!clash)return t;}
+  return null;}
+
+let seq=1;
+function newId(p){return p+'-'+Date.now().toString(36)+'-'+(seq++);}
+
+function labelToTaskId(label,tasks){
+  const l=(label||'').toLowerCase();
+  const find=id=>tasks.find(t=>t.taskId===id)?id:null;
+  if(l.includes('acu'))return find('PM-ACU')||'PM-QTR';
+  if(l.includes('epp')||l.includes('nova'))return find('PM-EPP')||'PM-QTR';
+  if(l.includes('6 month'))return find('PM-6M')||'PM-QTR';
+  if(l.includes('annual'))return find('PM-ANN')||'PM-QTR';
+  return 'PM-QTR';}
+
+/* ============ AUTO SCHEDULER ============ */
+async function runAutoSchedule(){
+  toast('Generating 4-month schedule...','info');
+  await loadHolidaySet();
+  const [sites,techs,tasks]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('tasks')]);
+  let ledger=await dbAll('ledger');
+  if(!sites.length||!techs.length){toast('Need sites and technicians first','err');return;}
+  for(const j of ledger.filter(j=>j.type==='PM'&&j.status==='Planned'))await dbDel('ledger',j.scheduleId);
+  ledger=await dbAll('ledger');
+  const siteMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  const taskMap=Object.fromEntries(tasks.map(t=>[t.taskId,t]));
+  const today=new Date();
+  const jobsToPlace=[];
+  for(let m=0;m<4;m++){
+    const dt=new Date(today.getFullYear(),today.getMonth()+m,1);
+    const mName=MONTHS[dt.getMonth()];
+    for(const s of sites)if(s.months&&s.months[mName])
+      jobsToPlace.push({site:s,label:s.months[mName],year:dt.getFullYear(),month:dt.getMonth()});}
+  const clsRank={'A+':0,'A':1,'B':2,'C':3,'D':4,'E':5,'R':6};
+  jobsToPlace.sort((a,b)=>(a.month-b.month)||((clsRank[a.site.siteClass]??9)-(clsRank[b.site.siteClass]??9)));
+  let placed=0,failed=0,flagged=0;
+  for(const job of jobsToPlace){
+    const taskId=labelToTaskId(job.label,tasks);
+    const task=taskMap[taskId]||{taskId:'PM-QTR',name:job.label,type:'PM',baseDuration:120,personnel:1,shiftReq:'Any'};
+    const daysInM=new Date(job.year,job.month+1,0).getDate();
+    const startDay=(job.month===today.getMonth()&&job.year===today.getFullYear())?today.getDate()+1:1;
+    let best=null,bestDs=null;
+    for(let d=startDay;d<=daysInM;d++){
+      const ds=dateStr(new Date(job.year,job.month,d));
+      if(!isWorkday(ds))continue;
+      for(const tech of techs){
+        const p=tryPlace(tech,job.site,task,ds,ledger,siteMap);
+        if(p&&(!best||p.score<best.score)){best=p;bestDs=ds;}}
+      if(best&&best.score<30)break;}
+    if(best){
+      const techIds=[best.tech.id];
+      if((task.personnel||1)>=2){
+        const partner=findPartner(best.tech,job.site,task,bestDs,best.start,best.end,ledger,techs);
+        if(partner)techIds.push(partner.id);else best.needsApproval=true;}
+      const entry={scheduleId:newId('PM'),woNumber:'',siteId:job.site.siteNo,taskId:task.taskId,
+        taskName:task.name+(job.label&&task.name!==job.label?' ('+job.label+')':''),
+        type:'PM',techIds,start:iso(best.start),end:iso(best.end),travelMin:best.travel+best.ret,
+        status:'Planned',needsApproval:!!best.needsApproval,approved:false,
+        note:best.needsApproval?((task.personnel>=2&&techIds.length<2)?'2nd tech unavailable':'Exceeds 9h span ('+best.span+'min)'):''};
+      await dbPut('ledger',entry);ledger.push(entry);
+      placed++;if(best.needsApproval)flagged++;
+    } else failed++;}
+  toast(`Schedule generated:\n✅ ${placed} PMs placed\n${flagged?'⚠️ '+flagged+' need manager approval\n':''}${failed?'❌ '+failed+' could not be placed':''}`,failed?'warn':'ok');
+  refreshAll();}
+
+/* ============ FAULT INSERTION ============ */
+let pendingFault=null;
+async function openFaultModal(){
+  const [sites,tasks]=await Promise.all([dbAll('sites'),dbAll('tasks')]);
+  document.getElementById('fSite').innerHTML=sites.map(s=>`<option value="${s.siteNo}">${s.siteNo} - ${s.siteName} (${s.region})</option>`).join('');
+  document.getElementById('fTask').innerHTML=tasks.filter(t=>t.type==='Fault').map(t=>`<option value="${t.taskId}">${t.name} (${t.baseDuration}min${t.personnel>1?', '+t.personnel+' techs':''})</option>`).join('');
+  document.getElementById('faultImpact').innerHTML='';document.getElementById('fWO').value='';pendingFault=null;
+  show('faultModal');}
+
+async function previewFault(){
+  const siteId=document.getElementById('fSite').value;
+  const taskId=document.getElementById('fTask').value;
+  const dayOff=parseInt(document.getElementById('fDay').value);
+  const ds=dateStr(addDays(new Date(),dayOff));
+  const [sites,techs,tasks]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('tasks')]);
+  const ledger=await dbAll('ledger');
+  const site=sites.find(s=>s.siteNo===siteId), task=tasks.find(t=>t.taskId===taskId);
+  if(!site||!task){toast('Select a site and fault task','err');return;}
+  const siteMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  const dur=jobDuration(task,site);
+  let best=null;
+  for(const tech of techs){
+    if(!geofenceOK(tech,site)||!skillsOK(tech,task)||!shiftOK(tech,task))continue;
+    const win=shiftWindow(tech,ds);
+    const tv=travelMin({lat:tech.lat,lng:tech.lng},{lat:site.lat,lng:site.lng});
+    const fStart=new Date(win.start.getTime()+tv*60000);
+    const fEnd=new Date(fStart.getTime()+dur*60000);
+    if(fEnd>win.end)continue;
+    const dayJobs=techDayJobs(ledger,tech.id,ds).filter(j=>j.status!=='Completed'&&j.status!=='In Progress');
+    let cursor=fEnd, prevLoc={lat:site.lat,lng:site.lng};
+    const shifted=[],preempted=[];
+    for(const j of dayJobs){
+      const js=siteMap[j.siteId];if(!js){preempted.push(j);continue;}
+      const jt=travelMin(prevLoc,{lat:js.lat,lng:js.lng});
+      const jDur=(new Date(j.end)-new Date(j.start))/60000;
+      const ns=new Date(cursor.getTime()+jt*60000), ne=new Date(ns.getTime()+jDur*60000);
+      const ret=travelMin({lat:js.lat,lng:js.lng},{lat:tech.lat,lng:tech.lng});
+      if(new Date(ne.getTime()+ret*60000)>win.end)preempted.push(j);
+      else{shifted.push({job:j,newStart:ns,newEnd:ne});cursor=ne;prevLoc={lat:js.lat,lng:js.lng};}}
+    const score=tv+geofencePenalty(tech,site)+preempted.length*10;
+    if(!best||score<best.score)best={tech,fStart,fEnd,tv,shifted,preempted,score};}
+  if(!best){toast('No qualified technician available (geofence / skills / shift)','err');return;}
+  let partner=null;
+  if((task.personnel||1)>=2)partner=findPartner(best.tech,site,task,ds,best.fStart,best.fEnd,ledger,techs);
+  pendingFault={site,task,ds,best,partner};
+  document.getElementById('faultImpact').innerHTML=`<div class="impact">
+    <p style="font-weight:700;margin-bottom:8px">Best assignment: ${best.tech.name} ${partner?'+ '+partner.name:''}${(task.personnel>=2&&!partner)?' <span class="badge bg-dispatched">⚠ 2nd tech unavailable</span>':''}</p>
+    <div class="impact-item"><span>🚨 ${task.name} @ ${site.siteName}</span><strong>${hm(iso(best.fStart))}–${hm(iso(best.fEnd))} (${best.tv} min travel)</strong></div>
+    ${best.shifted.map(s=>`<div class="impact-item"><span>↪️ ${s.job.taskName} @ ${s.job.siteId} shifted</span><span>${hm(s.job.start)} → <strong>${hm(iso(s.newStart))}</strong></span></div>`).join('')}
+    ${best.preempted.map(p=>`<div class="impact-item" style="border-left:3px solid var(--danger)"><span>⛔ ${p.taskName} @ ${p.siteId}</span><span class="badge bg-preempted">Will be PREEMPTED & rescheduled</span></div>`).join('')}
+    ${!best.shifted.length&&!best.preempted.length?'<div class="impact-item"><span>✅ No ripple effect — clean insertion</span></div>':''}
+    <button class="btn btn-d" style="width:100%;margin-top:10px" onclick="confirmFault()">✅ Confirm Dispatch</button>
+  </div>`;}
+
+async function confirmFault(){
+  if(!pendingFault)return;
+  const{site,task,ds,best,partner}=pendingFault;
+  const techIds=[best.tech.id];if(partner)techIds.push(partner.id);
+  await dbPut('ledger',{scheduleId:newId('FLT'),woNumber:document.getElementById('fWO').value.trim(),
+    siteId:site.siteNo,taskId:task.taskId,taskName:task.name,type:'Fault',
+    techIds,start:iso(best.fStart),end:iso(best.fEnd),travelMin:best.tv,status:'Dispatched',
+    needsApproval:(task.personnel>=2&&!partner),approved:false,note:(task.personnel>=2&&!partner)?'2nd tech unavailable':''});
+  for(const s of best.shifted){s.job.start=iso(s.newStart);s.job.end=iso(s.newEnd);await dbPut('ledger',s.job);}
+  await loadHolidaySet();
+  const [sites,techs,tasks]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('tasks')]);
+  const siteMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  const taskMap=Object.fromEntries(tasks.map(t=>[t.taskId,t]));
+  let rescheduled=0;
+  for(const p of best.preempted){
+    p.status='Preempted';await dbPut('ledger',p);
+    const ledger=await dbAll('ledger');
+    const pSite=siteMap[p.siteId], pTask=taskMap[p.taskId]||{baseDuration:(new Date(p.end)-new Date(p.start))/60000,type:'PM',personnel:1,shiftReq:'Any'};
+    if(!pSite)continue;
+    for(let d=1;d<=30;d++){
+      const nds=dateStr(addDays(new Date(ds),d));
+      if(!isWorkday(nds))continue;
+      let bp=null;
+      for(const t of techs){const pl=tryPlace(t,pSite,pTask,nds,ledger,siteMap);if(pl&&(!bp||pl.score<bp.score))bp=pl;}
+      if(bp){await dbPut('ledger',{...p,scheduleId:newId('PM'),techIds:[bp.tech.id],start:iso(bp.start),end:iso(bp.end),
+        travelMin:bp.travel+bp.ret,status:'Planned',needsApproval:bp.needsApproval,
+        note:'Rescheduled (preempted by fault '+ds+')'});rescheduled++;break;}}}
+  hide('faultModal');
+  toast(`Fault dispatched to ${best.tech.name}${partner?' + '+partner.name:''}\n${best.shifted.length} shifted, ${best.preempted.length} preempted, ${rescheduled} rescheduled`,'ok');
+  refreshAll();}
+
+/* ============ DRAG & DROP RESCHEDULE ============ */
+function dragJob(ev,id){ev.dataTransfer.setData('text/plain',id);ev.dataTransfer.effectAllowed='move';}
+function dragOver(ev){ev.preventDefault();ev.currentTarget.classList.add('dragover');}
+function dragLeave(ev){ev.currentTarget.classList.remove('dragover');}
+async function dropJob(ev,techId,ds){
+  ev.preventDefault();ev.currentTarget.classList.remove('dragover');
+  const id=ev.dataTransfer.getData('text/plain');if(!id)return;
+  await moveJob(id,techId,ds);}
+
+async function moveJob(id,techId,ds){
+  const j=await dbGet('ledger',id);if(!j)return;
+  if(j.status==='Completed'){toast('Cannot move a completed job','err');return;}
+  if(j.start.startsWith(ds)&&(j.techIds||[])[0]===techId){return;}
+  if(!isWorkday(ds)&&j.type==='PM'){toast('Target date is a weekend/holiday (PMs blocked; faults allowed)','err');return;}
+  await loadHolidaySet();
+  const [sites,techs,tasks]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('tasks')]);
+  const ledger=(await dbAll('ledger')).filter(x=>x.scheduleId!==id);
+  const siteMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  const site=siteMap[j.siteId];
+  const tech=techs.find(t=>t.id===techId);
+  if(!site||!tech){toast('Site or technician not found','err');return;}
+  const task=tasks.find(t=>t.taskId===j.taskId)||{taskId:j.taskId,name:j.taskName,type:j.type,
+    baseDuration:(new Date(j.end)-new Date(j.start))/60000,perServiceMin:0,personnel:1,shiftReq:'Any',requiredSkills:''};
+  const p=tryPlace(tech,site,task,ds,ledger,siteMap);
+  if(!p){toast(`Cannot place on ${tech.name} ${ds}:\nblocked by geofence, skills, shift window, or rest rules`,'err');renderBoard();return;}
+  j.techIds=[tech.id];
+  if((task.personnel||1)>=2){
+    const partner=findPartner(tech,site,task,ds,p.start,p.end,ledger,techs);
+    if(partner)j.techIds.push(partner.id);
+    else{p.needsApproval=true;j.note='2nd tech unavailable (manual move)';}}
+  j.start=iso(p.start);j.end=iso(p.end);j.travelMin=p.travel+p.ret;
+  j.needsApproval=!!p.needsApproval;if(p.needsApproval)j.approved=false;
+  if(j.status==='Preempted')j.status='Planned';
+  j.note=(j.note?j.note+' · ':'')+'Manually moved '+todayStr();
+  await dbPut('ledger',j);
+  toast(`Moved to ${tech.name} on ${ds} (${hm(j.start)})${p.needsApproval?' ⚠️ needs approval':''}`,'ok');
+  refreshAll();}
+
+/* ============ BOARD ============ */
+function shiftWeek(n){const i=document.getElementById('weekStart');i.value=dateStr(addDays(new Date(i.value),n));renderBoard();}
+function goToday(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));document.getElementById('weekStart').value=dateStr(d);renderBoard();}
+async function renderBoard(){
+  const grid=document.getElementById('boardGrid');
+  const ws=document.getElementById('weekStart').value||todayStr();
+  await loadHolidaySet();
+  const [techs,ledger,sites]=await Promise.all([dbAll('technicians'),dbAll('ledger'),dbAll('sites')]);
+  const sMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  let h='<div class="bh">Technician</div>';
+  const days=[];
+  for(let i=0;i<7;i++){const d=addDays(new Date(ws),i);const ds=dateStr(d);days.push(ds);
+    h+=`<div class="bh${isHoliday(ds)?' hol':''}">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]}<br>${d.getDate()}/${d.getMonth()+1}${isHoliday(ds)?'<br>🎉':''}</div>`;}
+  for(const t of techs){
+    h+=`<div class="btech">${t.name}<span><span class="badge bg-${t.region.toLowerCase()}">${t.region}</span> <span class="badge bg-${t.shift.toLowerCase()}">${t.shift}</span></span></div>`;
+    for(const ds of days){
+      const dow=new Date(ds+'T12:00').getDay();
+      const jobs=ledger.filter(j=>(j.techIds||[]).includes(t.id)&&j.start.startsWith(ds)).sort((a,b)=>a.start.localeCompare(b.start));
+      h+=`<div class="bcell${dow===0||dow===6?' wknd':''}${isHoliday(ds)?' hol':''}" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropJob(event,'${t.id}','${ds}')">`+jobs.map(j=>{
+        const cls=j.status==='Preempted'?'j-preempted':(j.type==='Fault'?'j-fault':'j-pm');
+        const drag=j.status!=='Completed'?`draggable="true" ondragstart="dragJob(event,'${j.scheduleId}')"`:'';
+        return`<div class="job ${cls}${j.status==='Completed'?' j-completed':''}${j.needsApproval&&!j.approved?' j-flag':''}" ${drag} onclick="openJob('${j.scheduleId}')">
+          ${j.needsApproval&&!j.approved?'⚠️ ':''}${j.woNumber?'['+j.woNumber+'] ':''}${hm(j.start)} ${sMap[j.siteId]?sMap[j.siteId].siteName:j.siteId}<br><span style="opacity:.85">${j.taskName}</span></div>`;}).join('')+'</div>';}}
+  if(!techs.length)h+='<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--gray)">No technicians yet — add them in the Technicians tab or import the workbook</div>';
+  grid.innerHTML=h;}
+
+async function openJob(id){
+  const j=await dbGet('ledger',id);if(!j)return;
+  const site=await dbGet('sites',j.siteId);
+  const statuses=['Planned','Dispatched','In Progress','Completed','Preempted'];
+  document.getElementById('jobDetail').innerHTML=`
+    <p><strong>${j.taskName}</strong> <span class="badge bg-${j.type.toLowerCase()}">${j.type}</span> <span class="badge bg-${j.status.toLowerCase().replace(' ','')}">${j.status}</span></p>
+    <p style="margin:8px 0;font-size:13px">📍 ${site?site.siteName:j.siteId} &nbsp; 🕐 ${j.start.replace('T',' ')} → ${hm(j.end)} &nbsp; 🚗 ${j.travelMin||0} min travel<br>👷 ${(j.techIds||[]).join(', ')}</p>
+    <div class="fg"><label class="fl">ServiceNow WO #</label>
+      <div style="display:flex;gap:6px"><input class="fi" id="woInput" value="${j.woNumber||''}" placeholder="WO0012345" style="flex:1">
+      <button class="btn btn-p btn-sm" onclick="saveWO('${j.scheduleId}')">Save</button></div></div>
+    ${j.note?`<p class="note">📝 ${j.note}</p>`:''}
+    ${j.needsApproval?`<div style="background:#fef3c7;padding:10px;border-radius:8px;margin:10px 0;font-size:13px">⚠️ <strong>Requires Manager Approval</strong> ${j.approved?'— ✅ Approved':''}
+      ${!j.approved?`<button class="btn btn-w btn-sm" style="margin-left:8px" onclick="approveJob('${j.scheduleId}')">Manager Override</button>`:''}</div>`:''}
+    <div class="fg"><label class="fl">Update Status</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${statuses.map(s=>`<button class="btn btn-s btn-sm" onclick="setStatus('${j.scheduleId}','${s}')">${s}</button>`).join('')}</div></div>
+    <button class="btn btn-d btn-sm" onclick="deleteJob('${j.scheduleId}')">🗑️ Delete Entry</button>`;
+  show('jobModal');}
+async function saveWO(id){const j=await dbGet('ledger',id);if(j){j.woNumber=document.getElementById('woInput').value.trim();await dbPut('ledger',j);toast('WO number saved','ok');refreshAll();}}
+async function setStatus(id,s){const j=await dbGet('ledger',id);if(j){j.status=s;await dbPut('ledger',j);hide('jobModal');toast('Status → '+s,'ok');refreshAll();}}
+async function approveJob(id){const j=await dbGet('ledger',id);if(j){j.approved=true;await dbPut('ledger',j);hide('jobModal');toast('Manager override applied','ok');refreshAll();}}
+async function deleteJob(id){await dbDel('ledger',id);hide('jobModal');refreshAll();}
+
+/* ============ MAP ============ */
+const TECH_COLORS=['#3b82f6','#ef4444','#10b981','#f59e0b','#9333ea','#0ea5e9','#ec4899','#84cc16'];
+function initMap(){
+  if(map)return;
+  map=L.map('map').setView([-33.8688,151.2093],10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+  drawRoutes();}
+async function drawRoutes(){
+  if(!map)return;
+  mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];
+  const ds=document.getElementById('mapDate').value||todayStr();
+  const [sites,techs,ledger]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('ledger')]);
+  const sMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  sites.forEach(s=>{const m=L.circleMarker([s.lat,s.lng],{radius:6,color:s.region==='Regional'?'#b45309':'#1d4ed8',fillOpacity:.8})
+    .bindPopup(`<b>${s.siteNo} ${s.siteName}</b><br>Class ${s.siteClass} · ${s.region}`).addTo(map);mapLayers.push(m);});
+  techs.forEach((t,i)=>{
+    const col=TECH_COLORS[i%TECH_COLORS.length];
+    const hm2=L.marker([t.lat,t.lng]).bindPopup(`🏠 <b>${t.name}</b> (${t.region}, ${t.shift})`).addTo(map);mapLayers.push(hm2);
+    const jobs=ledger.filter(j=>(j.techIds||[]).includes(t.id)&&j.start.startsWith(ds)&&j.status!=='Preempted').sort((a,b)=>a.start.localeCompare(b.start));
+    if(!jobs.length)return;
+    const pts=[[t.lat,t.lng],...jobs.map(j=>sMap[j.siteId]).filter(Boolean).map(s=>[s.lat,s.lng]),[t.lat,t.lng]];
+    const line=L.polyline(pts,{color:col,weight:3,opacity:.75,dashArray:'8,6'}).bindPopup(`<b>${t.name}</b> — ${jobs.length} jobs on ${ds}`).addTo(map);
+    mapLayers.push(line);});}
+
+/* ============ LEDGER VIEW ============ */
+async function renderLedger(){
+  const f=document.getElementById('ledgerFilter').value, ft=document.getElementById('ledgerType').value;
+  const [ledger,sites]=await Promise.all([dbAll('ledger'),dbAll('sites')]);
+  const sMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  const rows=ledger.filter(j=>(!f||j.status===f)&&(!ft||j.type===ft)).sort((a,b)=>a.start.localeCompare(b.start));
+  document.getElementById('ledgerBody').innerHTML=rows.map(j=>`<tr>
+    <td>${j.woNumber||'<span style="color:#cbd5e1">—</span>'}</td>
+    <td>${j.start.replace('T',' ')}–${hm(j.end)}</td>
+    <td>${sMap[j.siteId]?sMap[j.siteId].siteName:j.siteId}</td>
+    <td>${j.taskName}</td>
+    <td><span class="badge bg-${j.type.toLowerCase()}">${j.type}</span></td>
+    <td>${(j.techIds||[]).join(', ')}</td>
+    <td>${j.travelMin||0}m</td>
+    <td><span class="badge bg-${j.status.toLowerCase().replace(' ','')}">${j.status}</span></td>
+    <td>${j.needsApproval?(j.approved?'✅':'⚠️'):''}</td>
+    <td><button class="btn btn-s btn-sm" onclick="openJob('${j.scheduleId}')">Open</button></td></tr>`).join('')
+    ||'<tr><td colspan="10" style="text-align:center;color:var(--gray)">No entries — click Generate Schedule</td></tr>';}
+async function clearLedger(){if(confirm('Delete ALL schedule entries?')){await dbClear('ledger');refreshAll();toast('Ledger cleared','ok');}}
+async function exportLedgerExcel(){
+  const [ledger,sites]=await Promise.all([dbAll('ledger'),dbAll('sites')]);
+  const sMap=Object.fromEntries(sites.map(s=>[s.siteNo,s]));
+  const rows=ledger.sort((a,b)=>a.start.localeCompare(b.start)).map(j=>({WO_Number:j.woNumber||'',Schedule_ID:j.scheduleId,
+    Date:j.start.slice(0,10),Start:hm(j.start),End:hm(j.end),
+    Site_No:j.siteId,Site:sMap[j.siteId]?sMap[j.siteId].siteName:j.siteId,Task:j.taskName,Type:j.type,
+    Technicians:(j.techIds||[]).join(', '),Travel_Min:j.travelMin||0,Status:j.status,
+    Approval:j.needsApproval?(j.approved?'Approved':'PENDING'):'',Note:j.note||''}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Schedule');
+  XLSX.writeFile(wb,'Dispatch_Schedule_'+todayStr()+'.xlsx');toast('Schedule exported','ok');}
+
+/* ============ ANALYTICS ============ */
+async function renderAnalytics(){
+  const [ledger,techs]=await Promise.all([dbAll('ledger'),dbAll('technicians')]);
+  const active=ledger.filter(j=>j.status!=='Preempted');
+  let wrench=0,travel=0;
+  active.forEach(j=>{wrench+=(new Date(j.end)-new Date(j.start))/60000;travel+=j.travelMin||0;});
+  const ratio=travel?(wrench/travel).toFixed(1):'-';
+  const byStatus={};ledger.forEach(j=>byStatus[j.status]=(byStatus[j.status]||0)+1);
+  const techLoad=techs.map(t=>({name:t.name,jobs:active.filter(j=>(j.techIds||[]).includes(t.id)).length}));
+  const maxLoad=Math.max(1,...techLoad.map(t=>t.jobs));
+  const wp=wrench+travel?Math.round(wrench/(wrench+travel)*100):0;
+  const woCount=ledger.filter(j=>j.woNumber).length;
+  document.getElementById('analyticsGrid').innerHTML=`
+    <div class="card"><h3 style="font-size:14px;margin-bottom:10px">🔧 Wrench Time vs Travel Time</h3>
+      <div class="bar-wrap"><div style="width:${wp}%;background:linear-gradient(90deg,var(--ok),#34d399)"></div><div style="width:${100-wp}%;background:linear-gradient(90deg,var(--warn),#fbbf24)"></div></div>
+      <p style="margin-top:8px;font-size:13px">🟢 Wrench: <strong>${Math.round(wrench/60)}h (${wp}%)</strong> &nbsp; 🟡 Travel: <strong>${Math.round(travel/60)}h (${100-wp}%)</strong></p>
+      <p class="note">Ratio ${ratio}:1</p></div>
+    <div class="card"><h3 style="font-size:14px;margin-bottom:10px">📊 Ledger by Status</h3>
+      ${Object.entries(byStatus).map(([s,c])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--light);font-size:13px"><span class="badge bg-${s.toLowerCase().replace(' ','')}">${s}</span><strong>${c}</strong></div>`).join('')||'<p class="note">No data</p>'}</div>
+    <div class="card"><h3 style="font-size:14px;margin-bottom:10px">👷 Technician Workload</h3>
+      ${techLoad.map(t=>`<div style="margin-bottom:8px;font-size:12px">${t.name} — ${t.jobs} jobs
+        <div class="bar-wrap" style="height:10px"><div style="width:${t.jobs/maxLoad*100}%;background:var(--info)"></div></div></div>`).join('')||'<p class="note">No technicians</p>'}</div>
+    <div class="card"><h3 style="font-size:14px;margin-bottom:10px">⚖️ Compliance & SNOW</h3>
+      <div style="font-size:13px;line-height:2">Max shift span: <strong>9 h</strong> · Min rest: <strong>9 h</strong><br>
+      Flags pending: <strong>${ledger.filter(j=>j.needsApproval&&!j.approved).length}</strong><br>
+      WO numbers linked: <strong>${woCount}/${ledger.length}</strong><br>
+      Geofence: Regional→Metro <span class="badge bg-fault">Blocked</span> · Metro→Regional <span class="badge bg-dispatched">Penalty</span></div></div>`;}
+
+/* ============ ENTITY CRUD ============ */
+async function renderSites(q=''){
+  const sites=await dbAll('sites');q=q.toLowerCase();
+  document.getElementById('sitesBody').innerHTML=sites.filter(s=>!q||(s.siteNo+s.siteName).toLowerCase().includes(q)).map(s=>`<tr>
+    <td><strong>${s.siteNo}</strong></td><td>${s.siteName}</td><td>${s.siteClass}</td>
+    <td><span class="badge bg-${(s.region||'Metro').toLowerCase()}">${s.region||'Metro'}</span></td>
+    <td>${s.serviceCount||1}</td>
+    <td style="font-size:11px">${s.months?Object.keys(s.months).join(', '):''}</td>
+    <td><button class="btn btn-s btn-sm" onclick="editSite('${s.siteNo}')">✏️</button> <button class="btn btn-d btn-sm" onclick="delSite('${s.siteNo}')">🗑️</button></td></tr>`).join('');}
+function openSiteModal(){['sNo','sName','sLat','sLng','sMonths'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('sSvc').value=1;document.getElementById('sNo').readOnly=false;
+  document.getElementById('siteModalTitle').textContent='Add Site';show('siteModal');}
+async function editSite(id){const s=await dbGet('sites',id);if(!s)return;
+  document.getElementById('sNo').value=s.siteNo;document.getElementById('sNo').readOnly=true;
+  document.getElementById('sName').value=s.siteName;document.getElementById('sClass').value=s.siteClass;
+  document.getElementById('sRegion').value=s.region||'Metro';
+  document.getElementById('sLat').value=s.lat;document.getElementById('sLng').value=s.lng;
+  document.getElementById('sSvc').value=s.serviceCount||1;
+  document.getElementById('sMonths').value=s.months?Object.entries(s.months).map(([m,v])=>m+':'+v).join(', '):'';
+  document.getElementById('siteModalTitle').textContent='Edit Site';show('siteModal');}
+async function saveSite(e){e.preventDefault();
+  const months={};(document.getElementById('sMonths').value||'').split(',').forEach(p=>{
+    const[m,v]=p.split(':').map(x=>x&&x.trim());if(m&&MONTHS.includes(m))months[m]=v||'Quarterly';});
+  await dbPut('sites',{siteNo:document.getElementById('sNo').value.trim(),siteName:document.getElementById('sName').value.trim(),
+    siteClass:document.getElementById('sClass').value,region:document.getElementById('sRegion').value,
+    lat:parseFloat(document.getElementById('sLat').value),lng:parseFloat(document.getElementById('sLng').value),
+    serviceCount:parseInt(document.getElementById('sSvc').value)||1,months});
+  hide('siteModal');toast('Site saved','ok');refreshAll();}
+async function delSite(id){if(confirm('Delete site '+id+'?')){await dbDel('sites',id);refreshAll();}}
+
+async function renderTechs(){
+  const techs=await dbAll('technicians');
+  document.getElementById('techsBody').innerHTML=techs.map(t=>`<tr>
+    <td><strong>${t.id}</strong></td><td>${t.name}</td>
+    <td><span class="badge bg-${t.region.toLowerCase()}">${t.region}</span></td>
+    <td><span class="badge bg-${t.shift.toLowerCase()}">${t.shift}</span></td>
+    <td style="font-size:11px">${t.skills||''}</td><td style="font-size:11px">${t.lat.toFixed(3)}, ${t.lng.toFixed(3)}</td>
+    <td><button class="btn btn-s btn-sm" onclick="editTech('${t.id}')">✏️</button> <button class="btn btn-d btn-sm" onclick="delTech('${t.id}')">🗑️</button></td></tr>`).join('');}
+function openTechModal(){['tId','tName','tLat','tLng','tSkills'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('tId').readOnly=false;document.getElementById('techModalTitle').textContent='Add Technician';show('techModal');}
+async function editTech(id){const t=await dbGet('technicians',id);if(!t)return;
+  document.getElementById('tId').value=t.id;document.getElementById('tId').readOnly=true;
+  document.getElementById('tName').value=t.name;document.getElementById('tRegion').value=t.region;
+  document.getElementById('tShift').value=t.shift;document.getElementById('tLat').value=t.lat;
+  document.getElementById('tLng').value=t.lng;document.getElementById('tSkills').value=t.skills||'';
+  document.getElementById('techModalTitle').textContent='Edit Technician';show('techModal');}
+async function saveTech(e){e.preventDefault();
+  await dbPut('technicians',{id:document.getElementById('tId').value.trim(),name:document.getElementById('tName').value.trim(),
+    region:document.getElementById('tRegion').value,shift:document.getElementById('tShift').value,
+    lat:parseFloat(document.getElementById('tLat').value),lng:parseFloat(document.getElementById('tLng').value),
+    skills:document.getElementById('tSkills').value});
+  hide('techModal');toast('Technician saved','ok');refreshAll();}
+async function delTech(id){if(confirm('Delete technician '+id+'?')){await dbDel('technicians',id);refreshAll();}}
+
+async function renderTasks(){
+  const tasks=await dbAll('tasks');
+  document.getElementById('tasksBody').innerHTML=tasks.map(t=>`<tr>
+    <td><strong>${t.taskId}</strong></td><td>${t.name}</td>
+    <td><span class="badge bg-${t.type.toLowerCase()}">${t.type}</span></td>
+    <td>${t.baseDuration}</td><td>${t.perServiceMin||0}</td><td>${t.personnel||1}</td>
+    <td>${t.shiftReq||'Any'}</td><td style="font-size:11px">${t.requiredSkills||''}</td>
+    <td><button class="btn btn-s btn-sm" onclick="editTask('${t.taskId}')">✏️</button> <button class="btn btn-d btn-sm" onclick="delTask('${t.taskId}')">🗑️</button></td></tr>`).join('');}
+function openTaskModal(){['kId','kName','kSkills'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('kBase').value=120;document.getElementById('kPer').value=0;document.getElementById('kCrew').value=1;
+  document.getElementById('kId').readOnly=false;document.getElementById('taskModalTitle').textContent='Add Task';show('taskModal');}
+async function editTask(id){const t=await dbGet('tasks',id);if(!t)return;
+  document.getElementById('kId').value=t.taskId;document.getElementById('kId').readOnly=true;
+  document.getElementById('kName').value=t.name;document.getElementById('kType').value=t.type;
+  document.getElementById('kBase').value=t.baseDuration;document.getElementById('kPer').value=t.perServiceMin||0;
+  document.getElementById('kCrew').value=t.personnel||1;document.getElementById('kShift').value=t.shiftReq||'Any';
+  document.getElementById('kSkills').value=t.requiredSkills||'';
+  document.getElementById('taskModalTitle').textContent='Edit Task';show('taskModal');}
+async function saveTask(e){e.preventDefault();
+  await dbPut('tasks',{taskId:document.getElementById('kId').value.trim(),name:document.getElementById('kName').value.trim(),
+    type:document.getElementById('kType').value,baseDuration:parseInt(document.getElementById('kBase').value)||60,
+    perServiceMin:parseInt(document.getElementById('kPer').value)||0,personnel:parseInt(document.getElementById('kCrew').value)||1,
+    shiftReq:document.getElementById('kShift').value,requiredSkills:document.getElementById('kSkills').value});
+  hide('taskModal');toast('Task saved','ok');refreshAll();}
+async function delTask(id){if(confirm('Delete task '+id+'?')){await dbDel('tasks',id);refreshAll();}}
+
+/* ============ HOLIDAYS ============ */
+async function renderHolidays(){
+  const hols=(await dbAll('holidays')).sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById('holidaysBody').innerHTML=hols.map(h=>`<tr>
+    <td><strong>${h.date}</strong></td>
+    <td>${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(h.date+'T12:00').getDay()]}</td>
+    <td>${h.name}</td>
+    <td><button class="btn btn-d btn-sm" onclick="delHoliday('${h.date}')">🗑️</button></td></tr>`).join('')
+    ||'<tr><td colspan="4" style="text-align:center;color:var(--gray)">No holidays</td></tr>';}
+async function addHoliday(){
+  const d=document.getElementById('hDate').value, n=document.getElementById('hName').value.trim();
+  if(!d||!n){toast('Enter date and name','err');return;}
+  await dbPut('holidays',{date:d,name:n});await loadHolidaySet();
+  document.getElementById('hDate').value='';document.getElementById('hName').value='';
+  toast('Holiday added','ok');renderHolidays();renderBoard();}
+async function delHoliday(d){await dbDel('holidays',d);await loadHolidaySet();renderHolidays();renderBoard();}
+
+/* ============ MULTI-SHEET WORKBOOK EXPORT ============ */
+async function downloadWorkbook(){
+  const [sites,techs,tasks,hols]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('tasks'),dbAll('holidays')]);
+  const wb=XLSX.utils.book_new();
+  // ReadMe
+  const readme=XLSX.utils.aoa_to_sheet([
+    ['BAI DISPATCH ENGINE — IMPORT WORKBOOK'],[''],
+    ['HOW TO USE:'],
+    ['1. Edit the data on each sheet (Sites, Technicians, Tasks, Holidays).'],
+    ['2. Do NOT rename the sheet tabs or change header row text.'],
+    ['3. In the app, click "Import Workbook" and select this file. All sheets import in one go.'],[''],
+    ['FIELD RULES:'],
+    ['Sites: Region = Metro or Regional. Class = A+/A/B/C/D/E/R. Month columns take PM labels'],
+    ['  (Quarterly, 6 Monthly, Annually, EPP, Quarterly ACU, Nova & EPP).'],
+    ['Technicians: Region = Metro or Regional. Shift = Day or Night.'],
+    ['  Regional techs are BLOCKED from Metro sites. Skills must match Task Required_Skills.'],
+    ['Tasks: Type = PM or Fault. Duration formula = Base + (Per_Service x site Service_Count).'],
+    ['  Personnel >= 2 locks two qualified techs to the same slot.'],
+    ['Holidays: Date format YYYY-MM-DD. Scheduler skips these dates for PMs.'],[''],
+    ['Generated: '+new Date().toLocaleString()]]);
+  readme['!cols']=[{wch:95}];
+  XLSX.utils.book_append_sheet(wb,readme,'ReadMe');
+  // Sites
+  const siteRows=(sites.length?sites:[{siteNo:'2136',siteName:'Artarmon TXA',siteClass:'A+',region:'Metro',lat:-33.8093,lng:151.1854,serviceCount:4,months:{Mar:'6 Monthly',Sep:'Annually'}}])
+    .map(s=>({Site_No:s.siteNo,Site_Name:s.siteName,Class:s.siteClass,Region:s.region||'Metro',Latitude:s.lat,Longitude:s.lng,Service_Count:s.serviceCount||1,
+      ...Object.fromEntries(MONTHS.map(m=>[m,(s.months||{})[m]||'']))}));
+  const wsS=XLSX.utils.json_to_sheet(siteRows);
+  wsS['!cols']=[{wch:9},{wch:24},{wch:6},{wch:9},{wch:10},{wch:10},{wch:12},...MONTHS.map(()=>({wch:13}))];
+  XLSX.utils.book_append_sheet(wb,wsS,'Sites');
+  // Technicians
+  const techRows=(techs.length?techs:[{id:'T001',name:'John Smith',region:'Metro',shift:'Day',lat:-33.8688,lng:151.2093,skills:'EPP, ACU, Electrical'}])
+    .map(t=>({ID:t.id,Name:t.name,Region:t.region,Shift:t.shift,Home_Latitude:t.lat,Home_Longitude:t.lng,Skills:t.skills||''}));
+  const wsT=XLSX.utils.json_to_sheet(techRows);
+  wsT['!cols']=[{wch:8},{wch:20},{wch:9},{wch:7},{wch:13},{wch:14},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,wsT,'Technicians');
+  // Tasks
+  const taskRows=(tasks.length?tasks:[{taskId:'PM-QTR',name:'Quarterly PM',type:'PM',baseDuration:120,perServiceMin:10,personnel:1,shiftReq:'Any',requiredSkills:''}])
+    .map(t=>({Task_ID:t.taskId,Name:t.name,Type:t.type,Base_Duration_Min:t.baseDuration,Per_Service_Min:t.perServiceMin||0,
+      Personnel:t.personnel||1,Shift_Requirement:t.shiftReq||'Any',Required_Skills:t.requiredSkills||''}));
+  const wsK=XLSX.utils.json_to_sheet(taskRows);
+  wsK['!cols']=[{wch:10},{wch:24},{wch:7},{wch:16},{wch:15},{wch:10},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsK,'Tasks');
+  // Holidays
+  const holRows=(hols.length?hols:[{date:'2026-12-25',name:'Christmas Day'}]).map(h=>({Date:h.date,Name:h.name}));
+  const wsH=XLSX.utils.json_to_sheet(holRows);
+  wsH['!cols']=[{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,wsH,'Holidays');
+  XLSX.writeFile(wb,'BAI_Dispatch_Workbook_'+todayStr()+'.xlsx');
+  toast('Workbook exported — edit it and re-import to bulk update','ok');}
+
+/* ============ MULTI-SHEET WORKBOOK IMPORT ============ */
+function importAll(){
+  const i=document.createElement('input');i.type='file';i.accept='.xlsx,.xls,.json';
+  i.onchange=e=>{const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    if(f.name.toLowerCase().endsWith('.json')){
+      r.onload=async ev=>{try{const d=JSON.parse(ev.target.result);let n=0;
+        for(const s of d.sites||[]){await dbPut('sites',s);n++;}
+        for(const t of d.technicians||[]){await dbPut('technicians',t);n++;}
+        for(const k of d.tasks||[]){await dbPut('tasks',k);n++;}
+        for(const l of d.ledger||[]){await dbPut('ledger',l);n++;}
+        for(const h of d.holidays||[]){await dbPut('holidays',h);n++;}
+        await loadHolidaySet();toast(n+' records imported from JSON','ok');refreshAll();
+      }catch(err){toast('Import error: '+err.message,'err');}};
+      r.readAsText(f);
+    }else{
+      r.onload=async ev=>{try{
+        const wb=XLSX.read(ev.target.result,{type:'binary',cellDates:true});
+        const counts={};
+        const getSheet=name=>{const k=wb.SheetNames.find(n=>n.toLowerCase()===name.toLowerCase());return k?XLSX.utils.sheet_to_json(wb.Sheets[k]):null;};
+        // SITES
+        const sRows=getSheet('Sites');
+        if(sRows){counts.sites=0;
+          for(const row of sRows){
+            const no=row['Site_No']||row['Site No']||row['SiteNo']||'';
+            const nm=row['Site_Name']||row['Site Name']||row['Name']||'';
+            if(!no||!nm)continue;
+            const months={};MONTHS.forEach(m=>{if(row[m]&&String(row[m]).trim())months[m]=String(row[m]).trim();});
+            await dbPut('sites',{siteNo:String(no).trim(),siteName:String(nm).trim(),
+              siteClass:String(row['Class']||row['Site_Class']||'D').toUpperCase().trim(),
+              region:/regional/i.test(String(row['Region']||''))?'Regional':'Metro',
+              lat:parseFloat(row['Latitude']||row['Lat'])||-33.8688,
+              lng:parseFloat(row['Longitude']||row['Lng'])||151.2093,
+              serviceCount:parseInt(row['Service_Count']||row['Service Count'])||1,months});
+            counts.sites++;}}
+        // TECHNICIANS
+        const tRows=getSheet('Technicians');
+        if(tRows){counts.technicians=0;
+          for(const row of tRows){
+            const nm=row['Name']||row['Full Name']||'';if(!nm)continue;
+            await dbPut('technicians',{id:String(row['ID']||row['Employee ID']||'T'+Date.now()+counts.technicians).trim(),
+              name:String(nm).trim(),
+              region:/regional/i.test(String(row['Region']||''))?'Regional':'Metro',
+              shift:/night/i.test(String(row['Shift']||''))?'Night':'Day',
+              lat:parseFloat(row['Home_Latitude']||row['Home Latitude']||row['Latitude'])||-33.8688,
+              lng:parseFloat(row['Home_Longitude']||row['Home Longitude']||row['Longitude'])||151.2093,
+              skills:String(row['Skills']||'')});
+            counts.technicians++;}}
+        // TASKS
+        const kRows=getSheet('Tasks');
+        if(kRows){counts.tasks=0;
+          for(const row of kRows){
+            const id=row['Task_ID']||row['Task ID']||'';const nm=row['Name']||'';
+            if(!id||!nm)continue;
+            await dbPut('tasks',{taskId:String(id).trim(),name:String(nm).trim(),
+              type:/fault/i.test(String(row['Type']||''))?'Fault':'PM',
+              baseDuration:parseInt(row['Base_Duration_Min']||row['Base Duration']||row['Base_Duration'])||60,
+              perServiceMin:parseInt(row['Per_Service_Min']||row['Per Service'])||0,
+              personnel:parseInt(row['Personnel'])||1,
+              shiftReq:['Day','Night'].includes(String(row['Shift_Requirement']||'').trim())?String(row['Shift_Requirement']).trim():'Any',
+              requiredSkills:String(row['Required_Skills']||row['Skills']||'')});
+            counts.tasks++;}}
+        // HOLIDAYS
+        const hRows=getSheet('Holidays');
+        if(hRows){counts.holidays=0;
+          for(const row of hRows){
+            let d=row['Date'];if(!d)continue;
+            if(d instanceof Date)d=dateStr(d);else d=String(d).slice(0,10);
+            if(!/^\d{4}-\d{2}-\d{2}$/.test(d))continue;
+            await dbPut('holidays',{date:d,name:String(row['Name']||'Holiday')});
+            counts.holidays++;}}
+        await loadHolidaySet();
+        const summary=Object.entries(counts).map(([k,v])=>`${v} ${k}`).join(', ');
+        toast(summary?('Workbook imported: '+summary):'No recognised sheets found (need: Sites, Technicians, Tasks, Holidays)',summary?'ok':'warn');
+        refreshAll();
+      }catch(err){toast('Import error: '+err.message,'err');}};
+      r.readAsBinaryString(f);}};
+  i.click();}
+
+/* single-sheet entity import/export (kept for convenience) */
+function exportEntity(store){dbAll(store).then(rows=>{
+  const flat=rows.map(r=>store==='sites'?{Site_No:r.siteNo,Site_Name:r.siteName,Class:r.siteClass,Region:r.region,Latitude:r.lat,Longitude:r.lng,Service_Count:r.serviceCount||1,
+      ...Object.fromEntries(MONTHS.map(m=>[m,(r.months||{})[m]||'']))}
+    :{ID:r.id,Name:r.name,Region:r.region,Shift:r.shift,Home_Latitude:r.lat,Home_Longitude:r.lng,Skills:r.skills||''});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(flat),store==='sites'?'Sites':'Technicians');
+  XLSX.writeFile(wb,store+'_'+todayStr()+'.xlsx');toast('Exported','ok');});}
+function importEntity(store){importAll();} // workbook importer handles single sheets too
+
+async function exportAll(){
+  const data={exportDate:new Date().toISOString(),sites:await dbAll('sites'),technicians:await dbAll('technicians'),
+    tasks:await dbAll('tasks'),ledger:await dbAll('ledger'),holidays:await dbAll('holidays')};
+  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='BAI_Dispatch_Backup_'+todayStr()+'.json';a.click();
+  toast('Full JSON backup exported','ok');}
+
+/* ============ STATS / UI ============ */
+async function refreshStats(){
+  const [sites,techs,ledger]=await Promise.all([dbAll('sites'),dbAll('technicians'),dbAll('ledger')]);
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+  set('stSites',sites.length);set('stSitesD',sites.filter(s=>s.region==='Regional').length+' regional');
+  set('stTechs',techs.length);set('stTechsD',techs.filter(t=>t.shift==='Night').length+' night shift');
+  set('stPlanned',ledger.filter(j=>j.type==='PM'&&j.status==='Planned').length);
+  set('stFaults',ledger.filter(j=>j.type==='Fault'&&['Dispatched','In Progress'].includes(j.status)).length);
+  set('stPreempt',ledger.filter(j=>j.status==='Preempted').length);
+  set('stFlags',ledger.filter(j=>j.needsApproval&&!j.approved).length);
+  let w=0,tv=0;ledger.filter(j=>j.status!=='Preempted').forEach(j=>{w+=(new Date(j.end)-new Date(j.start))/60000;tv+=j.travelMin||0;});
+  set('stRatio',tv?(w/tv).toFixed(1)+':1':'-');set('stRatioD',Math.round(w/60)+'h wrench / '+Math.round(tv/60)+'h travel');}
+
+function switchTab(ev,name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));ev.target.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  if(name==='maptab')setTimeout(()=>{initMap();map.invalidateSize();drawRoutes();},100);
+  if(name==='ledger')renderLedger();
+  if(name==='analytics')renderAnalytics();
+  if(name==='sites')renderSites();
+  if(name==='techs')renderTechs();
+  if(name==='tasks')renderTasks();
+  if(name==='holidays')renderHolidays();
+  if(name==='board')renderBoard();}
+
+function show(id){document.getElementById(id).classList.add('show')}
+function hide(id){document.getElementById(id).classList.remove('show')}
+function toast(msg,type='info'){const box=document.getElementById('alerts');const a=document.createElement('div');
+  a.className='alert a-'+(type==='ok'?'ok':type==='err'?'err':type==='warn'?'warn':'info');a.textContent=msg;
+  box.appendChild(a);setTimeout(()=>a.remove(),5500);}
+window.onclick=e=>{if(e.target.classList.contains('modal'))e.target.classList.remove('show');};
+
+async function refreshAll(){await refreshStats();renderBoard();renderLedger();renderSites();renderTechs();renderTasks();renderHolidays();renderAnalytics();if(map)drawRoutes();}
+
+/* ============ SEED DATA ============ */
+const NSW_HOLIDAYS=[
+  ['2026-01-01',"New Year's Day"],['2026-01-26','Australia Day'],
+  ['2026-04-03','Good Friday'],['2026-04-04','Easter Saturday'],['2026-04-05','Easter Sunday'],['2026-04-06','Easter Monday'],
+  ['2026-04-25','Anzac Day'],['2026-06-08',"King's Birthday"],['2026-10-05','Labour Day'],
+  ['2026-12-25','Christmas Day'],['2026-12-26','Boxing Day'],['2026-12-28','Boxing Day (additional)'],
+  ['2027-01-01',"New Year's Day"],['2027-01-26','Australia Day']];
+
+async function seed(){
+  const tasks=[
+    {taskId:'PM-QTR',name:'Quarterly PM',type:'PM',baseDuration:120,perServiceMin:10,personnel:1,shiftReq:'Any',requiredSkills:''},
+    {taskId:'PM-6M',name:'6 Monthly PM',type:'PM',baseDuration:240,perServiceMin:15,personnel:1,shiftReq:'Day',requiredSkills:''},
+    {taskId:'PM-ANN',name:'Annual PM',type:'PM',baseDuration:360,perServiceMin:20,personnel:2,shiftReq:'Day',requiredSkills:''},
+    {taskId:'PM-EPP',name:'EPP Test',type:'PM',baseDuration:90,perServiceMin:0,personnel:1,shiftReq:'Any',requiredSkills:'EPP'},
+    {taskId:'PM-ACU',name:'Quarterly ACU Service',type:'PM',baseDuration:150,perServiceMin:10,personnel:1,shiftReq:'Day',requiredSkills:'ACU'},
+    {taskId:'FLT-PWR',name:'Power System Fault',type:'Fault',baseDuration:180,perServiceMin:0,personnel:1,shiftReq:'Any',requiredSkills:'Electrical'},
+    {taskId:'FLT-TX',name:'Transmitter Fault',type:'Fault',baseDuration:240,perServiceMin:0,personnel:2,shiftReq:'Any',requiredSkills:''},
+    {taskId:'FLT-AC',name:'HVAC Fault',type:'Fault',baseDuration:120,perServiceMin:0,personnel:1,shiftReq:'Day',requiredSkills:'ACU'}];
+  for(const t of tasks)await dbPut('tasks',t);
+  const sites=[
+    {siteNo:'2136',siteName:'Artarmon TXA',siteClass:'A+',region:'Metro',lat:-33.8093,lng:151.1854,serviceCount:4,months:{Mar:'6 Monthly',Jun:'Quarterly',Sep:'Annually',Dec:'Quarterly'}},
+    {siteNo:'2040',siteName:'Gore Hill',siteClass:'A+',region:'Metro',lat:-33.8204,lng:151.2074,serviceCount:6,months:{Jun:'Quarterly',Jul:'EPP',Aug:'EPP',Sep:'Annually'}},
+    {siteNo:'2060',siteName:'Liverpool MF',siteClass:'A+',region:'Metro',lat:-33.9211,lng:150.9254,serviceCount:5,months:{Jun:'EPP',Jul:'EPP',Aug:'Annually',Sep:'EPP'}},
+    {siteNo:'2144',siteName:'Bicentennial Park MF',siteClass:'A',region:'Metro',lat:-33.8427,lng:151.0645,serviceCount:3,months:{Jun:'Quarterly',Jul:'EPP',Aug:'EPP',Sep:'6 Monthly'}},
+    {siteNo:'2052',siteName:'Knights Hill',siteClass:'A',region:'Regional',lat:-34.5667,lng:150.7167,serviceCount:4,months:{Jun:'Quarterly ACU',Jul:'Quarterly ACU',Aug:'Quarterly ACU',Sep:'Quarterly ACU'}},
+    {siteNo:'2015',siteName:'Brokers Nose',siteClass:'B',region:'Regional',lat:-34.3667,lng:150.8833,serviceCount:2,months:{Sep:'Annually'}},
+    {siteNo:'2141',siteName:'Fairfield West',siteClass:'C',region:'Metro',lat:-33.8693,lng:150.9577,serviceCount:2,months:{Jun:'Quarterly',Sep:'Quarterly'}},
+    {siteNo:'2143',siteName:'Olympic Park',siteClass:'D',region:'Metro',lat:-33.8471,lng:151.0693,serviceCount:1,months:{Jun:'6 Monthly',Dec:'Annually'}},
+    {siteNo:'2027',siteName:'Sydney Airport',siteClass:'D',region:'Metro',lat:-33.9461,lng:151.1772,serviceCount:2,months:{Jun:'Quarterly',Sep:'Quarterly'}}];
+  for(const s of sites)await dbPut('sites',s);
+  const techs=[
+    {id:'T001',name:'John Smith',region:'Metro',shift:'Day',lat:-33.8688,lng:151.2093,skills:'EPP, ACU, Electrical'},
+    {id:'T002',name:'Sarah Johnson',region:'Metro',shift:'Day',lat:-33.8151,lng:151.0011,skills:'EPP, Electrical'},
+    {id:'T003',name:'Mike Chen',region:'Metro',shift:'Night',lat:-33.8383,lng:151.2061,skills:'Electrical, ACU'},
+    {id:'T004',name:'Emma Wilson',region:'Regional',shift:'Day',lat:-34.4278,lng:150.8931,skills:'EPP, ACU, Electrical'},
+    {id:'T005',name:'David Brown',region:'Metro',shift:'Day',lat:-33.7969,lng:151.1388,skills:'ACU, Electrical'}];
+  for(const t of techs)await dbPut('technicians',t);}
+
+/* ============ INIT ============ */
+document.addEventListener('DOMContentLoaded',async()=>{
+  try{
+    await initDB();
+    const sites=await dbAll('sites');
+    if(!sites.length){await seed();toast('Sample data loaded. Download the Excel Workbook, fill it with real data, and re-import.','info');}
+    const hols=await dbAll('holidays');
+    if(!hols.length){for(const[d,n]of NSW_HOLIDAYS)await dbPut('holidays',{date:d,name:n});}
+    await loadHolidaySet();
+    goToday();
+    document.getElementById('mapDate').value=todayStr();
+    refreshAll();
+  }catch(e){toast('Init error: '+e.message,'err');}
+});
+</script>
+</body>
+</html>
