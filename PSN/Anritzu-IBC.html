@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>S412E Map File Converter</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root {
   --navy:     #0f2240;
@@ -722,7 +723,100 @@ footer {
 .btn-ann-dl:hover { background: var(--ice); }
 .annotate-note { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-top: 8px; line-height: 1.6; }
 
-/* ── DROP ZONE CLEAR BUTTON ── */
+/* ── MAP REFERENCE TAB ── */
+.map-search-row {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.map-search-row input {
+  flex: 1; border: 1px solid var(--rule); border-radius: 4px;
+  padding: 9px 12px; font-family: var(--mono); font-size: 13px;
+  color: var(--ink); background: var(--white); outline: none;
+  transition: border-color 0.15s;
+}
+.map-search-row input:focus { border-color: var(--navy-lit); box-shadow: 0 0 0 3px rgba(37,99,168,0.12); }
+.btn-map-search {
+  padding: 9px 18px; background: var(--navy-mid); color: #fff;
+  border: none; border-radius: 4px; font-family: var(--cond);
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-map-search:hover { background: var(--navy-lit); }
+
+.map-presets {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.btn-preset {
+  padding: 5px 12px; background: var(--paper); border: 1px solid var(--rule);
+  border-radius: 3px; font-family: var(--mono); font-size: 11px; color: var(--ink-mid);
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-preset:hover { background: var(--ice); border-color: var(--navy-lit); color: var(--navy-mid); }
+
+.map-layout {
+  display: grid; grid-template-columns: 1fr 240px; gap: 14px; align-items: start;
+}
+#map-leaflet {
+  height: 480px; border-radius: 5px; border: 1px solid var(--rule); z-index: 0;
+}
+.map-side-panel {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.map-info-box {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px;
+}
+.map-info-label {
+  font-family: var(--cond); font-size: 10px; font-weight: 700; color: var(--ink-faint);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+}
+.map-info-val {
+  font-family: var(--mono); font-size: 11px; color: var(--ink); line-height: 1.7;
+}
+.map-info-val.dim { color: var(--ink-faint); }
+
+.map-ref-block {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px;
+}
+.map-ref-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px;
+}
+.map-ref-row:last-child { margin-bottom: 0; }
+.map-ref-label { font-family: var(--cond); font-size: 11px; font-weight: 600; color: var(--ink-faint); flex-shrink: 0; }
+.map-ref-coords { font-family: var(--mono); font-size: 10px; color: var(--ink-mid); flex: 1; text-align: right; line-height: 1.5; }
+.map-ref-coords.set { color: var(--green); }
+.btn-map-ref {
+  padding: 4px 8px; border: 1px solid var(--rule); border-radius: 3px;
+  background: var(--white); font-family: var(--cond); font-size: 10px;
+  font-weight: 600; color: var(--navy-mid); cursor: pointer; white-space: nowrap;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.btn-map-ref:hover { background: var(--ice); border-color: var(--navy-lit); }
+.btn-map-ref.active { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+.btn-map-transfer {
+  width: 100%; padding: 10px; background: var(--navy-mid); color: #fff;
+  border: none; border-radius: 4px; font-family: var(--cond); font-size: 13px;
+  font-weight: 700; cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.btn-map-transfer:hover { background: var(--navy-lit); }
+.btn-map-transfer:disabled { background: var(--ink-faint); cursor: not-allowed; }
+
+.map-capture-note {
+  background: var(--ice); border-left: 3px solid var(--navy-lit);
+  border-radius: 0 4px 4px 0; padding: 9px 11px;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.65; font-family: var(--sans);
+}
+.map-capture-note strong { color: var(--navy-mid); }
+
+/* Leaflet marker overrides */
+.leaflet-marker-icon.ref-marker {
+  background: var(--navy-mid); border: 2px solid #fff;
+  border-radius: 50%; width: 14px; height: 14px;
+}
+
+@media (max-width: 700px) {
+  .map-layout { grid-template-columns: 1fr; }
+  #map-leaflet { height: 320px; }
+}
 .dz-clear {
   position: absolute; top: 7px; right: 7px;
   width: 22px; height: 22px; border-radius: 50%;
@@ -760,6 +854,7 @@ footer {
     <div class="tab active" data-tab="convert">🗺 Map Converter</div>
     <div class="tab" data-tab="report">📊 Report Generator</div>
     <div class="tab" data-tab="siu">📖 SIU Instructions</div>
+    <div class="tab" data-tab="mapref">🌏 Map Reference</div>
     <div class="tab" data-tab="instructions">📋 How-To</div>
     <div class="tab" data-tab="format">🔬 File Format</div>
   </div>
@@ -1587,6 +1682,95 @@ footer {
 
   </div><!-- end tab-format -->
 
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB: MAP REFERENCE                                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-mapref">
+
+    <div class="card">
+      <div class="card-header">
+        OpenStreetMap Reference
+        <span class="tag">GPS CALIBRATION</span>
+      </div>
+      <div class="card-body">
+
+        <!-- Search -->
+        <div class="map-search-row">
+          <input type="text" id="map-search-input" placeholder="Search for a location, address or tunnel…" autocomplete="off">
+          <button class="btn-map-search" id="map-search-btn">🔍 Search</button>
+        </div>
+
+        <!-- Quick presets -->
+        <div class="map-presets">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);align-self:center;padding-right:4px;">QUICK ZOOM:</span>
+          <button class="btn-preset" data-lat="-33.8688" data-lon="151.2093" data-zoom="13">Sydney CBD</button>
+          <button class="btn-preset" data-lat="-33.9115" data-lon="151.1266" data-zoom="14">M8 Tunnel (Kingsgrove)</button>
+          <button class="btn-preset" data-lat="-33.8745" data-lon="151.1466" data-zoom="14">M8 Tunnel (St Peters)</button>
+          <button class="btn-preset" data-lat="-33.8025" data-lon="151.1295" data-zoom="15">Lane Cove Tunnel</button>
+          <button class="btn-preset" data-lat="-33.8688" data-lon="151.2093" data-zoom="11">Greater Sydney</button>
+        </div>
+
+        <!-- Map + side panel -->
+        <div class="map-layout">
+          <div id="map-leaflet"></div>
+
+          <div class="map-side-panel">
+
+            <!-- Cursor coords -->
+            <div class="map-info-box">
+              <div class="map-info-label">Cursor Position</div>
+              <div class="map-info-val dim" id="map-cursor-display">Move over map…</div>
+            </div>
+
+            <!-- Last click -->
+            <div class="map-info-box">
+              <div class="map-info-label">Last Click</div>
+              <div class="map-info-val dim" id="map-click-display">Click map to capture coordinates</div>
+            </div>
+
+            <!-- Ref points -->
+            <div class="map-ref-block">
+              <div class="map-info-label" style="margin-bottom:8px;">GPS Reference Points</div>
+              <div class="map-ref-row">
+                <span class="map-ref-label">Ref 1</span>
+                <span class="map-ref-coords dim" id="map-ref1-display">not set</span>
+                <button class="btn-map-ref" id="btn-set-ref1">Set</button>
+              </div>
+              <div class="map-ref-row">
+                <span class="map-ref-label">Ref 2</span>
+                <span class="map-ref-coords dim" id="map-ref2-display">not set</span>
+                <button class="btn-map-ref" id="btn-set-ref2">Set</button>
+              </div>
+              <div style="font-size:10px;color:var(--ink-faint);font-family:var(--mono);margin-top:8px;line-height:1.6;">
+                Click the map, then Set to record a GPS anchor for outdoor .map calibration.
+              </div>
+            </div>
+
+            <!-- Transfer button -->
+            <button class="btn-map-transfer" id="btn-map-transfer" disabled>
+              → Transfer to Converter
+            </button>
+            <div style="font-size:10px;color:var(--ink-faint);font-family:var(--mono);line-height:1.6;margin-top:-4px;">
+              Sends Ref 1 &amp; 2 to the outdoor GPS fields in the Map Converter tab and switches to Outdoor mode.
+            </div>
+
+            <!-- Capture instructions -->
+            <div class="map-capture-note">
+              <strong>To use this map as a floor plan:</strong><br>
+              1. Navigate and zoom to your survey area<br>
+              2. Set Ref 1 (top-left) and Ref 2 (bottom-right)<br>
+              3. Use <strong>Snipping Tool</strong> to capture the map area<br>
+              4. Upload the screenshot + transfer GPS refs to the <strong>Map Converter</strong> tab with Outdoor mode
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end tab-mapref -->
+
 </main>
 
 <footer>
@@ -2266,6 +2450,224 @@ img{max-width:100%;max-height:110mm;object-fit:contain;border:.5pt solid #d0d5de
   // Also trigger annotation when map image loads (done via checkReady)
 
 })(); // end report module
+</script>
+
+<!-- Leaflet.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// MAP REFERENCE MODULE
+// ══════════════════════════════════════════════════════════
+(function() {
+  let map = null;
+  let lastClickLatLng = null;
+  let ref1 = null, ref2 = null;
+  let ref1Marker = null, ref2Marker = null;
+  let searchMarker = null;
+
+  // ── Marker icons ──
+  function makeRefIcon(label, color) {
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        background:${color};border:2.5px solid #fff;border-radius:50%;
+        width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+        font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;
+        color:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);">${label}</div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+  }
+
+  function makeSearchIcon() {
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#c0392b;border:2.5px solid #fff;border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);width:20px;height:20px;
+        box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 20],
+    });
+  }
+
+  // ── Init map ──
+  function initMap() {
+    if (map) return;
+
+    map = L.map('map-leaflet', {
+      center: [-33.8688, 151.2093],
+      zoom: 12,
+      zoomControl: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Mousemove — show cursor coords
+    map.on('mousemove', e => {
+      document.getElementById('map-cursor-display').textContent =
+        `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      document.getElementById('map-cursor-display').classList.remove('dim');
+    });
+    map.on('mouseout', () => {
+      document.getElementById('map-cursor-display').textContent = 'Move over map…';
+      document.getElementById('map-cursor-display').classList.add('dim');
+    });
+
+    // Click — capture coords
+    map.on('click', e => {
+      lastClickLatLng = e.latlng;
+      const el = document.getElementById('map-click-display');
+      el.textContent = `${e.latlng.lat.toFixed(6)}\n${e.latlng.lng.toFixed(6)}`;
+      el.classList.remove('dim');
+    });
+  }
+
+  // ── Refresh map size when tab becomes visible ──
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.tab === 'mapref') {
+        setTimeout(() => {
+          if (!map) initMap();
+          else map.invalidateSize();
+        }, 50);
+      }
+    });
+  });
+
+  // ── Format coords display ──
+  function fmtLatLon(ll) {
+    return `${ll.lat.toFixed(6)}\n${ll.lng.toFixed(6)}`;
+  }
+
+  // ── Set Ref 1 ──
+  document.getElementById('btn-set-ref1').addEventListener('click', () => {
+    if (!lastClickLatLng) { alert('Click the map first to select a position.'); return; }
+    ref1 = { lat: lastClickLatLng.lat, lng: lastClickLatLng.lng };
+    const el = document.getElementById('map-ref1-display');
+    el.textContent = fmtLatLon(ref1);
+    el.classList.remove('dim'); el.classList.add('set');
+    document.getElementById('btn-set-ref1').classList.add('active');
+    document.getElementById('btn-set-ref1').textContent = '✓';
+
+    if (ref1Marker) map.removeLayer(ref1Marker);
+    ref1Marker = L.marker([ref1.lat, ref1.lng], { icon: makeRefIcon('1','#1a3f6f'), title: 'Ref Point 1' }).addTo(map);
+    ref1Marker.bindPopup(`<b>Ref Point 1</b><br>${ref1.lat.toFixed(6)}, ${ref1.lng.toFixed(6)}`);
+
+    checkTransferReady();
+  });
+
+  // ── Set Ref 2 ──
+  document.getElementById('btn-set-ref2').addEventListener('click', () => {
+    if (!lastClickLatLng) { alert('Click the map first to select a position.'); return; }
+    ref2 = { lat: lastClickLatLng.lat, lng: lastClickLatLng.lng };
+    const el = document.getElementById('map-ref2-display');
+    el.textContent = fmtLatLon(ref2);
+    el.classList.remove('dim'); el.classList.add('set');
+    document.getElementById('btn-set-ref2').classList.add('active');
+    document.getElementById('btn-set-ref2').textContent = '✓';
+
+    if (ref2Marker) map.removeLayer(ref2Marker);
+    ref2Marker = L.marker([ref2.lat, ref2.lng], { icon: makeRefIcon('2','#2563a8'), title: 'Ref Point 2' }).addTo(map);
+    ref2Marker.bindPopup(`<b>Ref Point 2</b><br>${ref2.lat.toFixed(6)}, ${ref2.lng.toFixed(6)}`);
+
+    checkTransferReady();
+  });
+
+  function checkTransferReady() {
+    document.getElementById('btn-map-transfer').disabled = !(ref1 && ref2);
+  }
+
+  // ── Transfer to Converter ──
+  document.getElementById('btn-map-transfer').addEventListener('click', () => {
+    if (!ref1 || !ref2) return;
+
+    // Populate GPS fields in converter
+    document.getElementById('pt1-lat').value = ref1.lat.toFixed(6);
+    document.getElementById('pt1-lon').value = ref1.lng.toFixed(6);
+    document.getElementById('pt2-lat').value = ref2.lat.toFixed(6);
+    document.getElementById('pt2-lon').value = ref2.lng.toFixed(6);
+
+    // Switch to outdoor mode
+    if (typeof setMode === 'function') setMode('outdoor');
+
+    // Switch to converter tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="convert"]').classList.add('active');
+    document.getElementById('tab-convert').classList.add('active');
+
+    // Scroll to GPS section
+    setTimeout(() => {
+      const gps = document.getElementById('gps-section');
+      if (gps) gps.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  });
+
+  // ── Quick preset buttons ──
+  document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!map) initMap();
+      const lat = parseFloat(btn.dataset.lat);
+      const lon = parseFloat(btn.dataset.lon);
+      const zoom = parseInt(btn.dataset.zoom);
+      map.setView([lat, lon], zoom, { animate: true });
+    });
+  });
+
+  // ── Nominatim search ──
+  async function doSearch() {
+    const query = document.getElementById('map-search-input').value.trim();
+    if (!query) return;
+
+    const btn = document.getElementById('map-search-btn');
+    btn.textContent = '⏳';
+    btn.disabled = true;
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=au`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const data = await res.json();
+
+      if (data.length > 0) {
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        const zoom = result.type === 'highway' || result.type === 'road' ? 15 : 14;
+
+        if (!map) initMap();
+        map.setView([lat, lon], zoom, { animate: true });
+
+        if (searchMarker) map.removeLayer(searchMarker);
+        searchMarker = L.marker([lat, lon], { icon: makeSearchIcon() }).addTo(map);
+        searchMarker.bindPopup(`<b>${result.display_name.split(',')[0]}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}`).openPopup();
+
+        // Update click display so user can immediately set as ref
+        lastClickLatLng = { lat, lng: lon };
+        const el = document.getElementById('map-click-display');
+        el.textContent = `${lat.toFixed(6)}\n${lon.toFixed(6)}`;
+        el.classList.remove('dim');
+      } else {
+        alert('Location not found. Try a different search term.');
+      }
+    } catch (e) {
+      alert('Search failed — check your internet connection.');
+    }
+
+    btn.textContent = '🔍 Search';
+    btn.disabled = false;
+  }
+
+  document.getElementById('map-search-btn').addEventListener('click', doSearch);
+  document.getElementById('map-search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+
+})(); // end map module
 </script>
 </body>
 </html>
