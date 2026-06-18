@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAI Sites Map v5 19-03-2026</title>
+    <title>BAI Sites Map v6 18-06-2026</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
     /* =====================================================
@@ -3938,32 +3938,57 @@ function setupDimensionListeners() {
 
 // Get default dimension config matching Site Map's statusConfig
 function getDefaultDimensionConfig() {
+    // BAI production defaults — matches bai-dimension-config-2026-06-18.json
     return {
         status: {
-            'Operational': { color: '#4CAF50', icon: '✓' },
-            'Operationally Accepted': { color: '#4CAF50', icon: '✓' },
-            'Non Operational': { color: '#FF9800', icon: '🔨' },
-            'Construction': { color: '#FF9800', icon: '🔨' },
-            'Conditionally Accepted': { color: '#9C27B0', icon: 'âš ' },
-            'Hybrid': { color: '#2196F3', icon: '⚡' },
-            'Hybrid Power & Enviro': { color: '#2196F3', icon: '⚡' }
+            'Operational':          { color: '#00d2d3', icon: '✓' },
+            'Operationally broken': { color: '#F368E0', icon: '✖' },
+            'Non Operational':      { color: '#FF9800', icon: '🔨' },
+            'Hybrid Power':         { color: '#EE5A6F', icon: '🔨' },
+            'Stockrooms':           { color: '#EE5A6F', icon: '⚡' }
         },
         contractor: {
-            'Contractor A': { color: '#FF6B6B', icon: '🏢' },
-            'Contractor B': { color: '#26DE81', icon: '🏢' },
-            'Contractor C': { color: '#54A0FF', icon: '🏢' },
-            'Unassigned': { color: '#999', icon: '?' }
+            'Unassigned':                 { color: '#999',     icon: '?' },
+            'BAI':                        { color: '#54a0ff', icon: '☆' },
+            'Allcom':                     { color: '#26de81', icon: '◼' },
+            'Karera Ballina':             { color: '#5F27CD', icon: '✔' },
+            'AA Radio':                   { color: '#95E1D3', icon: '⚠' },
+            'Karera Tamworth/Port Mac':   { color: '#26DE81', icon: '📍' },
+            'Karera Coffs Harbour':       { color: '#00D2D3', icon: '📞' },
+            'EA Comms':                   { color: '#5f27cd', icon: '⚠' }
         },
         region: {
-            'Sydney': { color: '#FF6B6B', icon: '📍' },
-            'Hunter': { color: '#4ECDC4', icon: '📍' },
-            'Central Coast': { color: '#FFE66D', icon: '📍' },
-            'North Coast': { color: '#95E1D3', icon: '📍' },
-            'South Coast': { color: '#F38181', icon: '📍' },
-            'New England': { color: '#AA96DA', icon: '📍' }
+            'Sydney Metropolitan':         { color: '#FFC857', icon: '☆' },
+            'Australian Capital Territory':{ color: '#20C997', icon: '📍' },
+            'Central Tablelands':          { color: '#26DE81', icon: '✔' },
+            'South Coast':                 { color: '#F38181', icon: '📍' },
+            'Riverina':                    { color: '#FF8C42', icon: '◼' },
+            'Northern Rivers':             { color: '#26DE81', icon: '◯' },
+            'North West Slopes & Plains':  { color: '#26DE81', icon: '✓' },
+            'Lower Western':               { color: '#26DE81', icon: '◯' },
+            'Upper Western':               { color: '#54A0FF', icon: '📞' },
+            'Central West Slopes & Plains':{ color: '#26DE81', icon: '✓' },
+            'Hunter':                      { color: '#4ECDC4', icon: '📍' },
+            'South West Slopes':           { color: '#FF8C42', icon: '📞' },
+            'Northern Tablelands':         { color: '#38B6FF', icon: '✔' },
+            'Southern Tablelands':         { color: '#20C997', icon: '⚡' },
+            'Snowy Mountains':             { color: '#FF6B6B', icon: '📍' },
+            'Illawarra':                   { color: '#FF8C42', icon: '🎯' },
+            'Unknown':                     { color: '#00D2D3', icon: '🎯' },
+            'Mid North Coast':             { color: '#20C997', icon: '☆' },
+            'Mobile Asset':                { color: '#20C997', icon: '🎯' },
+            'Metro':                       { color: '#38B6FF', icon: '⚡' },
+            'Regional':                    { color: '#38B6FF', icon: '🎯' }
         },
         siuCallout: {
-            'Not Set': { color: '#666666', icon: '📞' }
+            'SIU Sydney':    { color: '#F368E0', icon: '📞' },
+            'SIU Canberra':  { color: '#54A0FF', icon: '🔨' },
+            'SIU Victoria':  { color: '#95E1D3', icon: '🎯' },
+            'SIU Newcastle': { color: '#FFC857', icon: '◼' },
+            'SIU South QLD': { color: '#00D2D3', icon: '⚠' },
+            'SIU South Aus': { color: '#20C997', icon: '📞' },
+            'MRA':           { color: '#5F27CD', icon: '◼' },
+            'Not Set':       { color: '#666666', icon: '📞' }
         }
     };
 }
