@@ -4495,10 +4495,6 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     const borderWidth = 3;
     const totalSize = size + (borderWidth * 2);
     
-    // BAI logo badge size (bottom-right corner)
-    const badgeSize = Math.round(10 * scale);
-    const badgeOffset = Math.round(1 * scale);
-    
     // BAI logo icon: use the actual logo image as the main icon inside the circle
     // Triggered when icon is ☆ or ★ (default BAI contractor icon from Dimension Mapper)
     const BAI_LOGO_URL = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
@@ -4539,27 +4535,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
                 text-align: center;
                 overflow: hidden;
             ">${innerContent}</div>
-            <!-- BAI logo badge (only shown for non-BAI-logo markers) -->
-            ${!isBaiLogoIcon ? `<div style="
-                position: absolute;
-                bottom: ${badgeOffset}px;
-                right: ${badgeOffset}px;
-                width: ${badgeSize}px;
-                height: ${badgeSize}px;
-                border-radius: 50%;
-                background: white;
-                border: 1px solid rgba(0,0,0,0.25);
-                overflow: hidden;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-                pointer-events: none;
-            ">
-                <img src="${BAI_LOGO_URL}"
-                     style="width:${badgeSize - 2}px;height:${badgeSize - 2}px;object-fit:contain;display:block;"
-                     onerror="this.parentElement.style.display='none'">
-            </div>` : ''}
+
         </div>
     `;
     
@@ -13233,10 +13209,6 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     const borderWidth = 3;
     const totalSize = size + (borderWidth * 2);
     
-    // BAI logo badge size (bottom-right corner)
-    const badgeSize = Math.round(10 * scale);
-    const badgeOffset = Math.round(1 * scale);
-    
     // BAI logo icon: use the actual logo image as the main icon inside the circle
     // Triggered when icon is ☆ or ★ (default BAI contractor icon from Dimension Mapper)
     const BAI_LOGO_URL = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
@@ -13277,27 +13249,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
                 text-align: center;
                 overflow: hidden;
             ">${innerContent}</div>
-            <!-- BAI logo badge (only shown for non-BAI-logo markers) -->
-            ${!isBaiLogoIcon ? `<div style="
-                position: absolute;
-                bottom: ${badgeOffset}px;
-                right: ${badgeOffset}px;
-                width: ${badgeSize}px;
-                height: ${badgeSize}px;
-                border-radius: 50%;
-                background: white;
-                border: 1px solid rgba(0,0,0,0.25);
-                overflow: hidden;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-                pointer-events: none;
-            ">
-                <img src="${BAI_LOGO_URL}"
-                     style="width:${badgeSize - 2}px;height:${badgeSize - 2}px;object-fit:contain;display:block;"
-                     onerror="this.parentElement.style.display='none'">
-            </div>` : ''}
+
         </div>
     `;
     
