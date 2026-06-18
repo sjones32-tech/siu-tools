@@ -3402,8 +3402,8 @@ clearRouteDisplay();
     const top = screen.height / 2 - height / 2;
     
     window.dimensionMapperWindow = window.open(
-    'https://sjones32-tech.github.io/siu-tools/dimension-mapper/index.html',
-    'BAI_Dimension_Mapper',
+        'bai_dimension_mapper.html',
+        'BAI_Dimension_Mapper',
         `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
     );
     
@@ -9522,31 +9522,189 @@ setTimeout(() => {
         }
         
         function exportToKML() {
+            // ── Helper: hex colour → KML aabbggrr format ──────────────────
+            function hexToKMLColor(hex, alpha) {
+                // hex: '#rrggbb' or 'hsl(...)' or named
+                let r = 255, g = 150, b = 0; // orange fallback
+                try {
+                    // Parse hex colours
+                    const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+                    if (m) {
+                        r = parseInt(m[1], 16);
+                        g = parseInt(m[2], 16);
+                        b = parseInt(m[3], 16);
+                    } else {
+                        // Parse hsl() colours
+                        const hslm = hex.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
+                        if (hslm) {
+                            const h = parseInt(hslm[1]) / 360;
+                            const s = parseInt(hslm[2]) / 100;
+                            const l = parseInt(hslm[3]) / 100;
+                            const hue2rgb = (p, q, t) => {
+                                if (t < 0) t += 1; if (t > 1) t -= 1;
+                                if (t < 1/6) return p + (q - p) * 6 * t;
+                                if (t < 1/2) return q;
+                                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                                return p;
+                            };
+                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                            const p = 2 * l - q;
+                            r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+                            g = Math.round(hue2rgb(p, q, h) * 255);
+                            b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+                        }
+                    }
+                } catch(e) {}
+                const aa = (alpha || 'ff');
+                const toH = v => v.toString(16).padStart(2, '0');
+                // KML order: aabbggrr
+                return `${aa}${toH(b)}${toH(g)}${toH(r)}`;
+            }
+
+            // ── Collect unique dimension keys and colours ──────────────────
+            // Uses current dimension (status / contractor / region / siuCallout)
+            const styleMap = {}; // key → { kmlColor, styleId }
+            const usedKeys = new Set();
+            sites.forEach(site => {
+                let key = '';
+                switch (currentDimension) {
+                    case 'contractor': key = site.contractor || 'Unassigned'; break;
+                    case 'region':     key = site.region || 'Unknown'; break;
+                    case 'siuCallout': key = site.siuCallout || 'Not Set'; break;
+                    default:           key = site.status || 'Unknown';
+                }
+                usedKeys.add(key);
+            });
+
+            usedKeys.forEach(key => {
+                const style = getDimensionStyle({ status: key, contractor: key, region: key, siuCallout: key });
+                const color  = style ? style.color  : '#999999';
+                const styleId = 'style_' + key.replace(/[^a-zA-Z0-9]/g, '_');
+                styleMap[key] = { color, styleId };
+            });
+
+            // ── Build KML ──────────────────────────────────────────────────
             let kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
-    <name>PSN Sites Export</name>
-    <description>Exported on ${new Date().toLocaleString()}</description>\n`;
-            
-            sites.forEach(site => {
-                kml += `    <Placemark>
-      <name>${site.name}</name>
-      <description>Site Code: ${site.grnId} | Status: ${site.status}</description>
-      <Point>
-        <coordinates>${site.lng},${site.lat},0</coordinates>
-      </Point>
-    </Placemark>\n`;
+    <name>BAI PSN Sites Export</name>
+    <description>Exported on ${new Date().toLocaleString()} — ${sites.length} sites — View: ${currentDimension}</description>\n\n`;
+
+            // Style definitions (one per unique dimension value)
+            Object.entries(styleMap).forEach(([key, { color, styleId }]) => {
+                const kmlNormal   = hexToKMLColor(color, 'ff');
+                const kmlHighlight = hexToKMLColor(color, 'ff');
+                kml += `    <Style id="${styleId}Normal">
+      <IconStyle>
+        <color>${kmlNormal}</color>
+        <scale>1.0</scale>
+        <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
+      </IconStyle>
+      <LabelStyle><scale>0</scale></LabelStyle>
+      <BalloonStyle>
+        <bgColor>ff2d2d3e</bgColor>
+        <textColor>ffe0e0e0</textColor>
+        <text>$[description]</text>
+      </BalloonStyle>
+    </Style>
+    <Style id="${styleId}Highlight">
+      <IconStyle>
+        <color>${kmlHighlight}</color>
+        <scale>1.3</scale>
+        <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
+      </IconStyle>
+      <LabelStyle><scale>0.8</scale></LabelStyle>
+    </Style>
+    <StyleMap id="${styleId}">
+      <Pair><key>normal</key><styleUrl>#${styleId}Normal</styleUrl></Pair>
+      <Pair><key>highlight</key><styleUrl>#${styleId}Highlight</styleUrl></Pair>
+    </StyleMap>\n`;
             });
-            
-            kml += `  </Document>
-</kml>`;
-            
+
+            kml += '\n';
+
+            // Group placemarks by dimension key using Folders
+            const folders = {};
+            sites.forEach(site => {
+                let key = '';
+                switch (currentDimension) {
+                    case 'contractor': key = site.contractor || 'Unassigned'; break;
+                    case 'region':     key = site.region || 'Unknown'; break;
+                    case 'siuCallout': key = site.siuCallout || 'Not Set'; break;
+                    default:           key = site.status || 'Unknown';
+                }
+                if (!folders[key]) folders[key] = [];
+                folders[key].push(site);
+            });
+
+            Object.entries(folders).forEach(([key, folderSites]) => {
+                const { styleId } = styleMap[key] || { styleId: 'style_Unknown' };
+                kml += `    <Folder>
+      <name>${escapeXML(key)} (${folderSites.length})</name>\n`;
+
+                folderSites.forEach(site => {
+                    // Rich HTML description matching popup
+                    const desc = `<![CDATA[
+<div style="font-family:Arial,sans-serif;min-width:220px;padding:4px;">
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <tr><td style="color:#81C784;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">STATUS</td>
+        <td style="padding:3px 0;">${escapeXML(site.status)}</td></tr>
+    <tr><td style="color:#81C784;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">SITE ID</td>
+        <td style="padding:3px 0;">${escapeXML(site.siteNumber || '')}</td></tr>
+    <tr><td style="color:#81C784;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">SITE CODE</td>
+        <td style="padding:3px 0;">${escapeXML(site.grnId)}</td></tr>
+    <tr><td style="color:#81C784;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">REGION</td>
+        <td style="padding:3px 0;">${escapeXML(site.region || 'N/A')}</td></tr>
+    <tr><td style="color:#81C784;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">CONTRACTOR</td>
+        <td style="padding:3px 0;">${escapeXML(site.contractor || 'Unassigned')}</td></tr>${site.siuCallout ? `
+    <tr><td style="color:#F48FB1;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">SIU CALLOUT</td>
+        <td style="padding:3px 0;color:#FFB74D;">${escapeXML(site.siuCallout)}</td></tr>` : ''}
+    <tr><td style="color:#81C784;font-weight:bold;padding:3px 6px 3px 0;white-space:nowrap;">COORDINATES</td>
+        <td style="padding:3px 0;">${site.lat.toFixed(6)}, ${site.lng.toFixed(6)}</td></tr>
+  </table>
+</div>]]>`;
+
+                    kml += `      <Placemark>
+        <name>${escapeXML(site.name)}</name>
+        <description>${desc}</description>
+        <styleUrl>#${styleId}</styleUrl>
+        <ExtendedData>
+          <Data name="SiteCode"><value>${escapeXML(site.grnId)}</value></Data>
+          <Data name="SiteID"><value>${escapeXML(site.siteNumber || '')}</value></Data>
+          <Data name="Status"><value>${escapeXML(site.status)}</value></Data>
+          <Data name="Region"><value>${escapeXML(site.region || '')}</value></Data>
+          <Data name="Contractor"><value>${escapeXML(site.contractor || '')}</value></Data>
+          <Data name="SIUCallout"><value>${escapeXML(site.siuCallout || '')}</value></Data>
+        </ExtendedData>
+        <Point>
+          <coordinates>${site.lng},${site.lat},0</coordinates>
+        </Point>
+      </Placemark>\n`;
+                });
+
+                kml += `    </Folder>\n`;
+            });
+
+            kml += `  </Document>\n</kml>`;
+
+            // ── Helper: XML-safe escaping ──────────────────────────────────
+            function escapeXML(str) {
+                if (!str) return '';
+                return str.toString()
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+            }
+
             const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `psn-sites-${new Date().toISOString().split('T')[0]}.kml`;
+            const url  = window.URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `bai-psn-sites-${currentDimension}-${new Date().toISOString().split('T')[0]}.kml`;
             a.click();
+            window.URL.revokeObjectURL(url);
             closeExportModal();
         }
 
@@ -10492,33 +10650,6 @@ function unhighlightContractorTerritory(contractor) {
 // =====================================================
 // COMPLETE INITIALIZATION FUNCTION
 // =====================================================
-async function loadSitesFromJSON() {
-    try {
-        const response = await fetch('sites.json');
-        if (!response.ok) return false;
-        const data = await response.json();
-        const loaded = Array.isArray(data) ? data : (data.sites || []);
-        if (loaded.length === 0) return false;
-        sites.length = 0;
-        sites.push(...loaded.map(site => ({
-            name: site.name || '',
-            grnId: site.grnId || '',
-            siteNumber: site.siteNumber || '0',
-            status: site.status || 'Operationally Accepted',
-            region: site.region || 'Unknown',
-            contractor: site.contractor || 'Unassigned',
-            siuCallout: site.siuCallout || '',
-            lat: parseFloat(site.lat) || 0,
-            lng: parseFloat(site.lng) || 0
-        })));
-        console.log(`✓ Loaded ${sites.length} sites from sites.json`);
-        return true;
-    } catch (e) {
-        console.log('No sites.json found, falling back to IndexedDB');
-        return false;
-    }
-}
-
 // =====================================================
 // COMPLETE FIXED INITIALIZATION FUNCTION
 // =====================================================
@@ -10554,21 +10685,16 @@ async function init() {
         // STEP 3: Load Data from Storage
         console.log('STEP 3: Loading saved data...');
         try {
-            // Try sites.json first (GitHub Pages / shared deployment)
-            const jsonLoaded = await loadSitesFromJSON();
-            if (!jsonLoaded) {
-                // Fall back to IndexedDB (local use)
-                const savedData = await loadFromIndexedDB();
-                if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
-                    sites.length = 0;
-                    sites.push(...savedData.sites);
-                    console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
-                } else {
-                    console.log('ℹ No saved data found');
-                }
+            const savedData = await loadFromIndexedDB();
+            if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
+                sites.length = 0;
+                sites.push(...savedData.sites);
+                console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
+            } else {
+                console.log('ℹ No saved data found, using test sites');
             }
         } catch (e) {
-            console.warn('⚠ Error loading data:', e);
+            console.warn('âš  Error loading from IndexedDB:', e);
         }
         
         // STEP 4: Verify Map Instance
@@ -11482,9 +11608,6 @@ if (document.readyState === 'loading') {
         // Step 3: Setup listeners
         setupDimensionListeners();
         
-        // Auto-load KML layer from repo if present
-        await loadKMLFromFile('layers.kml');
-
         console.log('✅ All systems initialized successfully');
         console.log('📊 Stats:', {
             sites: sites.length,
@@ -11689,54 +11812,6 @@ function initKMLSystem() {
 // =====================================================
 // KML FILE UPLOAD & PARSING
 // =====================================================
-
-async function loadKMLFromFile(filename) {
-    try {
-        const response = await fetch(filename);
-        if (!response.ok) {
-            console.log(`No ${filename} found, skipping KML auto-load`);
-            return false;
-        }
-
-        const kmlText = await response.text();
-        const parser = new DOMParser();
-        const kmlDoc = parser.parseFromString(kmlText, 'text/xml');
-
-        if (kmlDoc.documentElement.nodeName === 'parsererror') {
-            console.warn('Auto-load KML: invalid file format');
-            return false;
-        }
-
-        const layerName = filename.replace('.kml', '').substring(0, 30);
-        const features = parseKMLDocument(kmlDoc);
-
-        if (features.length === 0) {
-            console.warn('Auto-load KML: no features found');
-            return false;
-        }
-
-        const layerId = `kml_${kmlLayerCounter++}`;
-        kmlLayers[layerId] = {
-            id: layerId,
-            name: layerName,
-            features: features,
-            visible: true,
-            color: generateRandomColor(),
-            featureCount: features.length,
-            file: filename,
-            uploadDate: new Date().toISOString()
-        };
-
-        renderKMLLayer(layerId);
-        updateKMLLegend();
-        console.log(`✓ Auto-loaded ${features.length} features from ${filename}`);
-        return true;
-
-    } catch (e) {
-        console.log(`KML auto-load skipped: ${e.message}`);
-        return false;
-    }
-}
 
 function handleKMLFileSelect(event) {
     const file = event.target.files[0];
