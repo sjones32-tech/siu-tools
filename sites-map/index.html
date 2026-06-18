@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAI Sites Map v6 18-06-2026</title>
+    <title>BAI Sites Map v5 19-03-2026</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
     /* =====================================================
@@ -4499,9 +4499,21 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     const badgeSize = Math.round(10 * scale);
     const badgeOffset = Math.round(1 * scale);
     
-    // Safer HTML encoding for icons
-    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    
+    // BAI logo icon: use the actual logo image as the main icon inside the circle
+    // Triggered when icon is ☆ or ★ (default BAI contractor icon from Dimension Mapper)
+    const BAI_LOGO_URL = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
+    const isBaiLogoIcon = (displayIcon === '\u2606' || displayIcon === '\u2605' || displayIcon === '\u2b50');
+    const logoImgSize = Math.round(size * 0.72);
+
+    // Inner content: BAI logo image OR encoded emoji text
+    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/''/g, '&#39;');
+    const innerContent = isBaiLogoIcon
+        ? `<img src="${BAI_LOGO_URL}"
+                style="width:${logoImgSize}px;height:${logoImgSize}px;object-fit:contain;
+                       display:block;filter:brightness(0) invert(1);"
+                onerror="this.style.display='none'">`
+        : safeIcon;
+
     const html = `
         <div style="
             position: relative;
@@ -4519,15 +4531,16 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: ${fontSize}px;
+                font-size: ${isBaiLogoIcon ? 0 : fontSize}px;
                 color: white;
                 font-weight: bold;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.4);
                 line-height: 1;
                 text-align: center;
-            ">${safeIcon}</div>
-            <!-- BAI logo badge -->
-            <div style="
+                overflow: hidden;
+            ">${innerContent}</div>
+            <!-- BAI logo badge (only shown for non-BAI-logo markers) -->
+            ${!isBaiLogoIcon ? `<div style="
                 position: absolute;
                 bottom: ${badgeOffset}px;
                 right: ${badgeOffset}px;
@@ -4543,10 +4556,10 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
                 box-shadow: 0 1px 3px rgba(0,0,0,0.4);
                 pointer-events: none;
             ">
-                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
-                     style="width: ${badgeSize - 2}px; height: ${badgeSize - 2}px; object-fit: contain; display: block;"
+                <img src="${BAI_LOGO_URL}"
+                     style="width:${badgeSize - 2}px;height:${badgeSize - 2}px;object-fit:contain;display:block;"
                      onerror="this.parentElement.style.display='none'">
-            </div>
+            </div>` : ''}
         </div>
     `;
     
@@ -13224,9 +13237,21 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     const badgeSize = Math.round(10 * scale);
     const badgeOffset = Math.round(1 * scale);
     
-    // Safer HTML encoding for icons
-    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    
+    // BAI logo icon: use the actual logo image as the main icon inside the circle
+    // Triggered when icon is ☆ or ★ (default BAI contractor icon from Dimension Mapper)
+    const BAI_LOGO_URL = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
+    const isBaiLogoIcon = (displayIcon === '\u2606' || displayIcon === '\u2605' || displayIcon === '\u2b50');
+    const logoImgSize = Math.round(size * 0.72);
+
+    // Inner content: BAI logo image OR encoded emoji text
+    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/''/g, '&#39;');
+    const innerContent = isBaiLogoIcon
+        ? `<img src="${BAI_LOGO_URL}"
+                style="width:${logoImgSize}px;height:${logoImgSize}px;object-fit:contain;
+                       display:block;filter:brightness(0) invert(1);"
+                onerror="this.style.display='none'">`
+        : safeIcon;
+
     const html = `
         <div style="
             position: relative;
@@ -13244,15 +13269,16 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: ${fontSize}px;
+                font-size: ${isBaiLogoIcon ? 0 : fontSize}px;
                 color: white;
                 font-weight: bold;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.4);
                 line-height: 1;
                 text-align: center;
-            ">${safeIcon}</div>
-            <!-- BAI logo badge -->
-            <div style="
+                overflow: hidden;
+            ">${innerContent}</div>
+            <!-- BAI logo badge (only shown for non-BAI-logo markers) -->
+            ${!isBaiLogoIcon ? `<div style="
                 position: absolute;
                 bottom: ${badgeOffset}px;
                 right: ${badgeOffset}px;
@@ -13268,10 +13294,10 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
                 box-shadow: 0 1px 3px rgba(0,0,0,0.4);
                 pointer-events: none;
             ">
-                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
-                     style="width: ${badgeSize - 2}px; height: ${badgeSize - 2}px; object-fit: contain; display: block;"
+                <img src="${BAI_LOGO_URL}"
+                     style="width:${badgeSize - 2}px;height:${badgeSize - 2}px;object-fit:contain;display:block;"
                      onerror="this.parentElement.style.display='none'">
-            </div>
+            </div>` : ''}
         </div>
     `;
     
