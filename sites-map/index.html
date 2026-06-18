@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAI Sites Map v6 19-03-2026</title>
+    <title>BAI Sites Map v5 19-03-2026</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
     /* =====================================================
@@ -1828,7 +1828,7 @@ button:disabled {
                     <h3 style="color: #00B8D4; margin-bottom: 15px;">📂 KML Layers</h3>
                     <div class="control-group">
                         <label for="kml-file-input">Load KML File</label>
-                        <input type="file" id="kml-file-input" accept=".kml" onchange="handleKMLFileSelect(event)">
+                        <input type="file" id="kml-file-input" accept=".kml,.kmz" onchange="handleKMLFileSelect(event)">
                         <div style="font-size: 11px; color: #999; margin-top: 4px;">
                             Import KML/KMZ files from Google Earth, ArcGIS, or GIS applications
                         </div>
@@ -2609,6 +2609,7 @@ button:disabled {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
 	// =====================================================
     // GLOBAL VARIABLE DECLARATIONS (TOP OF SCRIPT)
@@ -11740,6 +11741,9 @@ if (document.readyState === 'loading') {
         // Step 3: Setup listeners
         setupDimensionListeners();
         
+        // Auto-load KML/KMZ from GitHub Pages repo root
+        await loadKMLFromGitHub();
+
         console.log('✅ All systems initialized successfully');
         console.log('📊 Stats:', {
             sites: sites.length,
@@ -11934,6 +11938,97 @@ console.log('💡 Debug help: Type debugMapStatus() in console to check app stat
 //let kmlFeatureMarkers = {};  // Store all markers from KML features
 
 // Initialize KML system
+// =====================================================
+// AUTO-LOAD KML/KMZ FROM GITHUB PAGES
+// Tries layers.kmz first, then layers.kml, silent-fail if neither found
+// =====================================================
+async function loadKMLFromGitHub() {
+    if (window.location.protocol === 'file:') {
+        console.log('ℹ Running locally (file://), skipping KML auto-load');
+        return false;
+    }
+
+    const base = window.location.href.split('?')[0].replace(/\/[^\/]*$/, '/');
+    const candidates = ['layers.kmz', 'layers.kml'];
+
+    for (const filename of candidates) {
+        try {
+            const url = base + filename + '?_=' + Date.now();
+            console.log('Trying KML auto-load:', url);
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) continue;
+
+            let kmlText = null;
+
+            if (filename.endsWith('.kmz')) {
+                // KMZ is a ZIP — unpack with JSZip
+                if (typeof JSZip === 'undefined') {
+                    console.warn('JSZip not loaded, cannot unpack KMZ');
+                    continue;
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                // Find the first .kml file inside (usually doc.kml)
+                const kmlFile = Object.values(zip.files).find(f => f.name.endsWith('.kml') && !f.dir);
+                if (!kmlFile) {
+                    console.warn('No .kml found inside ' + filename);
+                    continue;
+                }
+                kmlText = await kmlFile.async('string');
+                console.log('Unpacked ' + kmlFile.name + ' from ' + filename);
+            } else {
+                kmlText = await response.text();
+            }
+
+            if (!kmlText) continue;
+
+            const parser = new DOMParser();
+            const kmlDoc = parser.parseFromString(kmlText, 'text/xml');
+            if (kmlDoc.documentElement.nodeName === 'parsererror') {
+                console.warn(filename + ': XML parse error');
+                continue;
+            }
+
+            const features = parseKMLDocument(kmlDoc);
+            if (!features.length) {
+                console.warn(filename + ': no features found');
+                continue;
+            }
+
+            const layerName = filename.replace(/\.(kml|kmz)$/i, '');
+            const layerId = 'kml_auto_' + layerName;
+
+            // Don't re-add if already loaded
+            if (kmlLayers[layerId]) {
+                console.log('KML layer already loaded: ' + layerId);
+                return true;
+            }
+
+            kmlLayers[layerId] = {
+                id: layerId,
+                name: layerName,
+                features: features,
+                visible: true,
+                color: '#00B8D4',
+                featureCount: features.length,
+                file: filename,
+                uploadDate: new Date().toISOString()
+            };
+
+            renderKMLLayer(layerId);
+            updateKMLLegend();
+            console.log('✓ Auto-loaded ' + features.length + ' features from ' + filename);
+            return true;
+
+        } catch (e) {
+            console.log(filename + ' load failed: ' + e.message);
+        }
+    }
+
+    console.log('No layers.kmz or layers.kml found in repo root');
+    return false;
+}
+
 function initKMLSystem() {
     console.log('Initializing KML Layer System');
     loadKMLLayersFromStorage();
@@ -11948,56 +12043,68 @@ function initKMLSystem() {
 function handleKMLFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
+    event.target.value = '';
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const kmlText = e.target.result;
-            const parser = new DOMParser();
-            const kmlDoc = parser.parseFromString(kmlText, 'text/xml');
+    const isKMZ = file.name.toLowerCase().endsWith('.kmz');
 
-            if (kmlDoc.documentElement.nodeName === 'parsererror') {
-                throw new Error('Invalid KML file format');
-            }
-
-            const layerName = file.name.replace('.kml', '').substring(0, 30);
-            const features = parseKMLDocument(kmlDoc);
-
-            if (features.length === 0) {
-                alert('No features found in KML file');
-                return;
-            }
-
-            // Create new layer
-            const layerId = `kml_${kmlLayerCounter++}`;
-            kmlLayers[layerId] = {
-                id: layerId,
-                name: layerName,
-                features: features,
-                visible: true,
-                color: generateRandomColor(),
-                featureCount: features.length,
-                file: file.name,
-                uploadDate: new Date().toISOString()
-            };
-
-            // Add to map
-            renderKMLLayer(layerId);
-            saveKMLLayersToStorage();
-            updateKMLLegend();
-
-            alert(`✓ Loaded ${features.length} features from ${layerName}`);
-            
-            // Clear file input
-            event.target.value = '';
-
-        } catch (error) {
-            alert('Error loading KML file:\n' + error.message);
-            console.error('KML parsing error:', error);
+    const processKML = function(kmlText) {
+        const parser = new DOMParser();
+        const kmlDoc = parser.parseFromString(kmlText, 'text/xml');
+        if (kmlDoc.documentElement.nodeName === 'parsererror') {
+            throw new Error('Invalid KML format inside file');
         }
+        const layerName = file.name.replace(/\.(kml|kmz)$/i, '').substring(0, 30);
+        const features = parseKMLDocument(kmlDoc);
+        if (features.length === 0) {
+            alert('No features found in file');
+            return;
+        }
+        const layerId = `kml_${kmlLayerCounter++}`;
+        kmlLayers[layerId] = {
+            id: layerId,
+            name: layerName,
+            features: features,
+            visible: true,
+            color: generateRandomColor(),
+            featureCount: features.length,
+            file: file.name,
+            uploadDate: new Date().toISOString()
+        };
+        renderKMLLayer(layerId);
+        saveKMLLayersToStorage();
+        updateKMLLegend();
+        alert(`✓ Loaded ${features.length} features from ${layerName}`);
     };
 
-    reader.readAsText(file);
+    if (isKMZ) {
+        if (typeof JSZip === 'undefined') {
+            alert('JSZip library not loaded — cannot open KMZ files');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const zip = await JSZip.loadAsync(e.target.result);
+                const kmlFile = Object.values(zip.files).find(f => f.name.endsWith('.kml') && !f.dir);
+                if (!kmlFile) { alert('No .kml file found inside the KMZ'); return; }
+                const kmlText = await kmlFile.async('string');
+                processKML(kmlText);
+            } catch(err) {
+                alert('Error opening KMZ:\n' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                processKML(e.target.result);
+            } catch(err) {
+                alert('Error loading KML:\n' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    }
 }
 
 // Parse KML document and extract features
@@ -12874,7 +12981,7 @@ function setupKMLControls() {
         </h3>
         <div class="control-group">
             <label for="kml-file-input">Load KML File</label>
-            <input type="file" id="kml-file-input" accept=".kml" onchange="handleKMLFileSelect(event)" style="padding: 8px; background: rgba(40,40,55,0.8); border: 2px dashed rgba(0,150,200,0.3); cursor: pointer;">
+            <input type="file" id="kml-file-input" accept=".kml,.kmz" onchange="handleKMLFileSelect(event)" style="padding: 8px; background: rgba(40,40,55,0.8); border: 2px dashed rgba(0,150,200,0.3); cursor: pointer;">
         </div>
         <div style="font-size: 11px; color: #999; margin-top: 8px; line-height: 1.4;">
             Import KML files from Google Earth, ArcGIS, or other GIS applications. Supports Points, LineStrings, and Polygons.
