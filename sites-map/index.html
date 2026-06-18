@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAI Sites Map v6 18-06-2026</title>
+    <title>BAI Sites Map v5 19-03-2026</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
     /* =====================================================
@@ -3949,7 +3949,7 @@ function getDefaultDimensionConfig() {
         },
         contractor: {
             'Unassigned':                 { color: '#999',     icon: '?' },
-            'BAI':                        { color: '#54a0ff', icon: '☆' },
+            'BAI':                        { color: '#54a0ff', icon: '__bai__' },
             'Allcom':                     { color: '#26de81', icon: '◼' },
             'Karera Ballina':             { color: '#5F27CD', icon: '✔' },
             'AA Radio':                   { color: '#95E1D3', icon: '⚠' },
@@ -4524,7 +4524,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     // BAI logo icon: use the actual logo image as the main icon inside the circle
     // Triggered when icon is ☆ or ★ (default BAI contractor icon from Dimension Mapper)
     const BAI_LOGO_URL = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
-    const isBaiLogoIcon = (displayIcon === '\u2606' || displayIcon === '\u2605' || displayIcon === '\u2b50');
+    const isBaiLogoIcon = (displayIcon === '\u2606' || displayIcon === '\u2605' || displayIcon === '\u2b50' || displayIcon === '__bai__');
     const logoImgSize = Math.round(size * 0.72);
 
     // Inner content: BAI logo image OR encoded emoji text
@@ -13344,7 +13344,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     // BAI logo icon: use the actual logo image as the main icon inside the circle
     // Triggered when icon is ☆ or ★ (default BAI contractor icon from Dimension Mapper)
     const BAI_LOGO_URL = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
-    const isBaiLogoIcon = (displayIcon === '\u2606' || displayIcon === '\u2605' || displayIcon === '\u2b50');
+    const isBaiLogoIcon = (displayIcon === '\u2606' || displayIcon === '\u2605' || displayIcon === '\u2b50' || displayIcon === '__bai__');
     const logoImgSize = Math.round(size * 0.72);
 
     // Inner content: BAI logo image OR encoded emoji text
