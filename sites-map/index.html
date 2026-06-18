@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAI Sites Map v5 19-03-2026</title>
+    <title>BAI Sites Map v6 18-06-2026</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
     /* =====================================================
@@ -2358,6 +2358,22 @@ button:disabled {
                 </div>
             </div>
 
+            <!-- ── sites.json Quick Load (local / GitHub Pages) ──────── -->
+            <div style="margin-bottom:20px; background:rgba(76,175,80,0.08); border:1px solid rgba(76,175,80,0.3); border-radius:8px; padding:15px;">
+                <label style="color:#81C784; font-weight:600; font-size:13px; display:block; margin-bottom:8px;">
+                    📂 Load sites.json
+                </label>
+                <div style="font-size:11px; color:#888; margin-bottom:10px; line-height:1.5;">
+                    Running locally? Select your <strong style="color:#e0e0e0;">sites.json</strong> file directly.<br>
+                    On GitHub Pages this loads automatically on startup.
+                </div>
+                <input type="file" id="sitesJsonFileInput" accept=".json"
+                       onchange="loadSitesJSONFromDisk(event)"
+                       style="width:100%; padding:8px; background:rgba(255,255,255,0.05);
+                              border:1px solid rgba(76,175,80,0.4); border-radius:4px;
+                              color:#fff; font-size:12px; cursor:pointer;">
+            </div>
+
             <!-- ── Other File Import ────────────────────────────────── -->
             <!-- ── Local File Import ────────────────────────────────── -->
             <div style="margin-bottom: 20px;">
@@ -4459,7 +4475,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     let backgroundColor = markerStyle.color;
-    let displayIcon = markerStyle.icon || '•';
+    let displayIcon = markerStyle.icon || '\u2022';
     let scale = 1;
     let borderColor = '#ffffff';
     
@@ -4475,32 +4491,63 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     const size = 28 * scale;
-    const fontSize = 14 * scale;
+    const fontSize = 13 * scale;
     const borderWidth = 3;
     const totalSize = size + (borderWidth * 2);
     
-    // ✅ FIX: Safer HTML encoding for icons
-    const safeIcon = displayIcon.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // BAI logo badge size (bottom-right corner)
+    const badgeSize = Math.round(10 * scale);
+    const badgeOffset = Math.round(1 * scale);
+    
+    // Safer HTML encoding for icons
+    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     
     const html = `
         <div style="
-            background: ${backgroundColor};
-            border: ${borderWidth}px solid ${borderColor};
-            border-radius: 50%;
-            width: ${size}px;
-            height: ${size}px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: ${fontSize}px;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            transition: all 0.2s ease;
+            position: relative;
+            width: ${totalSize}px;
+            height: ${totalSize}px;
             flex-shrink: 0;
-            line-height: 1;
-            text-align: center;
-        ">${safeIcon}</div>
+        ">
+            <!-- Main coloured circle -->
+            <div style="
+                position: absolute;
+                inset: 0;
+                background: ${backgroundColor};
+                border: ${borderWidth}px solid ${borderColor};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${fontSize}px;
+                color: white;
+                font-weight: bold;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                line-height: 1;
+                text-align: center;
+            ">${safeIcon}</div>
+            <!-- BAI logo badge -->
+            <div style="
+                position: absolute;
+                bottom: ${badgeOffset}px;
+                right: ${badgeOffset}px;
+                width: ${badgeSize}px;
+                height: ${badgeSize}px;
+                border-radius: 50%;
+                background: white;
+                border: 1px solid rgba(0,0,0,0.25);
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                pointer-events: none;
+            ">
+                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
+                     style="width: ${badgeSize - 2}px; height: ${badgeSize - 2}px; object-fit: contain; display: block;"
+                     onerror="this.parentElement.style.display='none'">
+            </div>
+        </div>
     `;
     
     try {
@@ -10648,6 +10695,96 @@ function unhighlightContractorTerritory(contractor) {
 }	
 		
 // =====================================================
+// LOAD SITES FROM sites.json (GitHub Pages / shared deployment)
+// =====================================================
+async function loadSitesFromJSON() {
+    // fetch() does not work on file:// protocol — skip silently for local use
+    if (window.location.protocol === 'file:') {
+        console.log('ℹ Running locally (file://), skipping sites.json fetch — using IndexedDB');
+        return false;
+    }
+    try {
+        // Append cache-buster so GitHub Pages always serves the latest version
+        const base = window.location.href.split('?')[0].replace(/\/[^\/]*$/, '/');
+        const url  = base + 'sites.json?_=' + Date.now();
+        console.log('Fetching sites.json from:', url);
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) {
+            console.log('sites.json not found (HTTP ' + response.status + ') — falling back to IndexedDB');
+            return false;
+        }
+        const data = await response.json();
+        const loaded = Array.isArray(data) ? data : (data.sites || []);
+        if (!loaded.length) {
+            console.log('sites.json found but contains no sites — falling back to IndexedDB');
+            return false;
+        }
+        sites.length = 0;
+        sites.push(...loaded.map(site => ({
+            name:       site.name       || '',
+            grnId:      site.grnId      || '',
+            siteNumber: site.siteNumber || '0',
+            status:     site.status     || 'Operationally Accepted',
+            region:     site.region     || 'Unknown',
+            contractor: site.contractor || 'Unassigned',
+            siuCallout: site.siuCallout || '',
+            lat:        parseFloat(site.lat) || 0,
+            lng:        parseFloat(site.lng) || 0
+        })));
+        console.log('✓ Loaded ' + sites.length + ' sites from sites.json');
+        return true;
+    } catch (e) {
+        console.warn('sites.json fetch error: ' + e.message + ' — falling back to IndexedDB');
+        return false;
+    }
+}
+
+// Manually load a sites.json file from disk (for local use without a web server)
+function loadSitesJSONFromDisk(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data   = JSON.parse(e.target.result);
+            const loaded = Array.isArray(data) ? data : (data.sites || []);
+            if (!loaded.length) { alert('No sites found in the selected file.'); return; }
+            sites.length = 0;
+            sites.push(...loaded.map(site => ({
+                name:       site.name       || '',
+                grnId:      site.grnId      || '',
+                siteNumber: site.siteNumber || '0',
+                status:     site.status     || 'Operationally Accepted',
+                region:     site.region     || 'Unknown',
+                contractor: site.contractor || 'Unassigned',
+                siuCallout: site.siuCallout || '',
+                lat:        parseFloat(site.lat) || 0,
+                lng:        parseFloat(site.lng) || 0
+            })));
+            visibleSites = [...sites];
+            updateStatusFilter(); updateRegionFilter(); updateContractorFilter();
+            updateStatusDatalist(); updateRegionDatalist(); updateContractorDatalist();
+            addMarkersToMap(sites);
+            populateSidebar(); updateStats(); updateLegendCounts();
+            rebuildLegendWithProperOrder();
+            renderContractorTerritories(); updateContractorTerritoryLegend();
+            publishDimensionsToMapper();
+            saveToIndexedDB().catch(e => console.warn('IndexedDB save error:', e));
+            closeImportModal();
+            const msg = document.createElement('div');
+            msg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#4CAF50,#45a049);color:white;padding:12px 24px;border-radius:8px;z-index:3000;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,0.3);';
+            msg.textContent = '✓ Loaded ' + sites.length + ' sites from ' + file.name;
+            document.body.appendChild(msg);
+            setTimeout(() => { msg.style.opacity='0'; msg.style.transition='opacity 0.5s'; setTimeout(()=>msg.remove(),500); }, 3000);
+        } catch(err) {
+            alert('Error reading file: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+// =====================================================
 // COMPLETE INITIALIZATION FUNCTION
 // =====================================================
 // =====================================================
@@ -10683,18 +10820,24 @@ async function init() {
         }
         
         // STEP 3: Load Data from Storage
+        // Priority: 1) sites.json (GitHub Pages / shared deployment)
+        //           2) IndexedDB (local browser storage)
         console.log('STEP 3: Loading saved data...');
         try {
-            const savedData = await loadFromIndexedDB();
-            if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
-                sites.length = 0;
-                sites.push(...savedData.sites);
-                console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
-            } else {
-                console.log('ℹ No saved data found, using test sites');
+            const jsonLoaded = await loadSitesFromJSON();
+            if (!jsonLoaded) {
+                // Fall back to IndexedDB for local use
+                const savedData = await loadFromIndexedDB();
+                if (savedData && savedData.sites && Array.isArray(savedData.sites) && savedData.sites.length > 0) {
+                    sites.length = 0;
+                    sites.push(...savedData.sites);
+                    console.log(`✓ Restored ${sites.length} sites from IndexedDB`);
+                } else {
+                    console.log('ℹ No saved data found in sites.json or IndexedDB');
+                }
             }
         } catch (e) {
-            console.warn('âš  Error loading from IndexedDB:', e);
+            console.warn('⚠ Error loading data:', e);
         }
         
         // STEP 4: Verify Map Instance
@@ -13057,7 +13200,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     let backgroundColor = markerStyle.color;
-    let displayIcon = markerStyle.icon || '•';
+    let displayIcon = markerStyle.icon || '\u2022';
     let scale = 1;
     let borderColor = '#ffffff';
     
@@ -13073,32 +13216,63 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     const size = 28 * scale;
-    const fontSize = 14 * scale;
+    const fontSize = 13 * scale;
     const borderWidth = 3;
     const totalSize = size + (borderWidth * 2);
     
-    // ✅ FIX: Safer HTML encoding for icons
-    const safeIcon = displayIcon.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // BAI logo badge size (bottom-right corner)
+    const badgeSize = Math.round(10 * scale);
+    const badgeOffset = Math.round(1 * scale);
+    
+    // Safer HTML encoding for icons
+    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     
     const html = `
         <div style="
-            background: ${backgroundColor};
-            border: ${borderWidth}px solid ${borderColor};
-            border-radius: 50%;
-            width: ${size}px;
-            height: ${size}px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: ${fontSize}px;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            transition: all 0.2s ease;
+            position: relative;
+            width: ${totalSize}px;
+            height: ${totalSize}px;
             flex-shrink: 0;
-            line-height: 1;
-            text-align: center;
-        ">${safeIcon}</div>
+        ">
+            <!-- Main coloured circle -->
+            <div style="
+                position: absolute;
+                inset: 0;
+                background: ${backgroundColor};
+                border: ${borderWidth}px solid ${borderColor};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${fontSize}px;
+                color: white;
+                font-weight: bold;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                line-height: 1;
+                text-align: center;
+            ">${safeIcon}</div>
+            <!-- BAI logo badge -->
+            <div style="
+                position: absolute;
+                bottom: ${badgeOffset}px;
+                right: ${badgeOffset}px;
+                width: ${badgeSize}px;
+                height: ${badgeSize}px;
+                border-radius: 50%;
+                background: white;
+                border: 1px solid rgba(0,0,0,0.25);
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                pointer-events: none;
+            ">
+                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
+                     style="width: ${badgeSize - 2}px; height: ${badgeSize - 2}px; object-fit: contain; display: block;"
+                     onerror="this.parentElement.style.display='none'">
+            </div>
+        </div>
     `;
     
     try {
