@@ -1,0 +1,219 @@
+{
+  "timestamp": "2026-06-18T02:39:45.663Z",
+  "dimensions": {
+    "status": {
+      "Operational": {
+        "color": "#00d2d3",
+        "icon": "✓"
+      },
+      "Operationally broken": {
+        "color": "#F368E0",
+        "icon": "✖"
+      },
+      "Non Operational": {
+        "color": "#FF9800",
+        "icon": "🔨"
+      },
+      "Hybrid Power": {
+        "color": "#EE5A6F",
+        "icon": "🔨"
+      },
+      "Stockrooms": {
+        "color": "#EE5A6F",
+        "icon": "⚡"
+      }
+    },
+    "contractor": {
+      "Unassigned": {
+        "color": "#999",
+        "icon": "?"
+      },
+      "BAI": {
+        "color": "#54a0ff",
+        "icon": "☆"
+      },
+      "Allcom": {
+        "color": "#26de81",
+        "icon": "◼"
+      },
+      "Karera Ballina": {
+        "color": "#5F27CD",
+        "icon": "✔"
+      },
+      "AA Radio": {
+        "color": "#95E1D3",
+        "icon": "⚠"
+      },
+      "Karera Tamworth/Port Mac": {
+        "color": "#26DE81",
+        "icon": "📍"
+      },
+      "Karera Coffs Harbour": {
+        "color": "#00D2D3",
+        "icon": "📞"
+      },
+      "EA Comms": {
+        "color": "#5f27cd",
+        "icon": "⚠"
+      }
+    },
+    "region": {
+      "Sydney Metropolitan": {
+        "color": "#FFC857",
+        "icon": "☆"
+      },
+      "Australian Capital Territory": {
+        "color": "#20C997",
+        "icon": "📍"
+      },
+      "Central Tablelands": {
+        "color": "#26DE81",
+        "icon": "✔"
+      },
+      "South Coast": {
+        "color": "#F38181",
+        "icon": "📍"
+      },
+      "Riverina": {
+        "color": "#FF8C42",
+        "icon": "◼"
+      },
+      "Northern Rivers": {
+        "color": "#26DE81",
+        "icon": "◯"
+      },
+      "North West Slopes & Plains": {
+        "color": "#26DE81",
+        "icon": "✓"
+      },
+      "Lower Western": {
+        "color": "#26DE81",
+        "icon": "◯"
+      },
+      "Upper Western": {
+        "color": "#54A0FF",
+        "icon": "📞"
+      },
+      "Central West Slopes & Plains": {
+        "color": "#26DE81",
+        "icon": "✓"
+      },
+      "Hunter": {
+        "color": "#4ECDC4",
+        "icon": "📍"
+      },
+      "South West Slopes": {
+        "color": "#FF8C42",
+        "icon": "📞"
+      },
+      "Northern Tablelands": {
+        "color": "#38B6FF",
+        "icon": "✔"
+      },
+      "Southern Tablelands": {
+        "color": "#20C997",
+        "icon": "⚡"
+      },
+      "Snowy Mountains": {
+        "color": "#FF6B6B",
+        "icon": "📍"
+      },
+      "Illawarra": {
+        "color": "#FF8C42",
+        "icon": "🎯"
+      },
+      "Unknown": {
+        "color": "#00D2D3",
+        "icon": "🎯"
+      },
+      "Mid North Coast": {
+        "color": "#20C997",
+        "icon": "☆"
+      },
+      "Mobile Asset": {
+        "color": "#20C997",
+        "icon": "🎯"
+      },
+      "Metro": {
+        "color": "#38B6FF",
+        "icon": "⚡"
+      },
+      "Regional": {
+        "color": "#38B6FF",
+        "icon": "🎯"
+      }
+    },
+    "siuCallout": {
+      "Progility Service Desk on 1800 426 671": {
+        "color": "#FFC857",
+        "icon": "⚡"
+      },
+      "SIU Sydney": {
+        "color": "#F368E0",
+        "icon": "📞"
+      },
+      "SIU Canberra": {
+        "color": "#54A0FF",
+        "icon": "🔨"
+      },
+      "SIU Victoria": {
+        "color": "#95E1D3",
+        "icon": "🎯"
+      },
+      "Karera Ballina": {
+        "color": "#F368E0",
+        "icon": "🏢"
+      },
+      "SIU South QLD": {
+        "color": "#00D2D3",
+        "icon": "⚠"
+      },
+      "SIU Newcastle": {
+        "color": "#FFC857",
+        "icon": "◼"
+      },
+      "Karera ": {
+        "color": "#EE5A6F",
+        "icon": "◯"
+      },
+      "Progility Service Desk on 1800 426 667": {
+        "color": "#F368E0",
+        "icon": "☆"
+      },
+      "Progility Service Desk on 1800 426 668": {
+        "color": "#95E1D3",
+        "icon": "⚠"
+      },
+      "SIU South Aus": {
+        "color": "#20C997",
+        "icon": "📞"
+      },
+      "Progility Service Desk on 1800 426 672": {
+        "color": "#FF8C42",
+        "icon": "☆"
+      },
+      "Progility Service Desk on 1800 426 669": {
+        "color": "#5F27CD",
+        "icon": "◼"
+      },
+      "MRA": {
+        "color": "#5F27CD",
+        "icon": "◼"
+      },
+      "Progility Service Desk on 1800 426 670": {
+        "color": "#FF8C42",
+        "icon": "⚡"
+      }
+    }
+  },
+  "contractorColors": {
+    "Unassigned": "#999",
+    "BAI": "#54a0ff",
+    "Allcom": "#26de81",
+    "Karera Ballina": "#5F27CD",
+    "AA Radio": "#95E1D3",
+    "Karera Tamworth/Port Mac": "#26DE81",
+    "Karera Coffs Harbour": "#00D2D3",
+    "EA Comms": "#5f27cd"
+  }
+}
