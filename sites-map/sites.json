@@ -4459,7 +4459,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     let backgroundColor = markerStyle.color;
-    let displayIcon = markerStyle.icon || '•';
+    let displayIcon = markerStyle.icon || '\u2022';
     let scale = 1;
     let borderColor = '#ffffff';
     
@@ -4475,32 +4475,63 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     const size = 28 * scale;
-    const fontSize = 14 * scale;
+    const fontSize = 13 * scale;
     const borderWidth = 3;
     const totalSize = size + (borderWidth * 2);
     
-    // ✅ FIX: Safer HTML encoding for icons
-    const safeIcon = displayIcon.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // BAI logo badge size (bottom-right corner)
+    const badgeSize = Math.round(10 * scale);
+    const badgeOffset = Math.round(1 * scale);
+    
+    // Safer HTML encoding for icons
+    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     
     const html = `
         <div style="
-            background: ${backgroundColor};
-            border: ${borderWidth}px solid ${borderColor};
-            border-radius: 50%;
-            width: ${size}px;
-            height: ${size}px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: ${fontSize}px;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            transition: all 0.2s ease;
+            position: relative;
+            width: ${totalSize}px;
+            height: ${totalSize}px;
             flex-shrink: 0;
-            line-height: 1;
-            text-align: center;
-        ">${safeIcon}</div>
+        ">
+            <!-- Main coloured circle -->
+            <div style="
+                position: absolute;
+                inset: 0;
+                background: ${backgroundColor};
+                border: ${borderWidth}px solid ${borderColor};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${fontSize}px;
+                color: white;
+                font-weight: bold;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                line-height: 1;
+                text-align: center;
+            ">${safeIcon}</div>
+            <!-- BAI logo badge -->
+            <div style="
+                position: absolute;
+                bottom: ${badgeOffset}px;
+                right: ${badgeOffset}px;
+                width: ${badgeSize}px;
+                height: ${badgeSize}px;
+                border-radius: 50%;
+                background: white;
+                border: 1px solid rgba(0,0,0,0.25);
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                pointer-events: none;
+            ">
+                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
+                     style="width: ${badgeSize - 2}px; height: ${badgeSize - 2}px; object-fit: contain; display: block;"
+                     onerror="this.parentElement.style.display='none'">
+            </div>
+        </div>
     `;
     
     try {
@@ -13101,7 +13132,7 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     let backgroundColor = markerStyle.color;
-    let displayIcon = markerStyle.icon || '•';
+    let displayIcon = markerStyle.icon || '\u2022';
     let scale = 1;
     let borderColor = '#ffffff';
     
@@ -13117,32 +13148,63 @@ function createMarkerIcon(site, isSelected = false, isTripPoint = false) {
     }
     
     const size = 28 * scale;
-    const fontSize = 14 * scale;
+    const fontSize = 13 * scale;
     const borderWidth = 3;
     const totalSize = size + (borderWidth * 2);
     
-    // ✅ FIX: Safer HTML encoding for icons
-    const safeIcon = displayIcon.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // BAI logo badge size (bottom-right corner)
+    const badgeSize = Math.round(10 * scale);
+    const badgeOffset = Math.round(1 * scale);
+    
+    // Safer HTML encoding for icons
+    const safeIcon = String(displayIcon).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     
     const html = `
         <div style="
-            background: ${backgroundColor};
-            border: ${borderWidth}px solid ${borderColor};
-            border-radius: 50%;
-            width: ${size}px;
-            height: ${size}px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: ${fontSize}px;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            transition: all 0.2s ease;
+            position: relative;
+            width: ${totalSize}px;
+            height: ${totalSize}px;
             flex-shrink: 0;
-            line-height: 1;
-            text-align: center;
-        ">${safeIcon}</div>
+        ">
+            <!-- Main coloured circle -->
+            <div style="
+                position: absolute;
+                inset: 0;
+                background: ${backgroundColor};
+                border: ${borderWidth}px solid ${borderColor};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${fontSize}px;
+                color: white;
+                font-weight: bold;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                line-height: 1;
+                text-align: center;
+            ">${safeIcon}</div>
+            <!-- BAI logo badge -->
+            <div style="
+                position: absolute;
+                bottom: ${badgeOffset}px;
+                right: ${badgeOffset}px;
+                width: ${badgeSize}px;
+                height: ${badgeSize}px;
+                border-radius: 50%;
+                background: white;
+                border: 1px solid rgba(0,0,0,0.25);
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                pointer-events: none;
+            ">
+                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
+                     style="width: ${badgeSize - 2}px; height: ${badgeSize - 2}px; object-fit: contain; display: block;"
+                     onerror="this.parentElement.style.display='none'">
+            </div>
+        </div>
     `;
     
     try {
@@ -13227,3 +13289,4 @@ console.log('💡 Type testMarkerRendering() in console to debug markers');
   </script>
 </body>
 </html>
+	
