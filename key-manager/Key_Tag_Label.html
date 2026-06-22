@@ -1,662 +1,645 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAI Key Tag Label Generator</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAI Key Tag Label Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --bg:#eef1f6; --card:#ffffff; --ink:#101826; --muted:#5d6b80;
+    --line:#e3e8f0; --brand:#0a52cc; --brand-d:#073f9e; --accent:#0bb6d6;
+    --good:#1a9d54; --warn:#b9740b; --bad:#d23f3f;
+    --radius:12px; --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--bg);
+    margin:0; padding:24px; line-height:1.45;
+  }
+  .wrap{max-width:1140px; margin:0 auto}
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+  .app-header{
+    display:flex; align-items:center; gap:14px; margin-bottom:20px;
+    padding-bottom:16px; border-bottom:2px solid var(--line);
+  }
+  .brand-mark{width:42px; height:42px; display:flex; align-items:center}
+  .brand-mark img{width:42px; height:42px; object-fit:contain}
+  .brand-fallback{
+    width:42px; height:42px; border-radius:9px;
+    background:linear-gradient(135deg,var(--brand),var(--accent));
+    display:none; align-items:center; justify-content:center; color:#fff;
+  }
+  .app-header h1{font-size:22px; margin:0; letter-spacing:-.01em}
+  .app-header .sub{color:var(--muted); font-size:13px; margin-top:2px}
 
-        h1 {
-            color: #333;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
+  .app{display:grid; grid-template-columns:minmax(330px,430px) 1fr; gap:20px; align-items:start}
+  @media(max-width:880px){ .app{grid-template-columns:1fr} }
 
-        .page-logo {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-        }
+  .panel{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:18px; box-shadow:0 1px 2px rgba(16,24,38,.04);
+  }
+  .panel + .panel{margin-top:18px}
+  .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--brand); margin:0 0 14px}
+  .panel h2 .count{color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0}
 
-        .input-group {
-            margin-bottom: 20px;
-        }
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  label{display:block; font-weight:600; font-size:13px; margin-bottom:5px}
+  .hint{font-weight:400; color:var(--muted); font-size:12px; margin:4px 0 0}
+  input[type=text]{
+    width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:8px;
+    font-size:15px; font-family:var(--sans); background:#fbfcfe;
+  }
+  input.code-input{font-family:var(--mono); letter-spacing:.04em; text-transform:uppercase}
+  input[type=number]{padding:10px 11px; border:1px solid var(--line); border-radius:8px; font-size:15px; background:#fbfcfe}
+  input:focus, select:focus, button:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .size-presets{display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap}
+  .chip{
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    padding:5px 9px; border-radius:999px; font-size:12px; cursor:pointer; font-family:var(--mono);
+  }
+  .chip[aria-pressed=true]{background:var(--brand); color:#fff; border-color:var(--brand)}
 
-        label.instruction-text {
-            font-size: 11px;
-            font-weight: normal;
-            color: #666;
-            margin-bottom: 2px;
-        }
+  details.help{margin-bottom:14px; border:1px solid var(--line); border-radius:8px; background:#f8faff}
+  details.help summary{cursor:pointer; padding:9px 11px; font-size:13px; font-weight:600; color:var(--brand)}
+  details.help .body{padding:0 12px 12px; font-size:12.5px; color:var(--muted)}
+  details.help code{font-family:var(--mono); color:var(--ink); background:#eef2fb; padding:1px 5px; border-radius:4px}
+  details.help ul{margin:6px 0 0; padding-left:18px}
+  details.help li{margin:3px 0}
 
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
+  .check{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; cursor:pointer}
+  .check input{width:auto}
 
-        input[type="number"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
+  .btn{
+    appearance:none; border:1px solid transparent; border-radius:9px; cursor:pointer;
+    font-size:14px; font-weight:600; padding:11px 14px; font-family:var(--sans);
+  }
+  .btn-block{width:100%}
+  .btn-primary{background:var(--brand); color:#fff}
+  .btn-primary:hover{background:var(--brand-d)}
+  .btn-ghost{background:#fff; color:var(--brand); border-color:var(--line)}
+  .btn-ghost:hover{border-color:var(--brand)}
+  .btn-danger{background:#fff; color:var(--bad); border-color:#f0cdcd}
+  .btn-danger:hover{background:#fdf2f2}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap}
+  .btn-row .btn{flex:1; min-width:120px}
 
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
+  /* Current label live preview */
+  .preview-card{
+    background:#f8faff; border:1px dashed var(--line); border-radius:10px;
+    padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .density{font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:7px}
+  .density .dot{width:9px; height:9px; border-radius:50%}
+  .density.good{color:var(--good)} .density.good .dot{background:var(--good)}
+  .density.marginal{color:var(--warn)} .density.marginal .dot{background:var(--warn)}
+  .density.bad{color:var(--bad)} .density.bad .dot{background:var(--bad)}
 
-        button:hover {
-            background-color: #0056b3;
-        }
+  /* Queue */
+  .queue-empty,.sheet-empty{color:var(--muted); font-size:13px; text-align:center; padding:18px 8px; border:1px dashed var(--line); border-radius:8px}
+  .q-item{
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    border:1px solid var(--line); border-radius:9px; padding:10px 12px; margin-bottom:8px;
+  }
+  .q-item.editing{border-color:var(--accent); box-shadow:0 0 0 2px rgba(11,182,214,.18)}
+  .q-info{font-size:13px; min-width:0}
+  .q-info .q-code{font-family:var(--mono); font-weight:700; color:var(--brand)}
+  .q-info .q-meta{color:var(--muted); font-size:12px; margin-top:2px}
+  .q-actions{display:flex; gap:6px; flex-shrink:0}
+  .q-actions button{border:1px solid var(--line); background:#fff; border-radius:7px; padding:5px 9px; font-size:12px; cursor:pointer; color:var(--ink)}
+  .q-actions .rm{color:var(--bad); border-color:#f0cdcd}
 
-        /* Print styles */
-        .label-container {
-            display: none;
-            margin-top: 20px;
-        }
+  .sheet-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+  .sheet-head .total{font-size:12.5px; color:var(--muted)}
 
-        .label-container.show {
-            display: block;
-        }
+  /* ---- Label artwork (front) ---- */
+  .label-sheet{
+    display:flex; flex-wrap:wrap; align-content:flex-start; gap:0;
+    width:210mm; padding:5mm; background:#fff; box-sizing:border-box; box-shadow:0 1px 6px rgba(16,24,38,.12);
+  }
+  .label-sheet + .label-sheet{margin-top:10mm}
+  .key-label{
+    margin:1mm; padding:1mm; border:1px solid #000; background:#fff; text-align:center; box-sizing:border-box;
+    display:flex; flex-direction:column; justify-content:space-between; flex:0 0 auto; overflow:hidden;
+  }
+  .logo-header{display:flex; align-items:center; justify-content:center; gap:1.5mm; margin-bottom:.3mm}
+  .logo-header img{object-fit:contain}
+  .logo-fallback{display:none; align-items:center; justify-content:center}
+  .key-label h2{margin:0; font-weight:700; text-transform:uppercase; line-height:1}
+  .barcode-container{flex:1; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; margin:.4mm 0}
+  .barcode-container svg{max-width:100%; max-height:100%; height:auto; width:auto}
+  .key-info{margin:0; font-weight:700; line-height:1.15; font-family:var(--mono); word-break:break-all}
+  .key-sub{font-weight:600; opacity:.85}
 
-        .key-label {
-            margin: 2mm;
-            padding: 1mm;
-            border: 1px solid #000;
-            text-align: center;
-            background-color: white;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            flex-shrink: 0;
-            flex-grow: 0;
-        }
+  /* ---- Label artwork (back) ---- */
+  .back-label{
+    margin:1mm; padding:1.5mm; border:1px solid #000; background:#fff; text-align:center; box-sizing:border-box;
+    display:flex; flex-direction:column; justify-content:center; align-items:center; gap:.6mm; flex:0 0 auto; overflow:hidden;
+  }
+  .back-line{margin:0; line-height:1.25; word-break:break-word; max-width:96%}
 
-        .logo-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2mm;
-            margin-bottom: 0.5mm;
-        }
+  /* Sheet preview fit-to-width on screen */
+  #printArea{overflow:hidden}
+  #sheetsInner{transform-origin:top left}
 
-        .logo-wrapper {
-            display: flex;
-            align-items: center;
-        }
+  /* Toast */
+  #toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:11px 16px; border-radius:10px; font-size:14px;
+    box-shadow:0 8px 24px rgba(16,24,38,.28); opacity:0; pointer-events:none; transition:.22s; z-index:50; max-width:90vw;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  #toast.error{background:var(--bad)} #toast.success{background:var(--good)}
 
-        .logo-image {
-            object-fit: contain;
-        }
+  @media (prefers-reduced-motion: reduce){ #toast{transition:none} }
 
-        .key-label h2 {
-            margin: 0;
-            font-weight: bold;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-
-        .barcode-container {
-            margin: 0.5mm 0;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .barcode-container svg {
-            max-width: 100%;
-            max-height: 100%;
-            height: auto;
-            width: auto;
-        }
-
-        .key-info {
-            margin: 0;
-            font-weight: bold;
-            line-height: 1.2;
-        }
-
-        .back-label {
-            margin: 2mm;
-            padding: 2mm;
-            border: 1px solid #000;
-            text-align: center;
-            background-color: white;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 1mm;
-            flex-shrink: 0;
-            flex-grow: 0;
-        }
-
-        .back-label-line {
-            margin: 0;
-            font-weight: normal;
-            line-height: 1.3;
-            word-wrap: break-word;
-            max-width: 95%;
-        }
-
-        .label-sheet {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-start;
-            align-content: flex-start;
-            gap: 0;
-            width: 210mm;
-            max-width: 210mm;
-            min-width: 210mm;
-            margin: 20px auto;
-            padding: 5mm;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-        }
-
-        .label-sheet.back-sheet {
-            margin-top: 30px;
-        }
-
-        @media print {
-            body {
-                background-color: white;
-                padding: 0;
-                margin: 0;
-            }
-
-            .container {
-                display: none !important;
-            }
-
-            .preview-section {
-                display: none !important;
-            }
-
-            .label-container {
-                display: block !important;
-                page-break-after: avoid;
-            }
-
-            .label-sheet {
-                width: 210mm !important;
-                max-width: 210mm !important;
-                margin: 0 !important;
-                padding: 5mm !important;
-                box-shadow: none !important;
-                page-break-after: avoid;
-                display: flex !important;
-                flex-wrap: wrap !important;
-                justify-content: flex-start !important;
-                align-content: flex-start !important;
-                box-sizing: border-box;
-            }
-
-            .label-sheet:not(:last-child) {
-                page-break-after: always;
-            }
-
-            .label-sheet:last-child {
-                page-break-after: avoid;
-            }
-
-            .key-label, .back-label {
-                margin: 1mm !important;
-                padding: 1mm !important;
-                border: 1px solid #000 !important;
-                page-break-inside: avoid;
-                flex-shrink: 0;
-                box-sizing: border-box;
-            }
-
-            .key-label {
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: space-between !important;
-            }
-
-            .back-label {
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: center !important;
-                align-items: center !important;
-            }
-
-            .logo-image {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            .barcode-svg {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            @page {
-                size: A4;
-                margin: 0;
-            }
-        }
-
-        .preview-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #ddd;
-        }
-
-        .preview-section h3 {
-            text-align: center;
-            color: #555;
-        }
-
-        .queue-item {
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .queue-item-info {
-            flex: 1;
-        }
-
-        .queue-item-info strong {
-            color: #007bff;
-        }
-
-        .queue-item-remove {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .queue-item-remove:hover {
-            background-color: #c82333;
-        }
-    </style>
+  /* ---- Print ---- */
+  @media print{
+    body{background:#fff; padding:0; margin:0}
+    .screen-only{display:none !important}
+    #printArea{overflow:visible !important; height:auto !important; padding:0; margin:0}
+    #sheetsInner{transform:none !important; width:auto !important}
+    .label-sheet{
+      width:210mm !important; padding:5mm !important; box-shadow:none !important; margin:0 !important;
+      page-break-after:always;
+    }
+    .label-sheet:last-child{page-break-after:auto}
+    .key-label,.back-label{page-break-inside:avoid}
+    .logo-header img,.barcode-container svg{-webkit-print-color-adjust:exact !important; print-color-adjust:exact !important}
+    @page{size:A4; margin:0}
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>
-            <div class="logo-wrapper">
-                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" alt="Logo" class="page-logo" onerror="this.style.display='none'">
-                <!-- If logo fails to load, it will be hidden -->
-            </div>
-            BAI Key Tag Label Generator
-        </h1>
-        
-        <div class="input-group">
-            <label for="headerText">Header Text:</label>
-            <input type="text" id="headerText" placeholder="Enter header text" value="BAI KEY">
+<div class="wrap">
+
+  <header class="app-header screen-only">
+    <span class="brand-mark">
+      <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png"
+           alt="BAI Communications" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <span class="brand-fallback" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="9" r="3.2" stroke="#fff" stroke-width="2"/><path d="M10.4 10.6 19 19M16 16l2-2M14 18l2-2" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </span>
+    </span>
+    <div>
+      <h1>BAI Key Tag Label Generator</h1>
+      <div class="sub">Build, preview, and print scannable CODE128 key tags onto an A4 sheet.</div>
+    </div>
+  </header>
+
+  <div class="app">
+
+    <!-- ============ LEFT: form ============ -->
+    <div class="screen-only">
+      <section class="panel">
+        <h2 id="formTitle">New label</h2>
+
+        <div class="field">
+          <label for="headerText">Header text</label>
+          <input type="text" id="headerText" placeholder="BAI KEY" value="BAI KEY" maxlength="24">
         </div>
 
-        <div class="input-group">
-            <label for="keyCode">BAI Key Number:</label>
-            <input type="text" id="keyCode" placeholder="Enter key code (e.g., BAI001, K123, etc.)" value="BAI001">
+        <div class="field">
+          <label for="keyCode">Key number (barcode value)</label>
+          <input type="text" id="keyCode" class="code-input" placeholder="e.g. SITE-001" value="BAI001" maxlength="40">
+          <p class="hint">This is what the scanner reads &mdash; use the same key number your Key Manager tracks. Letters, numbers and hyphens only.</p>
         </div>
 
-        <div class="input-group">
-            <label for="additionalText">Additional Info (Optional):</label>
-            <input type="text" id="additionalText" placeholder="Location, cabinet, etc.">
-			<label for="additionalText">1.For Cyberkey use Serial Number IE. K120007CA</label>
-			<label for="additionalText">2.For unique keys use Key Part Number - Serial number IE. 5AB434N2B8-494</label>
-			<label for="additionalText">3.For undefined keys use XXXX-AAAA-SSS-EE</label>
-			<label for="additionalText" class="instruction-text">.  .XXXX = Site number</label>
-			<label for="additionalText" class="instruction-text">.  .AAAA = Building </label>
-			<label for="additionalText" class="instruction-text">.  .SSSS = Cabinet</label>
-			<label for="additionalText" class="instruction-text">.  .EE   = Sequence number</label>
+        <details class="help">
+          <summary>Key numbering schemes</summary>
+          <div class="body">
+            <ul>
+              <li><strong>Cyberkey</strong> &mdash; use the serial number, e.g. <code>K120007CA</code></li>
+              <li><strong>Unique keys</strong> &mdash; key part number + serial, e.g. <code>5AB434N2B8-494</code></li>
+              <li><strong>Undefined keys</strong> &mdash; <code>XXXX-AAAA-SSS-EE</code></li>
+            </ul>
+            <ul>
+              <li><code>XXXX</code> = site number</li>
+              <li><code>AAAA</code> = building</li>
+              <li><code>SSSS</code> = cabinet</li>
+              <li><code>EE</code> = sequence number</li>
+            </ul>
+          </div>
+        </details>
+
+        <div class="field">
+          <label for="additionalText">Additional info (optional)</label>
+          <input type="text" id="additionalText" placeholder="Location, cabinet, etc." maxlength="40">
         </div>
 
-        <div class="input-group">
-            <label>Label Size:</label>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="number" id="labelWidth" placeholder="Width" value="37" style="width: 80px;" min="10" max="100"> mm
-                <span style="margin: 0 5px;">×</span>
-                <input type="number" id="labelHeight" placeholder="Height" value="21" style="width: 80px;" min="10" max="100"> mm
-            </div>
+        <div class="field">
+          <label>Label size</label>
+          <div class="size-presets" id="sizePresets">
+            <button type="button" class="chip" data-w="37" data-h="21">37 × 21</button>
+            <button type="button" class="chip" data-w="50" data-h="30">50 × 30</button>
+            <button type="button" class="chip" data-w="40" data-h="20">40 × 20</button>
+            <button type="button" class="chip" data-w="63" data-h="38">63 × 38</button>
+          </div>
+          <div class="row">
+            <input type="number" id="labelWidth" value="37" min="15" max="120" style="width:84px"> mm
+            <span>×</span>
+            <input type="number" id="labelHeight" value="21" min="10" max="120" style="width:84px"> mm
+          </div>
         </div>
 
-        <div class="input-group">
-            <label for="numCopies">Number of Copies:</label>
-            <input type="number" id="numCopies" placeholder="Number of labels to print" value="1" min="1" max="100" style="width: 100px;">
+        <div class="field">
+          <label for="numCopies">Number of copies</label>
+          <input type="number" id="numCopies" value="1" min="1" max="200" style="width:100px">
         </div>
 
-        <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 4px; border-left: 4px solid #007bff;">
-            <h3 style="margin-top: 0; color: #007bff;">Back Label (Optional)</h3>
-            
-            <div class="input-group">
-                <label for="backLine1">Line 1:</label>
-                <input type="text" id="backLine1" placeholder="Enter text for line 1">
-            </div>
-
-            <div class="input-group">
-                <label for="backLine2">Line 2:</label>
-                <input type="text" id="backLine2" placeholder="Enter text for line 2">
-            </div>
-
-            <div class="input-group">
-                <label for="backLine3">Line 3:</label>
-                <input type="text" id="backLine3" placeholder="Enter text for line 3">
-            </div>
+        <div class="field" style="border-top:1px solid var(--line); padding-top:14px">
+          <label style="color:var(--brand); text-transform:uppercase; font-size:12px; letter-spacing:.06em">Back label (optional)</label>
+          <input type="text" id="backLine1" placeholder="Line 1" maxlength="40" style="margin-bottom:8px">
+          <input type="text" id="backLine2" placeholder="Line 2" maxlength="40" style="margin-bottom:8px">
+          <input type="text" id="backLine3" placeholder="Line 3" maxlength="40">
         </div>
 
-        <button onclick="addToQueue()" style="background-color: #28a745;">➕ Add to Queue</button>
-        <button onclick="generateAllLabels()" style="background-color: #007bff;">📄 Generate Preview</button>
-        <button onclick="printLabels()" style="background-color: #6c757d;">🖨️ Print All Labels</button>
-        <button onclick="clearQueue()" style="background-color: #dc3545;">🗑️ Clear Queue</button>
+        <details class="help">
+          <summary>Logo &amp; advanced</summary>
+          <div class="body">
+            <label class="check" style="margin:6px 0 10px"><input type="checkbox" id="showLogo" checked> Show logo on label</label>
+            <label for="logoUrl" style="font-size:12px">Logo URL</label>
+            <input type="text" id="logoUrl" style="margin-top:4px"
+                   value="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png">
+            <p class="hint">For reliable printing, point this at a hosted <code>.png</code> or <code>.svg</code>. If the image can't load, a placeholder mark is used so the tag is never blank.</p>
+          </div>
+        </details>
 
-        <div id="queueSection" style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px; display: none;">
-            <h3 style="margin-top: 0; color: #007bff;">Label Queue (<span id="queueCount">0</span>)</h3>
-            <div id="queueList" style="max-height: 300px; overflow-y: auto;"></div>
+        <div class="btn-row" style="margin-top:6px">
+          <button type="button" class="btn btn-primary" id="addBtn" onclick="addOrUpdate()">Add to queue</button>
+          <button type="button" class="btn btn-ghost" id="cancelEditBtn" onclick="cancelEdit()" style="display:none">Cancel edit</button>
         </div>
+      </section>
 
-        <div class="preview-section">
-            <h3>Preview (A4 Sheet Layout):</h3>
-            <div id="previewContainer"></div>
+      <section class="panel">
+        <h2>Current label preview</h2>
+        <div class="preview-card">
+          <div id="currentPreview"></div>
+          <div id="densityBadge" class="density good"><span class="dot"></span><span class="txt"></span></div>
         </div>
+      </section>
     </div>
 
-    <div class="label-container" id="labelContainer"></div>
+    <!-- ============ RIGHT: queue + sheet ============ -->
+    <div>
+      <section class="panel screen-only">
+        <h2>Queue <span class="count" id="queueCount">(0)</span></h2>
+        <div id="queueList"></div>
+        <div class="btn-row" style="margin-top:12px">
+          <button type="button" class="btn btn-primary" onclick="printLabels()">Print labels</button>
+          <button type="button" class="btn btn-danger" onclick="clearQueue()">Clear queue</button>
+        </div>
+      </section>
 
-    <script>
-        // Queue to store label configurations
-        let labelQueue = [];
-        let queueIdCounter = 0;
+      <div class="sheet-head screen-only">
+        <h2 style="font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--brand); margin:0">Sheet preview (A4)</h2>
+        <span class="total" id="sheetTotal"></span>
+      </div>
+      <div id="printArea">
+        <div class="sheet-empty screen-only" id="sheetEmpty">No labels queued yet. Add a label to see the A4 layout here.</div>
+        <div id="sheetsInner"></div>
+      </div>
+    </div>
 
-        function addToQueue() {
-            const keyCode = document.getElementById('keyCode').value.trim() || 'BAI001';
-            const headerText = document.getElementById('headerText').value.trim() || 'BAI KEY';
-            const labelWidth = parseInt(document.getElementById('labelWidth').value) || 37;
-            const labelHeight = parseInt(document.getElementById('labelHeight').value) || 21;
-            const numCopies = parseInt(document.getElementById('numCopies').value) || 1;
-            const additionalText = document.getElementById('additionalText').value.trim();
-            const backLine1 = document.getElementById('backLine1').value.trim();
-            const backLine2 = document.getElementById('backLine2').value.trim();
-            const backLine3 = document.getElementById('backLine3').value.trim();
+  </div>
+</div>
 
-            // Validate key code
-            const cleanKeyCode = keyCode.replace(/[^a-zA-Z0-9\-]/g, '');
-            if (cleanKeyCode.length === 0) {
-                alert('Please enter a valid key code (letters, numbers, and hyphens only)');
-                return;
-            }
+<div id="toast" role="status" aria-live="polite"></div>
 
-            // Add to queue
-            const queueItem = {
-                id: queueIdCounter++,
-                keyCode: cleanKeyCode,
-                headerText: headerText,
-                labelWidth: labelWidth,
-                labelHeight: labelHeight,
-                numCopies: numCopies,
-                additionalText: additionalText,
-                backLine1: backLine1,
-                backLine2: backLine2,
-                backLine3: backLine3,
-                hasBackLabel: !!(backLine1 || backLine2 || backLine3)
-            };
+<script>
+  /* ---------------- state ---------------- */
+  let labelQueue = [];
+  let idCounter = 0;
+  let editingId = null;
+  const PX_PER_MM = 96 / 25.4;
+  const STORE = { queue: 'bai_keytag_queue', prefs: 'bai_keytag_prefs' };
 
-            labelQueue.push(queueItem);
-            updateQueueDisplay();
-            
-            // Show success feedback
-            alert(`Added ${numCopies} label(s) for "${cleanKeyCode}" to queue`);
-        }
+  const $ = sel => document.querySelector(sel);
+  const clamp = (min, v, max) => Math.max(min, Math.min(max, v));
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const sanitizeCode = s => (s || '').replace(/[^a-zA-Z0-9\-]/g,'').toUpperCase();
 
-        function removeFromQueue(id) {
-            labelQueue = labelQueue.filter(item => item.id !== id);
-            updateQueueDisplay();
-            generateAllLabels();
-        }
+  /* ---------------- storage (guarded so it never crashes) ---------------- */
+  function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function safeSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ /* storage blocked: run in-memory */ } }
 
-        function clearQueue() {
-            if (labelQueue.length === 0) {
-                alert('Queue is already empty');
-                return;
-            }
-            if (confirm('Are you sure you want to clear all labels from the queue?')) {
-                labelQueue = [];
-                updateQueueDisplay();
-                document.getElementById('labelContainer').innerHTML = '';
-                document.getElementById('previewContainer').innerHTML = '';
-            }
-        }
+  function saveState(){
+    safeSet(STORE.queue, JSON.stringify(labelQueue));
+    safeSet(STORE.prefs, JSON.stringify({
+      headerText: $('#headerText').value,
+      width: $('#labelWidth').value,
+      height: $('#labelHeight').value,
+      showLogo: $('#showLogo').checked,
+      logoUrl: $('#logoUrl').value
+    }));
+  }
+  function loadState(){
+    try{
+      const q = JSON.parse(safeGet(STORE.queue) || '[]');
+      if(Array.isArray(q)){ labelQueue = q; idCounter = q.reduce((m,i)=>Math.max(m,(i.id||0)+1),0); }
+    }catch(e){ labelQueue = []; }
+    try{
+      const p = JSON.parse(safeGet(STORE.prefs) || '{}');
+      if(p.headerText != null) $('#headerText').value = p.headerText;
+      if(p.width) $('#labelWidth').value = p.width;
+      if(p.height) $('#labelHeight').value = p.height;
+      if(typeof p.showLogo === 'boolean') $('#showLogo').checked = p.showLogo;
+      if(p.logoUrl) $('#logoUrl').value = p.logoUrl;
+    }catch(e){}
+  }
 
-        function printLabels() {
-            const labelContainer = document.getElementById('labelContainer');
-            
-            if (!labelContainer.innerHTML || labelContainer.innerHTML.trim() === '') {
-                alert('Please generate labels first by clicking "Generate Preview"');
-                return;
-            }
+  /* ---------------- read form ---------------- */
+  function readForm(){
+    return {
+      code: sanitizeCode($('#keyCode').value) || 'BAI001',
+      header: $('#headerText').value.trim() || 'BAI KEY',
+      width: clamp(15, parseInt($('#labelWidth').value,10) || 37, 120),
+      height: clamp(10, parseInt($('#labelHeight').value,10) || 21, 120),
+      copies: clamp(1, parseInt($('#numCopies').value,10) || 1, 200),
+      additional: $('#additionalText').value.trim(),
+      back1: $('#backLine1').value.trim(),
+      back2: $('#backLine2').value.trim(),
+      back3: $('#backLine3').value.trim(),
+      showLogo: $('#showLogo').checked,
+      logoUrl: $('#logoUrl').value.trim(),
+      get hasBack(){ return !!(this.back1 || this.back2 || this.back3); }
+    };
+  }
 
-            // Check if barcodes are rendered
-            const allBarcodes = labelContainer.querySelectorAll('.barcode-svg');
-            let barcodesReady = true;
-            
-            allBarcodes.forEach(svg => {
-                if (!svg.querySelector('rect') && !svg.querySelector('g')) {
-                    barcodesReady = false;
-                }
-            });
+  /* ---------------- barcode density estimate ---------------- */
+  function density(code, widthMm){
+    const n = (code || '').length || 1;
+    // CODE128 approx: ~11 modules/char + start(11)+checksum(11)+stop(13) + quiet zones(~20)
+    const modules = n * 11 + 35 + 20;
+    const innerMm = Math.max(5, widthMm - 4); // border + padding allowance
+    const perModule = innerMm / modules;
+    let rating = 'good', text = '';
+    if(perModule < 0.19){ rating = 'bad'; text = 'Too dense — use a wider label or shorter key number'; }
+    else if(perModule < 0.25){ rating = 'marginal'; text = 'Marginal — a wider label scans more reliably'; }
+    else { rating = 'good'; text = 'Good size for scanning'; }
+    return { perModule, rating, text };
+  }
 
-            if (!barcodesReady) {
-                alert('Barcodes are still loading. Please wait a moment and try again.');
-                return;
-            }
+  /* ---------------- render one barcode into an <svg> ---------------- */
+  function drawBarcode(svg, code, widthMm, heightMm){
+    if(!svg || typeof JsBarcode === 'undefined') return;
+    const modW = clamp(0.8, widthMm / 35, 2);
+    const h = Math.round(clamp(28, heightMm * 2.4, 90));
+    try{
+      JsBarcode(svg, code, { format:'CODE128', width:modW, height:h, displayValue:false, margin:2 });
+    }catch(e){ console.error('Barcode failed for', code, e); }
+  }
 
-            // Small delay to ensure everything is rendered
-            setTimeout(() => {
-                window.print();
-            }, 100);
-        }
+  /* ---------------- label HTML ---------------- */
+  function logoHTML(cfg, sizeMm){
+    if(!cfg.showLogo) return '';
+    const px = sizeMm.toFixed(2);
+    return `<span class="logo-wrap" style="display:inline-flex;align-items:center">
+      <img src="${esc(cfg.logoUrl)}" alt="" style="width:${px}mm;height:${px}mm;object-fit:contain"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+      <span class="logo-fallback" style="width:${px}mm;height:${px}mm" aria-hidden="true">
+        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="9" r="3.2" stroke="#000" stroke-width="2"/><path d="M10.4 10.6 19 19M16 16l2-2M14 18l2-2" stroke="#000" stroke-width="2" stroke-linecap="round"/></svg>
+      </span></span>`;
+  }
 
-        function updateQueueDisplay() {
-            const queueSection = document.getElementById('queueSection');
-            const queueList = document.getElementById('queueList');
-            const queueCount = document.getElementById('queueCount');
+  function frontLabelHTML(cfg, bcId){
+    const headerFs = clamp(6, cfg.height * 0.4, 11);
+    const codeFs   = clamp(5, cfg.height * 0.3, 9);
+    const logoSize = clamp(3, cfg.height * 0.22, 5);
+    return `<div class="key-label" style="width:${cfg.width}mm;height:${cfg.height}mm">
+      <div class="logo-header">
+        ${logoHTML(cfg, logoSize)}
+        <h2 style="font-size:${headerFs.toFixed(1)}pt">${esc(cfg.header)}</h2>
+      </div>
+      <div class="barcode-container"><svg data-bc="${bcId}"></svg></div>
+      <div class="key-info" style="font-size:${codeFs.toFixed(1)}pt">${esc(cfg.code)}</div>
+      ${cfg.additional ? `<div class="key-info key-sub" style="font-size:${(codeFs*0.8).toFixed(1)}pt">${esc(cfg.additional)}</div>` : ''}
+    </div>`;
+  }
 
-            if (labelQueue.length === 0) {
-                queueSection.style.display = 'none';
-                return;
-            }
+  function backLabelHTML(cfg){
+    const fs = clamp(5, cfg.height * 0.35, 9).toFixed(1);
+    const line = t => t ? `<div class="back-line" style="font-size:${fs}pt">${esc(t)}</div>` : '';
+    return `<div class="back-label" style="width:${cfg.width}mm;height:${cfg.height}mm">
+      ${line(cfg.back1)}${line(cfg.back2)}${line(cfg.back3)}</div>`;
+  }
 
-            queueSection.style.display = 'block';
-            queueCount.textContent = labelQueue.length;
+  /* ---------------- current (live) preview ---------------- */
+  function updateCurrentPreview(){
+    const cfg = readForm();
+    let html = frontLabelHTML(cfg, 'preview-front');
+    if(cfg.hasBack) html += '<div style="height:8px"></div>' + backLabelHTML(cfg);
+    $('#currentPreview').innerHTML = html;
+    drawBarcode($('#currentPreview svg[data-bc="preview-front"]'), cfg.code, cfg.width, cfg.height);
 
-            let html = '';
-            labelQueue.forEach(item => {
-                html += `
-                    <div class="queue-item">
-                        <div class="queue-item-info">
-                            <strong>${item.headerText}</strong>: ${item.keyCode} 
-                            (${item.numCopies} copies, ${item.labelWidth}×${item.labelHeight}mm)
-                            ${item.hasBackLabel ? ' [Has back label]' : ''}
-                        </div>
-                        <button class="queue-item-remove" onclick="removeFromQueue(${item.id})">Remove</button>
-                    </div>
-                `;
-            });
+    const d = density(cfg.code, cfg.width);
+    const badge = $('#densityBadge');
+    badge.className = 'density ' + d.rating;
+    badge.querySelector('.txt').textContent = `${d.text} (≈${d.perModule.toFixed(2)} mm/bar)`;
+    saveState();
+  }
 
-            queueList.innerHTML = html;
-        }
+  /* ---------------- queue ---------------- */
+  function addOrUpdate(){
+    const cfg = readForm();
+    if(!cfg.code){ toast('Enter a valid key number (letters, numbers, hyphens).','error'); return; }
 
-        function generateAllLabels() {
-            if (labelQueue.length === 0) {
-                alert('Queue is empty. Add labels to the queue first.');
-                return;
-            }
+    if(editingId !== null){
+      const it = labelQueue.find(i => i.id === editingId);
+      if(it) Object.assign(it, cfg, { id: it.id });
+      cancelEdit();
+      toast(`Updated “${cfg.code}”.`, 'success');
+    }else{
+      labelQueue.push({ id: idCounter++, ...cfg });
+      toast(`Added ${cfg.copies} label${cfg.copies>1?'s':''} for “${cfg.code}”.`, 'success');
+    }
+    renderQueue(); renderSheets(); saveState();
+  }
 
-            let allFrontLabels = '';
-            let allBackLabels = '';
-            let barcodeConfigs = [];
+  function editItem(id){
+    const it = labelQueue.find(i => i.id === id);
+    if(!it) return;
+    editingId = id;
+    $('#headerText').value = it.header;
+    $('#keyCode').value = it.code;
+    $('#additionalText').value = it.additional || '';
+    $('#labelWidth').value = it.width;
+    $('#labelHeight').value = it.height;
+    $('#numCopies').value = it.copies;
+    $('#backLine1').value = it.back1 || '';
+    $('#backLine2').value = it.back2 || '';
+    $('#backLine3').value = it.back3 || '';
+    $('#showLogo').checked = it.showLogo !== false;
+    if(it.logoUrl) $('#logoUrl').value = it.logoUrl;
+    $('#formTitle').textContent = 'Editing label';
+    $('#addBtn').textContent = 'Update label';
+    $('#cancelEditBtn').style.display = '';
+    updateCurrentPreview(); renderQueue();
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
 
-            labelQueue.forEach((item, queueIndex) => {
-                const headerFontSize = Math.max(6, Math.min(10, item.labelHeight * 0.4));
-                const keyInfoFontSize = Math.max(5, Math.min(8, item.labelHeight * 0.3));
-                const backLabelFontSize = Math.max(5, Math.min(8, item.labelHeight * 0.35));
-                // Adjusted barcode height to better fit small labels
-                const barcodeHeight = Math.max(15, Math.min(40, item.labelHeight * 1.2));
-                const logoSize = Math.max(3, Math.min(5, item.labelHeight * 0.2));
-                // Adjusted barcode width for better scanning
-                const barcodeWidth = Math.max(0.8, Math.min(1.5, item.labelWidth / 35));
+  function cancelEdit(){
+    editingId = null;
+    $('#formTitle').textContent = 'New label';
+    $('#addBtn').textContent = 'Add to queue';
+    $('#cancelEditBtn').style.display = 'none';
+    renderQueue();
+  }
 
-                for (let i = 0; i < item.numCopies; i++) {
-                    const uniqueId = `q${queueIndex}-c${i}`;
-                    
-                    // Front label
-                    allFrontLabels += `
-                        <div class="key-label" style="width: ${item.labelWidth}mm !important; height: ${item.labelHeight}mm !important;">
-                            <div class="logo-header">
-                                <div class="logo-wrapper">
-                                    <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" alt="Logo" class="logo-image" style="width: ${logoSize}mm; height: ${logoSize}mm;" onerror="this.style.display='none'">
-                                </div>
-                                <h2 style="font-size: ${headerFontSize}pt;">${item.headerText}</h2>
-                            </div>
-                            <div class="barcode-container">
-                                <svg class="barcode-svg" data-barcode-id="${uniqueId}"></svg>
-                            </div>
-                            <div class="key-info" style="font-size: ${keyInfoFontSize}pt;">${item.keyCode}</div>
-                            ${item.additionalText ? `<div class="key-info" style="font-size: ${keyInfoFontSize * 0.8}pt; margin-top: 0.5mm;">${item.additionalText}</div>` : ''}
-                        </div>
-                    `;
+  function duplicateItem(id){
+    const it = labelQueue.find(i => i.id === id);
+    if(!it) return;
+    labelQueue.push({ ...it, id: idCounter++ });
+    renderQueue(); renderSheets(); saveState();
+    toast('Label duplicated.', 'success');
+  }
 
-                    // Store barcode config
-                    barcodeConfigs.push({
-                        id: uniqueId,
-                        code: item.keyCode,
-                        width: barcodeWidth,
-                        height: barcodeHeight
-                    });
+  function removeItem(id){
+    labelQueue = labelQueue.filter(i => i.id !== id);
+    if(editingId === id) cancelEdit();
+    renderQueue(); renderSheets(); saveState();
+  }
 
-                    // Back label
-                    if (item.hasBackLabel) {
-                        allBackLabels += `
-                            <div class="back-label" style="width: ${item.labelWidth}mm !important; height: ${item.labelHeight}mm !important;">
-                                ${item.backLine1 ? `<div class="back-label-line" style="font-size: ${backLabelFontSize}pt;">${item.backLine1}</div>` : ''}
-                                ${item.backLine2 ? `<div class="back-label-line" style="font-size: ${backLabelFontSize}pt;">${item.backLine2}</div>` : ''}
-                                ${item.backLine3 ? `<div class="back-label-line" style="font-size: ${backLabelFontSize}pt;">${item.backLine3}</div>` : ''}
-                            </div>
-                        `;
-                    }
-                }
-            });
+  function clearQueue(){
+    if(!labelQueue.length){ toast('The queue is already empty.'); return; }
+    if(!confirm('Remove all labels from the queue?')) return;
+    labelQueue = []; cancelEdit();
+    renderQueue(); renderSheets(); saveState();
+    toast('Queue cleared.', 'success');
+  }
 
-            // Wrap in sheets
-            const hasBackLabels = allBackLabels.length > 0;
-            const fullHTML = `
-                <div class="label-sheet">
-                    ${allFrontLabels}
-                </div>
-                ${hasBackLabels ? `<div class="label-sheet back-sheet">${allBackLabels}</div>` : ''}
-            `;
+  function renderQueue(){
+    const list = $('#queueList');
+    const total = labelQueue.reduce((s,i)=>s + i.copies, 0);
+    $('#queueCount').textContent = `(${labelQueue.length})`;
+    $('#sheetTotal').textContent = total ? `${total} label${total>1?'s':''} total` : '';
 
-            // Update both print container and preview
-            document.getElementById('labelContainer').innerHTML = fullHTML;
-            document.getElementById('previewContainer').innerHTML = fullHTML;
-            document.getElementById('labelContainer').classList.add('show');
+    if(!labelQueue.length){
+      list.innerHTML = '<div class="queue-empty">No labels queued yet. Fill in a key number and choose “Add to queue”.</div>';
+      return;
+    }
+    list.innerHTML = labelQueue.map(it => `
+      <div class="q-item ${it.id===editingId?'editing':''}">
+        <div class="q-info">
+          <span class="q-code">${esc(it.code)}</span> — ${esc(it.header)}
+          <div class="q-meta">${it.copies} cop${it.copies>1?'ies':'y'} · ${it.width}×${it.height}mm${it.hasBack?' · back label':''}</div>
+        </div>
+        <div class="q-actions">
+          <button type="button" onclick="editItem(${it.id})">Edit</button>
+          <button type="button" onclick="duplicateItem(${it.id})">Copy</button>
+          <button type="button" class="rm" onclick="removeItem(${it.id})">Remove</button>
+        </div>
+      </div>`).join('');
+  }
 
-            // Generate all barcodes - need to wait for DOM to be fully ready
-            setTimeout(() => {
-                // Check if JsBarcode is available
-                if (typeof JsBarcode === 'undefined') {
-                    console.error('JsBarcode library not loaded!');
-                    alert('Barcode library not loaded. Please refresh the page.');
-                    return;
-                }
-                
-                console.log('Generating', barcodeConfigs.length, 'barcodes...');
-                
-                // Generate barcodes in both print container and preview container
-                const allBarcodes = document.querySelectorAll('.barcode-svg');
-                console.log('Found', allBarcodes.length, 'barcode SVG elements');
-                
-                let successCount = 0;
-                allBarcodes.forEach(barcodeSvg => {
-                    const barcodeId = barcodeSvg.getAttribute('data-barcode-id');
-                    const config = barcodeConfigs.find(c => c.id === barcodeId);
-                    
-                    if (config && barcodeSvg) {
-                        try {
-                            JsBarcode(barcodeSvg, config.code, {
-                                format: "CODE128",
-                                width: config.width,
-                                height: config.height,
-                                displayValue: false,
-                                margin: 1
-                            });
-                            successCount++;
-                        } catch (e) {
-                            console.error('Barcode error for', barcodeId, ':', e);
-                        }
-                    } else {
-                        console.warn('Missing config or element for:', barcodeId);
-                    }
-                });
-                
-                console.log('Successfully generated', successCount, 'barcodes');
-                
-                if (successCount === 0 && barcodeConfigs.length > 0) {
-                    alert('Warning: Barcodes failed to generate. Please check console for errors.');
-                }
-            }, 300);
-        }
+  /* ---------------- sheet preview (also what prints) ---------------- */
+  function renderSheets(){
+    const inner = $('#sheetsInner');
+    if(!labelQueue.length){
+      inner.innerHTML = '';
+      $('#sheetEmpty').style.display = 'block';
+      fitPreview();
+      return;
+    }
+    $('#sheetEmpty').style.display = 'none';
 
-        // Initialize on page load
-        window.onload = function() {
-            updateQueueDisplay();
-        };
-    </script>
+    let front = '', back = '', hasBack = false;
+    const jobs = [];
+    labelQueue.forEach((it, qi) => {
+      const cfg = { ...it, hasBack: !!(it.back1||it.back2||it.back3) };
+      for(let c = 0; c < it.copies; c++){
+        const bcId = `bc-${qi}-${c}`;
+        front += frontLabelHTML(cfg, bcId);
+        jobs.push({ bcId, code: it.code, width: it.width, height: it.height });
+        if(cfg.hasBack){ hasBack = true; back += backLabelHTML(cfg); }
+      }
+    });
+
+    inner.innerHTML = `<div class="label-sheet">${front}</div>` +
+                      (hasBack ? `<div class="label-sheet">${back}</div>` : '');
+
+    jobs.forEach(j => drawBarcode(inner.querySelector(`svg[data-bc="${j.bcId}"]`), j.code, j.width, j.height));
+    fitPreview();
+  }
+
+  /* scale the 210mm sheet down to fit the column on screen (full size when printing) */
+  function fitPreview(){
+    const wrap = $('#printArea');
+    const inner = $('#sheetsInner');
+    if(!inner.children.length){            // empty: let the hint show, don't clamp height
+      wrap.style.height = 'auto';
+      inner.style.transform = 'none';
+      inner.style.width = 'auto';
+      return;
+    }
+    const sheetWpx = 210 * PX_PER_MM;
+    const scale = Math.min(1, wrap.clientWidth / sheetWpx);
+    inner.style.width = sheetWpx + 'px';
+    inner.style.transform = `scale(${scale})`;
+    wrap.style.height = (inner.offsetHeight * scale) + 'px';
+  }
+
+  /* ---------------- print ---------------- */
+  function printLabels(){
+    if(!labelQueue.length){ toast('Add at least one label before printing.','error'); return; }
+    renderSheets();
+    const svgs = $('#sheetsInner').querySelectorAll('svg[data-bc]');
+    let ready = svgs.length > 0;
+    svgs.forEach(s => { if(!s.querySelector('rect') && !s.querySelector('g')) ready = false; });
+    if(!ready){ toast('Barcodes are still rendering — try again in a moment.','error'); return; }
+    setTimeout(() => window.print(), 80);
+  }
+
+  /* ---------------- toast ---------------- */
+  let toastTimer;
+  function toast(msg, type){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.className = 'show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.className = '', 2600);
+  }
+
+  /* ---------------- wiring ---------------- */
+  function debounce(fn, ms){ let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; }
+
+  window.addEventListener('load', () => {
+    loadState();
+
+    // live preview + persistence on input
+    ['headerText','keyCode','additionalText','labelWidth','labelHeight','backLine1','backLine2','backLine3','logoUrl']
+      .forEach(id => $('#'+id).addEventListener('input', debounce(updateCurrentPreview, 120)));
+    $('#showLogo').addEventListener('change', updateCurrentPreview);
+    $('#numCopies').addEventListener('input', debounce(saveState, 200));
+
+    // size preset chips
+    $('#sizePresets').addEventListener('click', e => {
+      const chip = e.target.closest('.chip'); if(!chip) return;
+      $('#labelWidth').value = chip.dataset.w;
+      $('#labelHeight').value = chip.dataset.h;
+      [...document.querySelectorAll('#sizePresets .chip')].forEach(c => c.setAttribute('aria-pressed','false'));
+      chip.setAttribute('aria-pressed','true');
+      updateCurrentPreview();
+    });
+
+    // Enter adds/updates (ignore inside the help <details>)
+    document.querySelectorAll('input[type=text], input[type=number]').forEach(inp => {
+      inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addOrUpdate(); } });
+    });
+
+    window.addEventListener('resize', debounce(fitPreview, 150));
+
+    updateCurrentPreview();
+    renderQueue();
+    renderSheets();
+  });
+</script>
 </body>
 </html>
