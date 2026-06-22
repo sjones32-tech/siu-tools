@@ -1,78 +1,3 @@
-
-Key-Database
-Manage Site-Keys Manage Keys on loans Manage Key's Storage locations, Cabinets in office or personal Site data base
-Created by you
-·
-Private
-
-
-
-How can I help you today?
-
-
-Your chats are private until shared
-Python vs HTML for web development
-Last message Nov 15, 2025
-Mobile Key Management App
-Last message Nov 12, 2025
-Technician name lookup interface
-Last message Nov 11, 2025
-Integrating Keymanager2 into mobile program
-Last message Nov 10, 2025
-Assessing program performance
-Last message Nov 10, 2025
-Memory
-Only you
-Purpose & context Steven works at BAI Communications in the Site Infrastructure Unit (SIU) department, where he manages physical keys across 41+ telecommunications sites. His primary objective is modernizing and expanding a comprehensive key management system he originally built as a single-page HTML application. The system tracks key loans, maintains audit trails, integrates with SharePoint systems, and manages technician assignments and cabinet locations. Steven's goal is to evolve this from a local storage solution to a multi-user, centrally managed system with both desktop administrative capabilities and mobile field access for technicians. Success means enabling real-time collaboration, better security, centralized data management, and seamless field operations while preserving all existing functionality including loan tracking, overdue notifications, and comprehensive audit logging. Current state Steven has successfully migrated his BAI Site Key Manager from IndexedDB to a Flask API backend with SQLAlchemy database models, implementing JWT authentication and role-based access control. The system now features a complete REST API architecture with proper CORS handling, database persistence, and resolved technical challenges around routing, authentication decorators, and field mapping. He has also developed a companion KeyTech Mobile application that provides bidirectional synchronization with the desktop system through shared localStorage, allowing field technicians to view assigned keys, update statuses, and transfer keys with real-time sync. Both applications maintain comprehensive functionality including technician management, cabinet integration, activity logging, and dashboard statistics while operating as an integrated ecosystem. Key learnings & principles Steven has demonstrated that preserving existing functionality while modernizing architecture is achievable through careful data mapping and incremental migration. He's learned that proper CORS configuration, trailing slash handling, and authentication decorator implementation are critical for Flask API stability. The importance of bidirectional data synchronization became clear when integrating mobile and desktop applications - using shared localStorage keys and storage event listeners enables real-time updates without complex backend infrastructure. Steven has also discovered that technician-specific filtering and dropdown population from existing databases eliminates data entry errors and improves user experience. His approach shows that comprehensive audit logging and activity tracking must be maintained throughout system evolution to preserve operational integrity. Approach & patterns Steven follows an iterative development approach, starting with core functionality and progressively adding features while maintaining system stability. He prioritizes data consistency through shared storage mechanisms and real-time synchronization patterns. His problem-solving methodology involves thorough debugging of technical issues like CORS, routing, and authentication before moving to the next feature. Steven implements comprehensive error handling and offline support to ensure field operations continue uninterrupted. He maintains separation of concerns between administrative desktop interfaces and field-focused mobile applications while ensuring seamless data flow between them. His development pattern includes extensive testing of integration points and user experience validation before deployment. Tools & resources Steven's technical stack includes Python 3.13 with Flask and SQLAlchemy for backend API development, JavaScript for frontend functionality, and localStorage for data synchronization between applications. He uses JWT for authentication, implements CORS handling for cross-origin requests, and maintains integration with existing SharePoint systems. His development environment includes virtual environments for Python dependency management and comprehensive debugging tools for resolving API integration issues. The system architecture supports both web-based desktop administration and mobile field applications with shared data models and real-time synchronization capabilities.
-
-Last updated Nov 19, 2025
-
-Instructions
-Add instructions to tailor Claude’s responses
-
-Files
-6% of project capacity used
-Search mode
-
-api-client.js
-307 lines
-
-js
-
-
-
-Key Management Mobile App.html
-1,533 lines
-
-html
-
-
-
-Key Management Mobile App.html
-2,138 lines
-
-html
-
-
-
-KeyTech Mobile - Integrated Mobile Version.html
-1,184 lines
-
-html
-
-
-
-BAI-KeyManager2 - Copy.html
-6,116 lines
-
-html
-
-
-BAI-KeyManager2 - Copy.html
-
-
-raw
-Syntax highlighting has been disabled due to code size.
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1006,6 +931,13 @@ Syntax highlighting has been disabled due to code size.
             border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
+        /* Toggle switch (settings) */
+        .switch { display:inline-flex; align-items:center; }
+        .switch input[type="checkbox"]{ width:40px; height:22px; -webkit-appearance:none; appearance:none; background:#cbd5e1; border-radius:999px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+        .switch input[type="checkbox"]:checked{ background: var(--success); }
+        .switch input[type="checkbox"]::after{ content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform .2s; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+        .switch input[type="checkbox"]:checked::after{ transform:translateX(18px); }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -1052,50 +984,50 @@ Syntax highlighting has been disabled due to code size.
         </div>
         <nav class="nav-menu">
             <a href="#" class="nav-item active" data-page="dashboard">
-                <span class="nav-icon">ðŸ </span>
+                <span class="nav-icon">🏠</span>
                 <span>Dashboard</span>
             </a>
             <a href="#" class="nav-item" data-page="keys">
-                <span class="nav-icon">ðŸ”‘</span>
+                <span class="nav-icon">🔑</span>
                 <span>All Keys</span>
             </a>
             <a href="#" class="nav-item" data-page="loans">
-                <span class="nav-icon">ðŸ“‹</span>
+                <span class="nav-icon">📋</span>
                 <span>Active Loans</span>
             </a>
             <a href="#" class="nav-item" data-page="history">
-                <span class="nav-icon">ðŸ“š</span>
+                <span class="nav-icon">📚</span>
                 <span>Loan History</span>
             </a>
             
             <div class="nav-divider"></div>
             
             <a href="#" class="nav-item" data-page="customers">
-                <span class="nav-icon">ðŸ‘¥</span>
+                <span class="nav-icon">👥</span>
                 <span>Customers</span>
             </a>
 			<a href="#" class="nav-item" data-page="technicians">
-				<span class="nav-icon">ðŸ™‹ðŸ»â€â™‚ï¸</span>
+				<span class="nav-icon">🙋🏻‍♂️</span>
 				<span>Technicians</span>
 			</a>
 			<a href="#" class="nav-item" data-page="keycabinet">
-				<span class="nav-icon">ðŸ—„ï¸</span>
+				<span class="nav-icon">🗄️</span>
 				<span>Key Cabinet</span>
 			</a>
 			<div class="nav-divider"></div>
             <a href="#" class="nav-item" data-page="sites">
-                <span class="nav-icon">ðŸ¢</span>
+                <span class="nav-icon">🏢</span>
                 <span>Sites</span>
             </a>
             
             <div class="nav-divider"></div>
             
             <a href="#" class="nav-item" data-page="reports">
-                <span class="nav-icon">ðŸ“ˆ</span>
+                <span class="nav-icon">📈</span>
                 <span>Reports</span>
             </a>
             <a href="#" class="nav-item" data-page="settings">
-                <span class="nav-icon">âš™ï¸</span>
+                <span class="nav-icon">⚙️</span>
                 <span>Settings</span>
             </a>
         </nav>
@@ -1111,17 +1043,17 @@ Syntax highlighting has been disabled due to code size.
                     <div class="header-subtitle">Overview of key management operations</div>
                 </div>
                 <div class="sync-status" id="syncStatus">
-                    <span>ðŸ’¾</span>
+                    <span>💾</span>
                     <span id="syncStatusText">All data saved</span>
                 </div>
             </div>
 			<div class="header-actions">
                 <button class="btn btn-secondary" id="importBtn">
-                    <span>ðŸ“¥</span>
+                    <span>📥</span>
                     Import/Export
                 </button>
                 <button class="btn btn-primary" id="quickLoanBtn">
-                    <span>âš¡</span>
+                    <span>⚡</span>
                     Quick Loan
                 </button>
             </div>
@@ -1133,7 +1065,7 @@ Syntax highlighting has been disabled due to code size.
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon blue">
-                        <span>ðŸ”‘</span>
+                        <span>🔑</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value" id="totalKeys">0</div>
@@ -1142,7 +1074,7 @@ Syntax highlighting has been disabled due to code size.
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green">
-                        <span>âœ…</span>
+                        <span>✅</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value" id="availableKeys">0</div>
@@ -1151,7 +1083,7 @@ Syntax highlighting has been disabled due to code size.
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon yellow">
-                        <span>ðŸ“‹</span>
+                        <span>📋</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value" id="loanedKeys">0</div>
@@ -1160,7 +1092,7 @@ Syntax highlighting has been disabled due to code size.
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon red">
-                        <span>âš ï¸</span>
+                        <span>⚠️</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value" id="overdueKeys">0</div>
@@ -1177,7 +1109,7 @@ Syntax highlighting has been disabled due to code size.
             <!-- Overdue Alert -->
             <div class="overdue-section" id="overdueAlert">
                 <div class="overdue-header">
-                    <span style="font-size: 1.5em;">ðŸš¨</span>
+                    <span style="font-size: 1.5em;">🚨</span>
                     <div class="overdue-title">Overdue Keys - Action Required</div>
                 </div>
                 <div id="overdueList"></div>
@@ -1194,7 +1126,7 @@ Syntax highlighting has been disabled due to code size.
                     <div class="tab-panel active" id="available-panel">
                         <div id="availableList">
                             <div class="empty-state">
-                                <div class="empty-icon">ðŸ”‘</div>
+                                <div class="empty-icon">🔑</div>
                                 <div class="empty-text">No available keys</div>
                                 <div class="empty-subtext">Add keys to get started</div>
                             </div>
@@ -1203,7 +1135,7 @@ Syntax highlighting has been disabled due to code size.
                     <div class="tab-panel" id="loans-panel">
                         <div id="loansList">
                             <div class="empty-state">
-                                <div class="empty-icon">ðŸ“‹</div>
+                                <div class="empty-icon">📋</div>
                                 <div class="empty-text">No active loans</div>
                                 <div class="empty-subtext">Loan out keys to track them</div>
                             </div>
@@ -1212,7 +1144,7 @@ Syntax highlighting has been disabled due to code size.
                     <div class="tab-panel" id="history-panel">
                         <div id="historyList">
                             <div class="empty-state">
-                                <div class="empty-icon">ðŸ“š</div>
+                                <div class="empty-icon">📚</div>
                                 <div class="empty-text">No history yet</div>
                                 <div class="empty-subtext">Completed loans will appear here</div>
                             </div>
@@ -1228,7 +1160,7 @@ Syntax highlighting has been disabled due to code size.
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Add New Key</h3>
-                <button class="modal-close" onclick="closeModal('addKeyModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('addKeyModal')">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1286,12 +1218,12 @@ Syntax highlighting has been disabled due to code size.
         <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
                 <h3 class="modal-title">Loan Out Key</h3>
-                <button class="modal-close" onclick="closeModal('loanModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('loanModal')">×</button>
             </div>
             <div class="modal-body">
                 <!-- Key Selection -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ”‘ Key Selection</div>
+                    <div class="form-section-title">🔑 Key Selection</div>
                     <div class="form-group">
                         <label class="form-label">Select Key *</label>
                         <select id="loanKeyId" class="form-select">
@@ -1302,7 +1234,7 @@ Syntax highlighting has been disabled due to code size.
 
                 <!-- Customer Information -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ‘¤ Customer Information</div>
+                    <div class="form-section-title">👤 Customer Information</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Name *</label>
@@ -1327,7 +1259,7 @@ Syntax highlighting has been disabled due to code size.
 
                 <!-- Site Information -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ¢ Site Information</div>
+                    <div class="form-section-title">🏢 Site Information</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Site Name *</label>
@@ -1350,7 +1282,7 @@ Syntax highlighting has been disabled due to code size.
 
                 <!-- Loan Details -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ“… Loan Details</div>
+                    <div class="form-section-title">📅 Loan Details</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Loan Type *</label>
@@ -1384,7 +1316,7 @@ Syntax highlighting has been disabled due to code size.
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Return Key</h3>
-                <button class="modal-close" onclick="closeModal('returnModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('returnModal')">×</button>
             </div>
             <div class="modal-body">
                 <div id="returnInfo" style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 20px;"></div>
@@ -1418,18 +1350,18 @@ Syntax highlighting has been disabled due to code size.
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Import/Export Data</h3>
-                <button class="modal-close" onclick="closeModal('importExportModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('importExportModal')">×</button>
             </div>
             <div class="modal-body">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div style="text-align: center; padding: 40px; border: 2px dashed var(--border); border-radius: 8px; cursor: pointer;" id="importSection">
-                        <div style="font-size: 3em; margin-bottom: 16px;">ðŸ“¥</div>
+                        <div style="font-size: 3em; margin-bottom: 16px;">📥</div>
                         <h4>Import Excel</h4>
                         <p style="color: var(--text-secondary); font-size: 0.9em; margin-top: 8px;">Click to select file</p>
                         <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
                     </div>
                     <div style="text-align: center; padding: 40px; border: 2px dashed var(--border); border-radius: 8px; cursor: pointer;" id="exportSection">
-                        <div style="font-size: 3em; margin-bottom: 16px;">ðŸ“¤</div>
+                        <div style="font-size: 3em; margin-bottom: 16px;">📤</div>
                         <h4>Export Excel</h4>
                         <p style="color: var(--text-secondary); font-size: 0.9em; margin-top: 8px;">Download current data</p>
                     </div>
@@ -1443,7 +1375,7 @@ Syntax highlighting has been disabled due to code size.
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Extend Due Date</h3>
-                <button class="modal-close" onclick="closeModal('extendModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('extendModal')">×</button>
             </div>
             <div class="modal-body">
                 <div id="extendInfo" style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 20px;"></div>
@@ -1484,13 +1416,13 @@ Syntax highlighting has been disabled due to code size.
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
                 <h3 class="modal-title">Key Collection Confirmation</h3>
-                <button class="modal-close" onclick="closeModal('collectionModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('collectionModal')">×</button>
             </div>
             <div class="modal-body">
                 <div id="collectionInfo" style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 20px;"></div>
                 
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ“‹ Collection Details</div>
+                    <div class="form-section-title">📋 Collection Details</div>
                     <div class="form-group">
                         <label class="form-label">Collection Date & Time *</label>
                         <input type="datetime-local" id="keyCollectionDate" class="form-input">
@@ -1506,7 +1438,7 @@ Syntax highlighting has been disabled due to code size.
                 </div>
                 
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ“§ Notifications</div>
+                    <div class="form-section-title">📧 Notifications</div>
                     <div style="margin: 12px 0;">
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" id="sendCollectionEmail" checked style="margin-right: 8px;">
@@ -1527,72 +1459,9 @@ Syntax highlighting has been disabled due to code size.
             </div>
         </div>
     </div>
-	<!-- Key Cabinet Modal -->
-	<div id="keycabinetModal" class="modal">
-    <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header">
-            <h3 class="modal-title" id="technicianModalTitle">Add Key Cabinet</h3>
-            <button class="modal-close" onclick="closeModal('keycabinetModal')">X</button>
-        </div>
-		<div class="modal-body">
-            <input type="hidden" id="keydetailsEdit">
-			
-            <!-- Key Information -->
-			
-			<div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Key ID *</label>
-                    <input type="text" id="cabinetKeyId" class="form-input" placeholder="e.g., SITE-001">
-                </div>
-				<div class="form-group">
-                    <label class="form-label">Key SN *</label>
-                    <input type="text" id="cabinetKeySN" class="form-input" placeholder="e.g., 28">
-                </div>
-				<div class="form-group">
-                    <label class="form-label">Key Number *</label>
-                    <input type="text" id="cabinetkeyNumber" class="form-input" placeholder="e.g., N2B8">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <input type="text" id="cabinetkeyDesc" class="form-input" placeholder="e.g., Main entrance key">
-                </div>
-                <div class="form-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
-				<div style="font-weight: 600; color: var(--text-primary); margin-bottom: 15px; font-size: 0.95em;">
-				   Key Cabinet Information
-				</div>  
-                <div class="form-group">
-                    <label class="form-label">Location</label>
-                    <input type="text" id="keyLocation" class="form-input" placeholder="e.g., SYD Office Cabinet">
-                </div>
-				<div class="form-group">
-                    <label class="form-label">Location Number</label>
-                    <input type="text" id="keylocationNumber" class="form-input" placeholder="e.g., Hook 41">
-                </div>
-				</div>		
-				<div class="form-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
-                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 15px; font-size: 0.95em;">
-                    Assignment Information
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Assigned Technician</label>
-                    <input type="text" id="assignedTechnician" class="form-input" placeholder="e.g., John Smith">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Assigned Date</label>
-                    <input type="date" id="assignedDate" class="form-input">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('addKeyModal')">Cancel</button>
-                <button class="btn btn-primary" id="saveKeyBtn">Add Key</button>
-            </div>
-			</div>
-		</div>
-	
-	
-	
-	
-<!-- Technician Modal -->
+	<!-- Key Cabinet modal removed: it was unused and duplicated the IDs saveKeyBtn / assignedTechnician / assignedDate / keylocationNumber / technicianModalTitle; cabinets are managed via the dynamic Add/Edit Cabinet modals -->
+
+    <!-- Technician Modal -->
 <div id="technicianModal" class="modal">
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
@@ -1979,7 +1848,9 @@ function initializeData() {
 }
 // Cabinet Tab Switching
 function setupCabinetTabs() {
-    // Use event delegation for dynamically created tabs
+    // Use event delegation for dynamically created tabs (bind once to avoid leaking listeners)
+    if (window.__cabinetTabsBound) return;
+    window.__cabinetTabsBound = true;
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('tab-button') && e.target.hasAttribute('data-tab')) {
             const tabId = e.target.getAttribute('data-tab');
@@ -2023,7 +1894,7 @@ function showAddCabinetModal() {
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Add New Cabinet</h3>
-                <button class="modal-close" onclick="closeModal('addCabinetModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('addCabinetModal')">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -2100,7 +1971,7 @@ function editCabinet(cabinetId) {
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Edit Cabinet</h3>
-                <button class="modal-close" onclick="closeModal('editCabinetModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('editCabinetModal')">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -2196,7 +2067,7 @@ function unassignKeyFromTechnician(keyId) {
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h3 class="modal-title">Return Key to Cabinet</h3>
-                <button class="modal-close" onclick="closeModal('unassignModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('unassignModal')">×</button>
             </div>
             <div class="modal-body">
                 <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -2230,7 +2101,7 @@ function unassignKeyFromTechnician(keyId) {
                 
                 <div class="form-group">
                     <label class="form-label">Return Notes</label>
-                    <textarea id="returnNotes" class="form-textarea" 
+                    <textarea id="unassignReturnNotes" class="form-textarea" 
                               placeholder="Reason for unassignment, condition notes, etc."></textarea>
                 </div>
             </div>
@@ -2246,7 +2117,7 @@ function unassignKeyFromTechnician(keyId) {
 function confirmUnassignment(keyId) {
     const cabinetSelect = document.getElementById('returnCabinetSelect');
     const locationNumber = document.getElementById('returnLocationNumber');
-    const notes = document.getElementById('returnNotes');
+    const notes = document.getElementById('unassignReturnNotes');
     
     if (!cabinetSelect || !cabinetSelect.value) {
         showAlert('Please select a cabinet', 'error');
@@ -2369,7 +2240,7 @@ function showKeyDetails(keyId) {
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Key Details</h3>
-                <button class="modal-close" onclick="closeModal('keyDetailsModal')">Ã—</button>
+                <button class="modal-close" onclick="closeModal('keyDetailsModal')">×</button>
             </div>
             <div class="modal-body">
                 <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
@@ -2525,9 +2396,12 @@ function loadAllDataFromStorage() {
     try {
         const saved = localStorage.getItem('keyManagerData');
         if (saved) {
+            const defaults = appData.settings;
             const loaded = JSON.parse(saved);
             // Merge with default structure to ensure all properties exist
             appData = { ...appData, ...loaded };
+            // Preserve any new default settings keys not present in saved data
+            appData.settings = { ...defaults, ...(loaded.settings || {}) };
             
             // Ensure arrays exist
             if (!Array.isArray(appData.keys)) appData.keys = [];
@@ -2680,6 +2554,8 @@ function createBackup(type = 'manual') {
                 keys: [...appData.keys],
                 loans: [...appData.loans],
                 sites: [...appData.sites],
+                technicians: [...(appData.technicians || [])],
+                cabinets: [...(appData.cabinets || [])],
                 settings: { ...appData.settings }
             },
             size: JSON.stringify(appData).length
@@ -2774,10 +2650,12 @@ function restoreBackup(backupId) {
     
     if (confirm('Are you sure you want to restore this backup? Current data will be replaced.')) {
         // Restore data
-        appData.keys = [...backup.data.keys];
-        appData.loans = [...backup.data.loans];
-        appData.sites = [...backup.data.sites];
-        appData.settings = { ...backup.data.settings };
+        appData.keys = [...(backup.data.keys || [])];
+        appData.loans = [...(backup.data.loans || [])];
+        appData.sites = [...(backup.data.sites || [])];
+        if (Array.isArray(backup.data.technicians)) appData.technicians = [...backup.data.technicians];
+        if (Array.isArray(backup.data.cabinets)) appData.cabinets = [...backup.data.cabinets];
+        appData.settings = { ...appData.settings, ...backup.data.settings };
         
         // Save and update
         saveAllDataToStorage();
@@ -2853,7 +2731,7 @@ function updateFileSystemStatus(enabled, filename = null) {
     if (enabled && filename) {
         statusElement.innerHTML = `
             <div class="file-manager-status connected">
-                <strong>âœ… File System Connected</strong><br>
+                <strong>✅ File System Connected</strong><br>
                 Auto-save file: ${filename}<br>
                 <button class="btn btn-sm btn-secondary" onclick="disconnectFileSystem()">Disconnect</button>
             </div>
@@ -2868,7 +2746,7 @@ function updateFileSystemStatus(enabled, filename = null) {
     } else {
         statusElement.innerHTML = `
             <div class="file-manager-status disconnected">
-                <strong>âš ï¸ File System Not Available</strong><br>
+                <strong>⚠️ File System Not Available</strong><br>
                 <small>Use Chrome or Edge for file system support</small>
             </div>
         `;
@@ -2889,13 +2767,13 @@ function showExportOptions() {
     const options = `
         <div style="display: grid; gap: 15px;">
             <button class="btn btn-primary" onclick="exportData('excel')" style="padding: 20px;">
-                ðŸ“Š Export as Excel
+                📊 Export as Excel
             </button>
             <button class="btn btn-secondary" onclick="exportData('json')" style="padding: 20px;">
-                ðŸ“„ Export as JSON
+                📄 Export as JSON
             </button>
             <button class="btn btn-secondary" onclick="exportData('backup')" style="padding: 20px;">
-                ðŸ’¾ Create & Export Backup
+                💾 Create & Export Backup
             </button>
         </div>
     `;
@@ -2907,7 +2785,7 @@ function showExportOptions() {
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
                 <h3 class="modal-title">Export Options</h3>
-                <button class="modal-close" onclick="this.closest('.modal').remove()">Ã—</button>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
             </div>
             <div class="modal-body">
                 ${options}
@@ -3063,11 +2941,13 @@ function handleFileUpload(event) {
                         id: row.id || row.ID,
                         description: row.description || row.Description || '',
                         location: row.location || row.Location || 'Unspecified',
-						locationNumber: row.locationNumber || row.locationNumber || 'Unspecified',
-						KeyNumber: row.keyNumber || row.KeyNumber || '',
-						KeySN: row.keySN || row.KeySN || '',
+						locationNumber: row.locationNumber || row.LocationNumber || 'Unspecified',
+						keyNumber: row.keyNumber || row.KeyNumber || 'Unspecified',
+						keySN: row.keySN || row.KeySN || 'Unspecified',
 					
-                        available: row.available === true || row.Available === 'Yes' || row.Available === true
+                        assignedTechnician: row.assignedTechnician || row.AssignedTechnician || 'Unassigned',
+                        assignedDate: row.assignedDate || row.AssignedDate || null,
+                        available: row.available === true || row.available === 'Yes' || row.Available === 'Yes' || row.Available === true
                     }));
                     imported.keys = appData.keys.length;
                 }
@@ -3278,7 +3158,7 @@ function loadKeyCabinetContent(content) {
             <div class="stats-grid" style="margin-bottom: 20px;">
                 <div class="stat-card">
                     <div class="stat-icon blue">
-                        <span>ðŸ—„ï¸</span>
+                        <span>🗄️</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value">0</div>
@@ -3287,7 +3167,7 @@ function loadKeyCabinetContent(content) {
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green">
-                        <span>ðŸ”‘</span>
+                        <span>🔑</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value">0</div>
@@ -3296,7 +3176,7 @@ function loadKeyCabinetContent(content) {
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon yellow">
-                        <span>ðŸ“Š</span>
+                        <span>📊</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value">0</div>
@@ -3305,7 +3185,7 @@ function loadKeyCabinetContent(content) {
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green">
-                        <span>ðŸ“ˆ</span>
+                        <span>📈</span>
                     </div>
                     <div class="stat-details">
                         <div class="stat-value">0%</div>
@@ -3318,12 +3198,12 @@ function loadKeyCabinetContent(content) {
                 <div class="card-header">
                     <div class="card-title">Key Cabinet Management</div>
                     <button class="btn btn-primary btn-sm" onclick="showAddCabinetModal()">
-                        <span>âž•</span> Add First Cabinet
+                        <span>➕</span> Add First Cabinet
                     </button>
                 </div>
                 <div class="card-body">
                     <div class="empty-state">
-                        <div class="empty-icon">ðŸ—„ï¸</div>
+                        <div class="empty-icon">🗄️</div>
                         <div class="empty-text">No cabinets configured</div>
                         <div class="empty-subtext">Add your first cabinet to start organizing keys</div>
                     </div>
@@ -3339,7 +3219,7 @@ function loadKeyCabinetContent(content) {
         <div class="stats-grid" style="margin-bottom: 20px;">
             <div class="stat-card">
                 <div class="stat-icon blue">
-                    <span>ðŸ—„ï¸</span>
+                    <span>🗄️</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value">${cabinets.length}</div>
@@ -3348,7 +3228,7 @@ function loadKeyCabinetContent(content) {
             </div>
             <div class="stat-card">
                 <div class="stat-icon green">
-                    <span>ðŸ”‘</span>
+                    <span>🔑</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value">${totalKeysStored}</div>
@@ -3357,7 +3237,7 @@ function loadKeyCabinetContent(content) {
             </div>
             <div class="stat-card">
                 <div class="stat-icon yellow">
-                    <span>ðŸ“Š</span>
+                    <span>📊</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value">${totalCapacity}</div>
@@ -3366,7 +3246,7 @@ function loadKeyCabinetContent(content) {
             </div>
             <div class="stat-card">
                 <div class="stat-icon ${totalCapacity > 0 && totalKeysStored/totalCapacity > 0.8 ? 'red' : 'green'}">
-                    <span>ðŸ“ˆ</span>
+                    <span>📈</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value">${totalCapacity > 0 ? Math.round((totalKeysStored/totalCapacity) * 100) : 0}%</div>
@@ -3380,7 +3260,7 @@ function loadKeyCabinetContent(content) {
                 <div class="card-title">Key Cabinet Overview</div>
 		
                 <button class="btn btn-primary btn-sm" onclick="showAddCabinetModal()">
-                    <span>âž•</span> Add Cabinet
+                    <span>➕</span> Add Cabinet
                 </button>
 				
             </div>
@@ -3424,7 +3304,7 @@ function loadKeyCabinetContent(content) {
                                                      onclick="showKeyDetails('${keyInSlot.id}')"
                                                      title="${keyInSlot.id} - ${keyInSlot.description}">
                                                     <span class="slot-number">#${slotNumber}</span>
-                                                    <div class="slot-key-icon">ðŸ”‘</div>
+                                                    <div class="slot-key-icon">🔑</div>
                                                     <div class="slot-key-id">${keyInSlot.id}</div>
                                                     <div class="slot-status">${isOnLoan ? 'On Loan' : 'Available'}</div>
                                                 </div>
@@ -3436,7 +3316,7 @@ function loadKeyCabinetContent(content) {
          style="cursor: pointer;"
          title="Click to add key to this slot">
         <span class="slot-number">#${slotNumber}</span>
-        <div class="slot-key-icon" style="opacity: 0.3;">ðŸ”“</div>
+        <div class="slot-key-icon" style="opacity: 0.3;">🔓</div>
         <div class="slot-status">Empty</div>
         <div style="font-size: 0.7em; margin-top: 2px; opacity: 0.5;">Click to add</div>
     </div>
@@ -3448,7 +3328,7 @@ function loadKeyCabinetContent(content) {
                                 
                                 <div style="margin-top: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
 									<button class="btn btn-primary btn-sm" onclick="showAddKeyToCabinet('${cabinet.id}', '${cabinet.name}')">
-											<span>âž•</span> Add Key to Cabinet
+											<span>➕</span> Add Key to Cabinet
 									</button>
 									<button class="btn btn-secondary btn-sm" onclick="editCabinet('${cabinet.id}')">Edit Cabinet</button>
 									<button class="btn btn-primary btn-sm" onclick="auditCabinet('${cabinet.id}')">Perform Audit</button>
@@ -3564,7 +3444,7 @@ function loadDashboardContent(content) {
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon blue">
-                    <span>ðŸ”‘</span>
+                    <span>🔑</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value" id="totalKeys">${keys.length}</div>
@@ -3573,7 +3453,7 @@ function loadDashboardContent(content) {
             </div>
             <div class="stat-card">
                 <div class="stat-icon green">
-                    <span>âœ…</span>
+                    <span>✅</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value" id="availableKeys">${keys.filter(k => k.available).length}</div>
@@ -3582,7 +3462,7 @@ function loadDashboardContent(content) {
             </div>
             <div class="stat-card">
                 <div class="stat-icon yellow">
-                    <span>ðŸ“‹</span>
+                    <span>📋</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value" id="loanedKeys">${loans.filter(l => l.status === 'active').length}</div>
@@ -3591,7 +3471,7 @@ function loadDashboardContent(content) {
             </div>
             <div class="stat-card">
                 <div class="stat-icon red">
-                    <span>âš ï¸</span>
+                    <span>⚠️</span>
                 </div>
                 <div class="stat-details">
                     <div class="stat-value" id="overdueKeys">${getOverdueLoans().length}</div>
@@ -3608,7 +3488,7 @@ function loadDashboardContent(content) {
         <!-- Overdue Alert -->
         <div class="overdue-section" id="overdueAlert">
             <div class="overdue-header">
-                <span style="font-size: 1.5em;">ðŸš¨</span>
+                <span style="font-size: 1.5em;">🚨</span>
                 <div class="overdue-title">Overdue Keys - Action Required</div>
             </div>
             <div id="overdueList"></div>
@@ -3646,7 +3526,7 @@ function loadKeysContent(content) {
             <div class="card-header">
                 <div class="card-title">All Keys</div>
                 <button class="btn btn-primary btn-sm" onclick="showAddKeyModal()">
-                    <span>âž•</span> Add Key
+                    <span>➕</span> Add Key
                 </button>
             </div>
             <div class="card-body">
@@ -3666,7 +3546,7 @@ function loadLoansContent(content) {
             <div class="card-header">
                 <div class="card-title">Active Loans</div>
                 <button class="btn btn-primary btn-sm" onclick="showQuickLoan()">
-                    <span>âš¡</span> New Loan
+                    <span>⚡</span> New Loan
                 </button>
             </div>
             <div class="card-body">
@@ -3728,21 +3608,21 @@ function loadReportsContent(content) {
             <div class="card-body">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
                     <div class="stat-card" style="cursor: pointer;" onclick="generateReport('monthly')">
-                        <div class="stat-icon blue"><span>ðŸ“Š</span></div>
+                        <div class="stat-icon blue"><span>📊</span></div>
                         <div class="stat-details">
                             <div class="stat-label">Monthly Report</div>
                             <div style="font-size: 0.9em; color: var(--text-secondary);">Generate monthly activity report</div>
                         </div>
                     </div>
                     <div class="stat-card" style="cursor: pointer;" onclick="generateReport('overdue')">
-                        <div class="stat-icon red"><span>âš ï¸</span></div>
+                        <div class="stat-icon red"><span>⚠️</span></div>
                         <div class="stat-details">
                             <div class="stat-label">Overdue Report</div>
                             <div style="font-size: 0.9em; color: var(--text-secondary);">View all overdue items</div>
                         </div>
                     </div>
                     <div class="stat-card" style="cursor: pointer;" onclick="generateReport('customer')">
-                        <div class="stat-icon green"><span>ðŸ‘¥</span></div>
+                        <div class="stat-icon green"><span>👥</span></div>
                         <div class="stat-details">
                             <div class="stat-label">Customer Report</div>
                             <div style="font-size: 0.9em; color: var(--text-secondary);">Customer loan history</div>
@@ -3761,15 +3641,15 @@ function loadSettingsContent(content) {
             <div class="card-header">
                 <div class="card-title">System Settings</div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-sm btn-success" onclick="quickSaveAll()">ðŸ’¾ Save Now</button>
-                    <button class="btn btn-sm btn-primary" onclick="createBackup('manual')">ðŸ“¦ Create Backup</button>
-                    <button class="btn btn-sm btn-secondary" onclick="clearStorage()">ðŸ—‘ï¸ Clear Storage</button>
+                    <button class="btn btn-sm btn-success" onclick="quickSaveAll()">💾 Save Now</button>
+                    <button class="btn btn-sm btn-primary" onclick="createBackup('manual')">📦 Create Backup</button>
+                    <button class="btn btn-sm btn-secondary" onclick="clearStorage()">🗑️ Clear Storage</button>
                 </div>
             </div>
             <div class="card-body">
                 <!-- Storage Status -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ’¾ Storage Status</div>
+                    <div class="form-section-title">💾 Storage Status</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div style="padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
                             <strong>Data Size:</strong><br>
@@ -3789,7 +3669,7 @@ function loadSettingsContent(content) {
                         ${fileSystemSupported ? `
                             <div class="file-manager-status ${appData.settings.fileSystemEnabled ? 'connected' : 'disconnected'}">
                                 ${appData.settings.fileSystemEnabled && appData.metadata.autoSaveFile ? 
-                                    `<strong>âœ… File System Connected</strong><br>
+                                    `<strong>✅ File System Connected</strong><br>
                                      Auto-save file: ${appData.metadata.autoSaveFile}<br>
                                      <button class="btn btn-sm btn-secondary" onclick="disconnectFileSystem()">Disconnect</button>` :
                                     `<strong>File System Available</strong><br>
@@ -3798,7 +3678,7 @@ function loadSettingsContent(content) {
                             </div>
                         ` : `
                             <div class="file-manager-status disconnected">
-                                <strong>âš ï¸ File System Not Available</strong><br>
+                                <strong>⚠️ File System Not Available</strong><br>
                                 <small>Use Chrome or Edge for file system support</small>
                             </div>
                         `}
@@ -3807,7 +3687,7 @@ function loadSettingsContent(content) {
 
                 <!-- Auto-Save Settings -->
                 <div class="form-section">
-                    <div class="form-section-title">â±ï¸ Auto-Save Settings</div>
+                    <div class="form-section-title">⏱️ Auto-Save Settings</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Auto-Save Interval (minutes)</label>
@@ -3827,7 +3707,7 @@ function loadSettingsContent(content) {
 
                 <!-- Backup Settings -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ“¦ Backup Settings</div>
+                    <div class="form-section-title">📦 Backup Settings</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Backup Frequency</label>
@@ -3876,7 +3756,7 @@ function loadSettingsContent(content) {
 
                 <!-- General Settings -->
                 <div class="form-section">
-                    <div class="form-section-title">âš™ï¸ General Settings</div>
+                    <div class="form-section-title">⚙️ General Settings</div>
                     <div class="form-group">
                         <label class="form-label">Default Loan Duration (days)</label>
                         <input type="number" id="defaultLoanDuration" class="form-input" value="${appData.settings.defaultLoanDuration}" style="max-width: 200px;">
@@ -3893,12 +3773,12 @@ function loadSettingsContent(content) {
 
                 <!-- Export/Import Options -->
                 <div class="form-section">
-                    <div class="form-section-title">ðŸ“¤ Export Options</div>
+                    <div class="form-section-title">📤 Export Options</div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                        <button class="btn btn-primary" onclick="exportData('excel')">ðŸ“Š Export Excel</button>
-                        <button class="btn btn-secondary" onclick="exportData('json')">ðŸ“„ Export JSON</button>
-                        <button class="btn btn-secondary" onclick="createBackup('manual')">ðŸ“¦ Create Backup</button>
-                        <button class="btn btn-warning" onclick="exportSettings()">âš™ï¸ Export Settings</button>
+                        <button class="btn btn-primary" onclick="exportData('excel')">📊 Export Excel</button>
+                        <button class="btn btn-secondary" onclick="exportData('json')">📄 Export JSON</button>
+                        <button class="btn btn-secondary" onclick="createBackup('manual')">📦 Create Backup</button>
+                        <button class="btn btn-warning" onclick="exportSettings()">⚙️ Export Settings</button>
                     </div>
                 </div>
 
@@ -3939,9 +3819,9 @@ function displayAllKeys() {
                     <div class="key-id">${key.id}</div>
                     <div class="key-details">${key.description}</div>
                     <div class="key-meta">
-                        <span>ðŸ“ ${key.location}</span>
+                        <span>📍 ${key.location}</span>
                         ${key.locationNumber && key.locationNumber !== 'Unspecified' ? 
-                            `<span>ðŸ“ Hook: ${key.locationNumber}</span>` : ''}
+                            `<span>📍 Hook: ${key.locationNumber}</span>` : ''}
                     </div>
                     ${(key.keyNumber && key.keyNumber !== 'Unspecified') || 
                       (key.keySN && key.keySN !== 'Unspecified') ? 
@@ -3957,14 +3837,14 @@ function displayAllKeys() {
                         `<div style="margin-top: 8px; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); 
                                     border-radius: 6px; font-size: 0.85em;">
                             <span style="color: var(--primary);">
-                                ðŸ‘· <strong>Assigned to:</strong> ${key.assignedTechnician}
+                                👷 <strong>Assigned to:</strong> ${key.assignedTechnician}
                                 ${key.assignedDate ? ` | <strong>Since:</strong> ${new Date(key.assignedDate).toLocaleDateString()}` : ''}
                             </span>
                         </div>` : 
                         `<div style="margin-top: 8px; padding: 6px 10px; background: rgba(107, 114, 128, 0.1); 
                                     border-radius: 6px; font-size: 0.85em;">
                             <span style="color: var(--text-secondary);">
-                                ðŸ‘· Unassigned
+                                👷 Unassigned
                             </span>
                         </div>`
                     }
@@ -4004,7 +3884,7 @@ function displayActiveLoans() {
     if (!container) return;
     
     if (activeLoans.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“‹</div><div class="empty-text">No active loans</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No active loans</div></div>';
         return;
     }
     
@@ -4024,7 +3904,7 @@ function displayActiveLoans() {
                             <strong>Site:</strong> ${loan.siteName} (${loan.siteNumber})<br>
                             <strong>Loan Date:</strong> ${loan.loanDate}<br>
                             <strong>Due Date:</strong> ${loan.expectedReturnDate}
-                            ${isOverdue ? `<br><span style="color: var(--danger);"><strong>âš ï¸ ${daysOverdue} days overdue</strong></span>` : ''}
+                            ${isOverdue ? `<br><span style="color: var(--danger);"><strong>⚠️ ${daysOverdue} days overdue</strong></span>` : ''}
                         </div>
                     </div>
                     <span class="badge ${isOverdue ? 'badge-danger' : 'badge-warning'}">
@@ -4049,7 +3929,7 @@ function displayCompleteHistory() {
     if (!container) return;
     
     if (loans.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“š</div><div class="empty-text">No loan history</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">No loan history</div></div>';
         return;
     }
     
@@ -4067,7 +3947,7 @@ function displayCompleteHistory() {
                         <div class="key-id">${loan.keyId} - ${key ? key.description : 'Unknown'}</div>
                         <div class="key-details">
                             <strong>Customer:</strong> ${loan.customerName}<br>
-                            <strong>Period:</strong> ${loan.loanDate} â†’ ${loan.actualReturnDate || 'Not returned'}<br>
+                            <strong>Period:</strong> ${loan.loanDate} → ${loan.actualReturnDate || 'Not returned'}<br>
                             <strong>Site:</strong> ${loan.siteName}
                         </div>
                     </div>
@@ -4101,7 +3981,7 @@ function displayCustomers() {
     const customerArray = Object.values(customers);
     
     if (customerArray.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ‘¥</div><div class="empty-text">No customers yet</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No customers yet</div></div>';
         return;
     }
     
@@ -4116,9 +3996,9 @@ function displayCustomers() {
                         <strong>Company:</strong> ${customer.company}
                     </div>
                     <div class="key-meta">
-                        <span>ðŸ“‹ ${customer.loans.length} loan(s)</span>
-                        <span>âœ… ${customer.loans.filter(l => l.status === 'returned').length} returned</span>
-                        <span>âš ï¸ ${customer.loans.filter(l => l.status === 'active').length} active</span>
+                        <span>📋 ${customer.loans.length} loan(s)</span>
+                        <span>✅ ${customer.loans.filter(l => l.status === 'returned').length} returned</span>
+                        <span>⚠️ ${customer.loans.filter(l => l.status === 'active').length} active</span>
                     </div>
                 </div>
             </div>
@@ -4148,7 +4028,7 @@ function displaySites() {
     const siteArray = Object.values(sites);
     
     if (siteArray.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ¢</div><div class="empty-text">No sites recorded</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-text">No sites recorded</div></div>';
         return;
     }
     
@@ -4161,8 +4041,8 @@ function displaySites() {
                         <strong>Site Number:</strong> ${site.number}
                     </div>
                     <div class="key-meta">
-                        <span>ðŸ”‘ ${site.loans.length} key loan(s)</span>
-                        <span>ðŸ“… Last activity: ${site.loans[site.loans.length - 1].loanDate}</span>
+                        <span>🔑 ${site.loans.length} key loan(s)</span>
+                        <span>📅 Last activity: ${site.loans[site.loans.length - 1].loanDate}</span>
                     </div>
                 </div>
             </div>
@@ -4739,9 +4619,9 @@ function filterKeys(searchTerm) {
                     <div class="key-id">${key.id}</div>
                     <div class="key-details">${key.description}</div>
                     <div class="key-meta">
-                        <span>ðŸ“ ${key.location}</span>
+                        <span>📍 ${key.location}</span>
                         ${key.locationNumber && key.locationNumber !== 'Unspecified' ? 
-                            `<span>ðŸ“ Hook: ${key.locationNumber}</span>` : ''}
+                            `<span>📍 Hook: ${key.locationNumber}</span>` : ''}
                     </div>
                     ${(key.keyNumber && key.keyNumber !== 'Unspecified') || 
                       (key.keySN && key.keySN !== 'Unspecified') ? 
@@ -4757,14 +4637,14 @@ function filterKeys(searchTerm) {
                         `<div style="margin-top: 8px; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); 
                                     border-radius: 6px; font-size: 0.85em;">
                             <span style="color: var(--primary);">
-                                ðŸ‘· <strong>Assigned to:</strong> ${key.assignedTechnician}
+                                👷 <strong>Assigned to:</strong> ${key.assignedTechnician}
                                 ${key.assignedDate ? ` | <strong>Since:</strong> ${new Date(key.assignedDate).toLocaleDateString()}` : ''}
                             </span>
                         </div>` : 
                         `<div style="margin-top: 8px; padding: 6px 10px; background: rgba(107, 114, 128, 0.1); 
                                     border-radius: 6px; font-size: 0.85em;">
                             <span style="color: var(--text-secondary);">
-                                ðŸ‘· Unassigned
+                                👷 Unassigned
                             </span>
                         </div>`
                     }
@@ -4838,7 +4718,7 @@ function updateKeysDisplay(keysToShow) {
     if (!container) return;
     
     if (keysToShow.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ”‘</div><div class="empty-text">No available keys</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔑</div><div class="empty-text">No available keys</div></div>';
         return;
     }
 
@@ -4849,9 +4729,9 @@ function updateKeysDisplay(keysToShow) {
                     <div class="key-id">${key.id}</div>
                     <div class="key-details">${key.description}</div>
                     <div class="key-meta">
-                        <span>ðŸ“ ${key.location}</span>
+                        <span>📍 ${key.location}</span>
                         ${key.assignedTechnician && key.assignedTechnician !== 'Unassigned' ? 
-                            `<span>ðŸ‘· ${key.assignedTechnician}</span>` : ''}
+                            `<span>👷 ${key.assignedTechnician}</span>` : ''}
                     </div>
                 </div>
                 <span class="badge badge-success">Available</span>
@@ -5247,7 +5127,7 @@ function updateKeysDisplay(keysToShow) {
     if (!container) return;
     
     if (keysToShow.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ”‘</div><div class="empty-text">No available keys</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔑</div><div class="empty-text">No available keys</div></div>';
         return;
     }
 
@@ -5258,7 +5138,7 @@ function updateKeysDisplay(keysToShow) {
                     <div class="key-id">${key.id}</div>
                     <div class="key-details">${key.description}</div>
                     <div class="key-meta">
-                        <span>ðŸ“ ${key.location}</span>
+                        <span>📍 ${key.location}</span>
                     </div>
                 </div>
                 <span class="badge badge-success">Available</span>
@@ -5272,7 +5152,7 @@ function updateLoansDisplay(loansToShow) {
     if (!container) return;
     
     if (loansToShow.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“‹</div><div class="empty-text">No active loans</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No active loans</div></div>';
         return;
     }
 
@@ -5294,21 +5174,21 @@ function updateLoansDisplay(loansToShow) {
                             <strong>Customer:</strong> ${loan.customerName}<br>
                             <strong>Site:</strong> ${loan.siteName} (${loan.siteNumber})<br>
                             <strong>Due:</strong> ${loan.expectedReturnDate}
-                            ${isOverdue ? `<br><span style="color: var(--danger);"><strong>âš ï¸ ${daysOverdue} days overdue</strong></span>` : ''}
-                            ${loan.reminderCount ? `<br><span style="color: var(--text-secondary);">ðŸ“§ ${loan.reminderCount} reminder(s) sent</span>` : ''}
+                            ${isOverdue ? `<br><span style="color: var(--danger);"><strong>⚠️ ${daysOverdue} days overdue</strong></span>` : ''}
+                            ${loan.reminderCount ? `<br><span style="color: var(--text-secondary);">📧 ${loan.reminderCount} reminder(s) sent</span>` : ''}
                         </div>
                         <div class="key-meta">
-                            <span>ðŸ“§ ${loan.customerEmail}</span>
-                            <span>ðŸ“± ${loan.customerPhone}</span>
+                            <span>📧 ${loan.customerEmail}</span>
+                            <span>📱 ${loan.customerPhone}</span>
                         </div>
                         ${isCollected ? `
                             <div style="margin-top: 8px; padding: 8px; background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
-                                âœ… <strong>Collected by:</strong> ${loan.keyCollectedBy}<br>
+                                ✅ <strong>Collected by:</strong> ${loan.keyCollectedBy}<br>
                                 <small>${new Date(loan.keyCollectionDate).toLocaleString()}</small>
                             </div>
                         ` : `
                             <div style="margin-top: 8px; padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 6px;">
-                                âš ï¸ <strong>Awaiting Collection</strong>
+                                ⚠️ <strong>Awaiting Collection</strong>
                             </div>
                         `}
                     </div>
@@ -5339,7 +5219,7 @@ function updateHistoryDisplay() {
     const completedLoans = loans.filter(l => l.status === 'returned');
     
     if (completedLoans.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“š</div><div class="empty-text">No history yet</div></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">No history yet</div></div>';
         return;
     }
 
@@ -5350,7 +5230,7 @@ function updateHistoryDisplay() {
                     <div class="key-id">${loan.keyId}</div>
                     <div class="key-details">
                         <strong>Customer:</strong> ${loan.customerName}<br>
-                        <strong>Period:</strong> ${loan.loanDate} â†’ ${loan.actualReturnDate}
+                        <strong>Period:</strong> ${loan.loanDate} → ${loan.actualReturnDate}
                     </div>
                 </div>
                 <span class="badge badge-info">Returned</span>
@@ -5385,21 +5265,21 @@ function updateOverdueAlert() {
                         <strong>Phone:</strong> ${loan.customerPhone}<br>
                         <strong>Site:</strong> ${loan.siteName} (${loan.siteNumber})<br>
                         <span style="color: var(--danger); font-weight: 600;">
-                            âš ï¸ ${daysOverdue} days overdue (Due: ${loan.expectedReturnDate})
+                            ⚠️ ${daysOverdue} days overdue (Due: ${loan.expectedReturnDate})
                         </span>
                         ${loan.reminderCount ? `
                             <div style="margin-top: 5px; font-size: 0.9em; color: var(--text-secondary);">
-                                ðŸ“§ ${loan.reminderCount} reminder(s) sent | Last: ${new Date(loan.lastReminderDate).toLocaleDateString()}
+                                📧 ${loan.reminderCount} reminder(s) sent | Last: ${new Date(loan.lastReminderDate).toLocaleDateString()}
                             </div>
                         ` : ''}
                     </div>
                 </div>
                 <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
                     <button class="btn btn-danger btn-sm" onclick="sendReminder('${loan.id}')">
-                        ðŸ“§ Send Reminder ${loan.reminderCount ? `(#${loan.reminderCount + 1})` : ''}
+                        📧 Send Reminder ${loan.reminderCount ? `(#${loan.reminderCount + 1})` : ''}
                     </button>
-                    <button class="btn btn-warning btn-sm" onclick="showExtendModal('${loan.id}')">ðŸ“… Extend</button>
-                    <button class="btn btn-success btn-sm" onclick="showReturnModal('${loan.id}')">ðŸ”„ Return</button>
+                    <button class="btn btn-warning btn-sm" onclick="showExtendModal('${loan.id}')">📅 Extend</button>
+                    <button class="btn btn-success btn-sm" onclick="showReturnModal('${loan.id}')">🔄 Return</button>
                 </div>
             </div>
         `;
@@ -5442,9 +5322,9 @@ KEY DETAILS:
 
 IMMEDIATE ACTION REQUIRED:
 Please return the key immediately to avoid:
-â€¢ Additional fees and penalties
-â€¢ Legal action
-â€¢ Suspension of future access privileges
+• Additional fees and penalties
+• Legal action
+• Suspension of future access privileges
 
 If you need to extend the loan period or have any questions, please contact us immediately.
 
@@ -5651,11 +5531,11 @@ LOAN DETAILS:
 - Expected Return Date: ${loan.expectedReturnDate}
 
 IMPORTANT REMINDERS:
-â€¢ Please return the key by the due date
-â€¢ Keep this key secure at all times
-â€¢ Do not duplicate or share this key
-â€¢ Report any loss or damage immediately
-â€¢ Follow all site safety and security procedures
+• Please return the key by the due date
+• Keep this key secure at all times
+• Do not duplicate or share this key
+• Report any loss or damage immediately
+• Follow all site safety and security procedures
 
 TERMS & CONDITIONS:
 By collecting this key, you agree to:
@@ -6063,7 +5943,7 @@ function quickSaveAll() {
 }
 
 function clearStorage() {
-    if (confirm('âš ï¸ WARNING: This will delete ALL data including keys, loans, history, and settings. Are you sure?')) {
+    if (confirm('⚠️ WARNING: This will delete ALL data including keys, loans, history, and settings. Are you sure?')) {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
@@ -6078,6 +5958,8 @@ function clearStorage() {
                 keys: [],
                 loans: [],
                 sites: [],
+                technicians: [],
+                cabinets: [],
                 settings: {
                     dbLocation: 'Browser Storage',
                     backupFrequency: 'daily',
