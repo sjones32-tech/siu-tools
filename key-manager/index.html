@@ -931,6 +931,70 @@
             border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
+        /* ===== v2.1 UI additions ===== */
+        .menu-toggle { display:none; background:none; border:none; font-size:1.5em; color:var(--text-primary); cursor:pointer; padding:2px 10px; margin-right:4px; border-radius:6px; line-height:1; }
+        .menu-toggle:hover { background:var(--bg-secondary); }
+        @media (max-width: 768px) { .menu-toggle { display:inline-flex; align-items:center; } .sidebar { z-index:1100; box-shadow:2px 0 12px rgba(0,0,0,.2); } }
+
+        .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
+        .filter-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+        .filter-chip { border:1px solid var(--border); background:#fff; color:var(--text-secondary); padding:6px 12px; border-radius:999px; font-size:0.82em; font-weight:600; cursor:pointer; transition:all .15s; }
+        .filter-chip[aria-pressed="true"] { background:var(--primary); color:#fff; border-color:var(--primary); }
+        .filter-select { padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:0.85em; background:#fff; cursor:pointer; }
+        .result-count { margin-left:auto; color:var(--text-secondary); font-size:0.85em; font-weight:500; }
+
+        .table-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
+        .data-table { width:100%; border-collapse:collapse; font-size:0.9em; }
+        .data-table thead th { position:sticky; top:0; background:var(--bg-secondary); text-align:left; padding:10px 12px; font-size:0.74em; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+        .data-table thead th.no-sort { cursor:default; }
+        .data-table thead th .caret { opacity:.35; font-size:.85em; margin-left:2px; }
+        .data-table thead th[aria-sort="ascending"] .caret, .data-table thead th[aria-sort="descending"] .caret { opacity:1; color:var(--primary); }
+        .data-table tbody td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+        .data-table tbody tr:last-child td { border-bottom:none; }
+        .data-table tbody tr:hover { background:#f8fafc; }
+        .data-table .cell-mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:600; }
+        .data-table .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
+        .table-empty { text-align:center; color:var(--text-secondary); padding:32px 12px; }
+
+        .needs-attention { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px; margin-bottom:24px; }
+        .na-card { background:#fff; border:1px solid var(--border); border-left:4px solid var(--text-secondary); border-radius:8px; padding:14px 16px; box-shadow:var(--card-shadow); }
+        .na-card.red { border-left-color:var(--danger); }
+        .na-card.yellow { border-left-color:var(--warning); }
+        .na-card.blue { border-left-color:var(--primary); }
+        .na-card h4 { font-size:0.78em; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); margin-bottom:6px; }
+        .na-card .na-num { font-size:1.6em; font-weight:700; line-height:1; }
+        .na-card ul { list-style:none; margin-top:8px; font-size:0.85em; }
+        .na-card li { padding:4px 0; border-top:1px solid var(--border); cursor:pointer; }
+        .na-card li:hover { color:var(--primary); }
+        .na-card .na-ok { color:var(--success); font-size:0.85em; margin-top:6px; }
+
+        .capacity-bar { height:8px; background:var(--bg-secondary); border-radius:999px; overflow:hidden; margin-top:10px; }
+        .capacity-fill { height:100%; background:var(--primary); border-radius:999px; transition:width .3s; }
+
+        .undo-toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); background:var(--text-primary); color:#fff; padding:10px 14px; border-radius:10px; display:flex; align-items:center; gap:14px; box-shadow:0 8px 24px rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:.2s; z-index:3000; font-size:0.9em; }
+        .undo-toast.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+        .undo-toast .undo-btn { background:none; border:1px solid rgba(255,255,255,.5); color:#fff; padding:4px 12px; border-radius:6px; cursor:pointer; font-weight:600; }
+        .undo-toast .undo-btn:hover { background:rgba(255,255,255,.15); }
+
+        .form-input.invalid, .form-select.invalid, .form-textarea.invalid { border-color:var(--danger) !important; box-shadow:0 0 0 3px rgba(239,68,68,.12) !important; }
+
+        /* ===== v2.2 searchable comboboxes (loan form) ===== */
+        .combo { position:relative; }
+        .combo .combo-input { width:100%; }
+        .combo-menu { position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.14); max-height:260px; overflow-y:auto; z-index:60; display:none; }
+        .combo-menu.open { display:block; }
+        .combo-item { padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--bg-secondary); }
+        .combo-item:last-child { border-bottom:none; }
+        .combo-item:hover, .combo-item.active { background:var(--bg-secondary); }
+        .combo-item .ci-main { font-weight:600; color:var(--text-primary); font-size:0.9em; }
+        .combo-item .ci-sub { font-size:0.8em; color:var(--text-secondary); margin-top:2px; }
+        .combo-item.combo-add .ci-main { color:var(--primary); }
+        .combo-empty { padding:10px 12px; color:var(--text-secondary); font-size:0.88em; }
+        .combo-hint { font-size:0.8em; margin-top:6px; min-height:1em; color:var(--text-secondary); }
+        .combo-hint.new { color:var(--primary); font-weight:600; }
+        .combo-hint.ok { color:var(--success); }
+        .combo input[type=hidden].invalid ~ .combo-input { border-color:var(--danger) !important; box-shadow:0 0 0 3px rgba(239,68,68,.12) !important; }
+
         /* Toggle switch (settings) */
         .switch { display:inline-flex; align-items:center; }
         .switch input[type="checkbox"]{ width:40px; height:22px; -webkit-appearance:none; appearance:none; background:#cbd5e1; border-radius:999px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
@@ -975,7 +1039,9 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="logo-section">
-                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" alt="BAI Logo" class="logo-image" onerror="this.style.display='none'">
+                <span class="logo-image" style="display:inline-flex;align-items:center;justify-content:center;">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="9" r="3.4" stroke="#3b82f6" stroke-width="2"/><path d="M10.6 10.8 19 19M16.2 16.2l1.8-1.8M14.2 18.2l1.8-1.8" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/></svg>
+                </span>
                 <div class="app-title">
                     <h1>Key Manager</h1>
                     <div class="app-subtitle">Site Key Management</div>
@@ -1037,6 +1103,7 @@
     <div class="main-container">
         <!-- Header -->
         <div class="header">
+            <button class="menu-toggle" id="menuToggle" type="button" aria-label="Toggle navigation">☰</button>
             <div class="header-left">
 			<div>
                     <h2>Dashboard</h2>
@@ -1107,13 +1174,7 @@
             </div>
 
             <!-- Overdue Alert -->
-            <div class="overdue-section" id="overdueAlert">
-                <div class="overdue-header">
-                    <span style="font-size: 1.5em;">🚨</span>
-                    <div class="overdue-title">Overdue Keys - Action Required</div>
-                </div>
-                <div id="overdueList"></div>
-            </div>
+            <div id="needsAttention" class="needs-attention"></div>
 
             <!-- Tabs -->
             <div class="tabs-container">
@@ -1226,9 +1287,12 @@
                     <div class="form-section-title">🔑 Key Selection</div>
                     <div class="form-group">
                         <label class="form-label">Select Key *</label>
-                        <select id="loanKeyId" class="form-select">
-                            <option value="">Choose a key...</option>
-                        </select>
+                        <div class="combo" id="loanKeyCombo">
+                            <input type="hidden" id="loanKeyId">
+                            <input type="text" id="loanKeySearch" class="form-input combo-input" placeholder="Search by key ID, description, location or SN..." autocomplete="off">
+                            <div class="combo-menu" id="loanKeyMenu" role="listbox"></div>
+                        </div>
+                        <div id="loanKeyHint" class="combo-hint"></div>
                     </div>
                 </div>
 
@@ -1238,7 +1302,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Name *</label>
-                            <input type="text" id="customerName" class="form-input" placeholder="John Smith">
+                            <div class="combo" id="customerCombo">
+                                <input type="text" id="customerName" class="form-input combo-input" placeholder="Search or enter customer name..." autocomplete="off">
+                                <div class="combo-menu" id="customerMenu" role="listbox"></div>
+                            </div>
+                            <div id="customerHint" class="combo-hint"></div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Company</label>
@@ -1568,9 +1636,13 @@
     <div id="alertContainer"></div>
 
     <script>
+	/* v2.1.0 UI release: sortable/filterable tables, dashboard "needs attention" panel,
+	   capacity bars, undo-on-delete, inline field validation, responsive hamburger nav,
+	   modal Esc/autofocus, '/' search shortcut, inline-SVG logo. */
+	/* v2.2.0: searchable key picker + customer lookup/add on the Loan Out Key form. */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.0.0',
+    version: '2.2.0',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -2202,12 +2274,20 @@ function deleteCabinet(cabinetId) {
     
     // Remove the cabinet from the array
     const index = appData.cabinets.findIndex(c => c.id === cabinetId);
+    let removedCabinet = null, removedCabAt = index;
     if (index !== -1) {
+        removedCabinet = appData.cabinets[index];
         appData.cabinets.splice(index, 1);
     }
     
     markDataChanged();
-    showAlert(`Cabinet "${cabinet.name}" deleted successfully`, 'success');
+    showUndoToast(`Cabinet "${cabinet.name}" deleted`, () => {
+        if (removedCabinet) {
+            appData.cabinets.splice(Math.min(removedCabAt, appData.cabinets.length), 0, removedCabinet);
+            markDataChanged();
+            if (currentPage === 'keycabinet') { loadKeyCabinetContent(document.querySelector('.content')); }
+        }
+    });
     
     // Refresh the Key Cabinet page
     if (currentPage === 'keycabinet') {
@@ -3288,6 +3368,7 @@ function loadKeyCabinetContent(content) {
 										<span style="margin-left: 20px;"><strong>Capacity:</strong> ${cabinetKeys.length}/${maxSlots}</span>
 										<span style="margin-left: 20px;"><strong>Last Audit:</strong> ${cabinet.lastAudit || 'Never'}</span>
 									</div>
+									<div class="capacity-bar" title="${cabinetKeys.length} of ${maxSlots} slots used"><div class="capacity-fill" style="width:${maxSlots ? Math.min(100, Math.round(cabinetKeys.length / maxSlots * 100)) : 0}%"></div></div>
 								</div>
                                 
                                 <div class="cabinet-visual">
@@ -3486,13 +3567,7 @@ function loadDashboardContent(content) {
         </div>
 
         <!-- Overdue Alert -->
-        <div class="overdue-section" id="overdueAlert">
-            <div class="overdue-header">
-                <span style="font-size: 1.5em;">🚨</span>
-                <div class="overdue-title">Overdue Keys - Action Required</div>
-            </div>
-            <div id="overdueList"></div>
-        </div>
+        <div id="needsAttention" class="needs-attention"></div>
 
         <!-- Tabs -->
         <div class="tabs-container">
@@ -3807,7 +3882,8 @@ function setupDashboardListeners() {
 }
 
 // Display functions
-function displayAllKeys() {
+function displayAllKeys(){ return renderKeysTable(); }
+function _legacy_displayAllKeysdisplayAllKeys() {
     const keys = getKeys();
     const container = document.getElementById('allKeysList');
     if (!container) return;
@@ -3875,7 +3951,8 @@ function displayAllKeys() {
 	
 }
 
-function displayActiveLoans() {
+function displayActiveLoans(){ return renderLoansTable(); }
+function _legacy_displayActiveLoansdisplayActiveLoans() {
     const loans = getLoans();
     const keys = getKeys();
     const activeLoans = loans.filter(l => l.status === 'active');
@@ -4180,8 +4257,8 @@ function saveTechnician() {
     const email = document.getElementById('techEmail').value.trim();
     const phone = document.getElementById('techPhone').value.trim();
     
-    if (!name || !employeeId || !email || !phone) {
-        showAlert('Please fill in all required fields', 'error');
+    if (!validateRequired(['techName','techEmployeeId','techEmail','techPhone'])) {
+        showAlert('Please complete the highlighted fields', 'error');
         return;
     }
     
@@ -4270,9 +4347,15 @@ function deleteTechnician(techId) {
             });
         }
         
+        const removedTech = technicians[index];
+        const removedTechAt = index;
         technicians.splice(index, 1);
         markDataChanged();
-        showAlert('Technician deleted successfully', 'success');
+        showUndoToast('Technician deleted', () => {
+            technicians.splice(Math.min(removedTechAt, technicians.length), 0, removedTech);
+            markDataChanged();
+            if (currentPage === 'technicians') { loadTechniciansContent(document.querySelector('.content')); }
+        });
         
         if (currentPage === 'technicians') {
             loadTechniciansContent(document.querySelector('.content'));
@@ -4281,7 +4364,8 @@ function deleteTechnician(techId) {
 }
 
 // Load technicians page content
-function loadTechniciansContent(content) {
+function loadTechniciansContent(content){ return renderTechniciansPage(content); }
+function _legacy_loadTechniciansContentloadTechniciansContent(content) {
     const technicians = getTechnicians();
     
     // Update assigned keys count
@@ -4354,7 +4438,8 @@ function loadTechniciansContent(content) {
 	
 }
 // Filter technicians
-function filterTechnicians(searchTerm) {
+function filterTechnicians(searchTerm){ return renderTechniciansTable(); }
+function _legacy_filterTechniciansfilterTechnicians(searchTerm) {
     const technicians = getTechnicians();
     const filtered = technicians.filter(tech => 
         tech.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -4576,28 +4661,18 @@ function showQuickLoan() {
 
 function quickLoanKey(keyId) {
     const key = getKeys().find(k => k.id === keyId);
-    if (!key) {
-        showAlert('Key not found', 'error');
-        return;
-    }
-    if (!key.available) {
-        showAlert('Key is not available for loan', 'error');
-        return;
-    }
+    if (!key) { showAlert('Key not found', 'error'); return; }
+    if (!key.available) { showAlert('Key is not available for loan', 'error'); return; }
     updateLoanKeyOptions();
-    const loanKeySelect = document.getElementById('loanKeyId');
-    if (loanKeySelect) {
-        loanKeySelect.value = keyId;
-    }
+    setLoanKey(keyId);
     const loanModal = document.getElementById('loanModal');
-    if (loanModal) {
-        loanModal.classList.add('show');
-    }
+    if (loanModal) loanModal.classList.add('show');
 }
 
 
 
-function filterKeys(searchTerm) {
+function filterKeys(searchTerm){ return renderKeysTable(); }
+function _legacy_filterKeysfilterKeys(searchTerm) {
     const keys = getKeys();
     const filtered = keys.filter(key => 
         key.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -4693,7 +4768,8 @@ function assignTechnician(keyId) {
     }
 }
 
-function reassignTechnician(keyId) {
+function reassignTechnician(keyId){ return assignTechnicianFromDB(keyId); }
+function _legacy_reassignTechnicianreassignTechnician(keyId) {
     const keys = getKeys();
     const key = keys.find(k => k.id === keyId);
     if (key) {
@@ -4799,8 +4875,8 @@ function addKey() {
     const assignedTechnician = document.getElementById('assignedTechnician').value.trim();
     const assignedDate = document.getElementById('assignedDate').value;
 
-    if (!keyId || !description) {
-        showAlert('Please fill in required fields', 'error');
+    if (!validateRequired(['keyId','keyDesc'])) {
+        showAlert('Please complete the highlighted fields', 'error');
         return;
     }
 
@@ -4893,7 +4969,7 @@ function editKey(keyId) {
 
 // Add Delete Key function
 function deleteKey(keyId) {
-    if (!confirm(`Are you sure you want to delete key ${keyId}?`)) return;
+    // delete now offers an Undo toast instead of a blocking confirm
     
     const keys = getKeys();
     const key = keys.find(k => k.id === keyId);
@@ -4909,11 +4985,15 @@ function deleteKey(keyId) {
     // Remove key from array
     const index = appData.keys.findIndex(k => k.id === keyId);
     if (index !== -1) {
+        const removedKey = appData.keys[index];
+        const removedAt = index;
         appData.keys.splice(index, 1);
         markDataChanged();
-        showAlert(`Key ${keyId} deleted successfully`, 'success');
-        
-        // Refresh display
+        showUndoToast(`Key ${keyId} deleted`, () => {
+            appData.keys.splice(Math.min(removedAt, appData.keys.length), 0, removedKey);
+            markDataChanged();
+            if (currentPage === 'keys') { displayAllKeys(); } else { updateDisplay(); }
+        });
         if (currentPage === 'keys') {
             displayAllKeys();
         } else {
@@ -4923,20 +5003,8 @@ function deleteKey(keyId) {
 }
 
 function updateLoanKeyOptions() {
-    const keys = getKeys();
-    const select = document.getElementById('loanKeyId');
-    if (!select) return;
-    
-    // Clear existing options
-    select.innerHTML = '<option value="">Choose a key...</option>';
-    
-    // Add available keys only
-    keys.filter(k => k.available).forEach(key => {
-        const option = document.createElement('option');
-        option.value = key.id;
-        option.textContent = `${key.id} - ${key.description}`;
-        select.appendChild(option);
-    });
+    ensureLoanComboboxes();
+    resetLoanForm();
 }
 
 function loanKey() {
@@ -4951,10 +5019,8 @@ function loanKey() {
     const loanType = document.getElementById('loanType').value;
     const expectedReturnDate = document.getElementById('expectedReturnDate').value;
 
-    if (!keyId || !customerName || !customerEmail || !customerPhone || 
-        !siteName || !siteNumber || !siteAccessRequestNumber || !accessPurpose ||
-        !loanType || !expectedReturnDate) {
-        showAlert('Please fill in all required fields', 'error');
+    if (!validateRequired(['loanKeyId','customerName','customerEmail','customerPhone','siteName','siteNumber','siteAccessRequestNumber','accessPurpose','loanType','expectedReturnDate'])) {
+        showAlert('Please complete the highlighted fields', 'error');
         return;
     }
 
@@ -5030,8 +5096,8 @@ function processReturn() {
     const returnToName = document.getElementById('returnToName').value.trim();
     const returnLocation = document.getElementById('returnLocation').value.trim();
 
-    if (!returnDate || !returnToName || !returnLocation) {
-        showAlert('Please fill in all required fields', 'error');
+    if (!validateRequired(['returnDate','returnToName','returnLocation'])) {
+        showAlert('Please complete the highlighted fields', 'error');
         return;
     }
 
@@ -5239,7 +5305,8 @@ function updateHistoryDisplay() {
     `).join('');
 }
 
-function updateOverdueAlert() {
+function updateOverdueAlert(){ return renderNeedsAttention(); }
+function _legacy_updateOverdueAlertupdateOverdueAlert() {
     const overdueLoans = getOverdueLoans();
     const alert = document.getElementById('overdueAlert');
     const list = document.getElementById('overdueList');
@@ -5947,7 +6014,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.0.0',
+                version: '2.2.0',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -6015,6 +6082,408 @@ function clearForm(fieldIds) {
     });
 }
 
+
+// ===================== v2.1 UI: tables, dashboard, undo, validation =====================
+function escapeHtml(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function validateRequired(ids){
+    let firstBad = null;
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        const empty = !String(el.value||'').trim();
+        el.classList.toggle('invalid', empty);
+        if(empty && !firstBad) firstBad = el;
+    });
+    if(firstBad){ try{ firstBad.focus(); firstBad.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }
+    return !firstBad;
+}
+
+let __undoTimer = null;
+function showUndoToast(message, onUndo){
+    let t = document.getElementById('undoToast');
+    if(!t){ t = document.createElement('div'); t.id = 'undoToast'; t.className = 'undo-toast'; document.body.appendChild(t); }
+    t.innerHTML = '<span class="undo-msg"></span><button type="button" class="undo-btn">Undo</button>';
+    t.querySelector('.undo-msg').textContent = message;
+    t.classList.add('show');
+    clearTimeout(__undoTimer);
+    t.querySelector('.undo-btn').onclick = () => { clearTimeout(__undoTimer); t.classList.remove('show'); if(onUndo) onUndo(); };
+    __undoTimer = setTimeout(() => t.classList.remove('show'), 6000);
+}
+
+let keyFilters = { status:'all', cabinet:'all', technician:'all' };
+let keySort = { col:'id', dir:1 };
+function setKeyFilter(kind, val){ keyFilters[kind] = val; renderKeysTable(); }
+function setKeySort(col){ if(keySort.col === col){ keySort.dir *= -1; } else { keySort.col = col; keySort.dir = 1; } renderKeysTable(); }
+function _isUnassigned(k){ return !k.assignedTechnician || k.assignedTechnician === 'Unassigned'; }
+
+function renderKeysTable(){
+    const container = document.getElementById('allKeysList');
+    if(!container) return;
+    const searchEl = document.getElementById('keySearch');
+    const search = (searchEl ? searchEl.value : '').toLowerCase();
+    const all = getKeys();
+    let rows = all.filter(k => {
+        const hay = [k.id,k.description,k.location,k.locationNumber,k.keyNumber,k.keySN,k.assignedTechnician].map(x=>String(x||'').toLowerCase()).join(' ');
+        if(search && hay.indexOf(search) === -1) return false;
+        if(keyFilters.status === 'available' && !k.available) return false;
+        if(keyFilters.status === 'onloan' && k.available) return false;
+        if(keyFilters.status === 'unassigned' && !_isUnassigned(k)) return false;
+        if(keyFilters.cabinet !== 'all' && k.location !== keyFilters.cabinet) return false;
+        if(keyFilters.technician === '__un' && !_isUnassigned(k)) return false;
+        if(keyFilters.technician !== 'all' && keyFilters.technician !== '__un' && k.assignedTechnician !== keyFilters.technician) return false;
+        return true;
+    });
+    const sortVal = (k) => ({ id:k.id, description:k.description, location:(k.location||'')+' '+(k.locationNumber||''), sn:(k.keyNumber||'')+' '+(k.keySN||''), tech:k.assignedTechnician||'', status:(k.available?'1':'0') })[keySort.col] || '';
+    rows.sort((a,b) => String(sortVal(a)).localeCompare(String(sortVal(b)), undefined, {numeric:true}) * keySort.dir);
+
+    const cabinets = (appData.cabinets||[]).map(c=>c.name);
+    const techs = getTechnicians().map(t=>t.name);
+    const chip = (v,label) => '<button class="filter-chip" data-filter="key:status" data-val="'+v+'" aria-pressed="'+(keyFilters.status===v)+'">'+label+'</button>';
+    const opt = (v,label,sel) => '<option value="'+escapeAttr(v)+'"'+(sel?' selected':'')+'>'+escapeHtml(label)+'</option>';
+    const th = (key,label) => { const on = keySort.col===key; const arrow = on ? (keySort.dir>0?'\u25b2':'\u25bc') : '\u2195'; return '<th data-sort="'+key+'" aria-sort="'+(on?(keySort.dir>0?'ascending':'descending'):'none')+'">'+label+' <span class="caret">'+arrow+'</span></th>'; };
+
+    let html = '<div class="toolbar"><div class="filter-bar">'
+        + chip('all','All') + chip('available','Available') + chip('onloan','On loan') + chip('unassigned','Unassigned')
+        + '<select class="filter-select" data-filter="key:cabinet"><option value="all">All cabinets</option>'
+        + cabinets.map(c=>opt(c,c,keyFilters.cabinet===c)).join('') + '</select>'
+        + '<select class="filter-select" data-filter="key:technician"><option value="all">All technicians</option>'
+        + opt('__un','Unassigned',keyFilters.technician==='__un') + techs.map(t=>opt(t,t,keyFilters.technician===t)).join('') + '</select>'
+        + '</div><span class="result-count">'+rows.length+' of '+all.length+' keys</span></div>'
+        + '<div class="table-scroll"><table class="data-table"><thead><tr>'
+        + th('id','Key ID') + th('description','Description') + th('location','Location / Hook') + th('sn','Serial / No.') + th('tech','Assigned to') + th('status','Status')
+        + '<th class="no-sort">Actions</th></tr></thead><tbody>';
+
+    if(rows.length === 0){
+        html += '<tr><td colspan="7" class="table-empty">No keys match these filters.</td></tr>';
+    } else {
+        rows.forEach(k => {
+            const id = escapeAttr(k.id);
+            const loc = [k.location, (k.locationNumber && k.locationNumber!=='Unspecified')?k.locationNumber:''].filter(x=>x && x!=='Unspecified').map(escapeHtml).join(' \u00b7 ') || '\u2014';
+            const sn = [ (k.keyNumber && k.keyNumber!=='Unspecified')?('#'+k.keyNumber):'', (k.keySN && k.keySN!=='Unspecified')?('SN '+k.keySN):'' ].filter(Boolean).map(escapeHtml).join(' \u00b7 ') || '\u2014';
+            const tech = _isUnassigned(k) ? '<span style="color:var(--text-secondary)">Unassigned</span>' : escapeHtml(k.assignedTechnician);
+            let actions;
+            if(k.available){
+                actions = '<button class="btn btn-sm btn-primary" data-action="key:loan" data-id="'+id+'">Loan</button>'
+                    + '<button class="btn btn-sm btn-secondary" data-action="key:edit" data-id="'+id+'">Edit</button>'
+                    + (_isUnassigned(k)
+                        ? '<button class="btn btn-sm btn-secondary" data-action="key:assign" data-id="'+id+'">Assign</button>'
+                        : '<button class="btn btn-sm btn-secondary" data-action="key:reassign" data-id="'+id+'">Reassign</button><button class="btn btn-sm btn-warning" data-action="key:unassign" data-id="'+id+'">Return</button>')
+                    + '<button class="btn btn-sm btn-danger" data-action="key:delete" data-id="'+id+'">Delete</button>';
+            } else {
+                actions = '<button class="btn btn-sm btn-secondary" data-action="key:edit" data-id="'+id+'">Edit</button>';
+            }
+            html += '<tr><td class="cell-mono">'+escapeHtml(k.id)+'</td><td>'+escapeHtml(k.description||'')+'</td><td>'+loc+'</td><td>'+sn+'</td><td>'+tech+'</td>'
+                + '<td><span class="badge '+(k.available?'badge-success':'badge-warning')+'">'+(k.available?'Available':'On Loan')+'</span></td>'
+                + '<td><div class="row-actions">'+actions+'</div></td></tr>';
+        });
+    }
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderLoansTable(){
+    const container = document.getElementById('activeLoansFullList');
+    if(!container) return;
+    const keys = getKeys();
+    const today = new Date().toISOString().split('T')[0];
+    const loans = getLoans().filter(l => l.status === 'active');
+    let html = '<div class="toolbar"><span class="result-count" style="margin-left:0">'+loans.length+' active loan(s)</span></div>'
+        + '<div class="table-scroll"><table class="data-table"><thead><tr>'
+        + '<th class="no-sort">Key</th><th class="no-sort">Customer</th><th class="no-sort">Site</th><th class="no-sort">Due</th><th class="no-sort">Status</th><th class="no-sort">Actions</th>'
+        + '</tr></thead><tbody>';
+    if(loans.length === 0){
+        html += '<tr><td colspan="6" class="table-empty">No active loans.</td></tr>';
+    } else {
+        loans.forEach(loan => {
+            const key = keys.find(k => k.id === loan.keyId);
+            const overdue = loan.expectedReturnDate < today;
+            const daysOver = overdue ? Math.floor((new Date(today) - new Date(loan.expectedReturnDate)) / 86400000) : 0;
+            const collected = loan.keyCollectedBy && loan.keyCollectionDate;
+            const id = escapeAttr(loan.id);
+            let actions = '';
+            if(!collected) actions += '<button class="btn btn-sm btn-primary" data-action="loan:collect" data-id="'+id+'">Collect</button>';
+            if(overdue) actions += '<button class="btn btn-sm btn-danger" data-action="loan:remind" data-id="'+id+'">Remind</button>';
+            actions += '<button class="btn btn-sm btn-warning" data-action="loan:extend" data-id="'+id+'">Extend</button>';
+            actions += '<button class="btn btn-sm btn-success" data-action="loan:return" data-id="'+id+'">Return</button>';
+            html += '<tr><td class="cell-mono">'+escapeHtml(loan.keyId)+'<div style="font-weight:400;color:var(--text-secondary);font-size:.85em">'+escapeHtml(key?key.description:'Unknown')+'</div></td>'
+                + '<td>'+escapeHtml(loan.customerName||'')+'</td>'
+                + '<td>'+escapeHtml(loan.siteName||'')+(loan.siteNumber?(' ('+escapeHtml(loan.siteNumber)+')'):'')+'</td>'
+                + '<td>'+escapeHtml(loan.expectedReturnDate||'')+(overdue?('<div style="color:var(--danger);font-weight:600;font-size:.85em">'+daysOver+'d overdue</div>'):'')+'</td>'
+                + '<td><span class="badge '+(overdue?'badge-danger':'badge-warning')+'">'+(overdue?'Overdue':'Active')+'</span></td>'
+                + '<td><div class="row-actions">'+actions+'</div></td></tr>';
+        });
+    }
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderTechniciansPage(content){
+    if(!content) return;
+    content.innerHTML = '<div class="card"><div class="card-header"><div class="card-title">Technician Database</div>'
+        + '<button class="btn btn-primary btn-sm" onclick="showAddTechnicianModal()"><span>+</span> Add Technician</button></div>'
+        + '<div class="card-body"><div class="search-section" style="margin-bottom:16px;">'
+        + '<input type="text" class="search-input" id="techSearch" placeholder="Search technicians..." onkeyup="filterTechnicians(this.value)"></div>'
+        + '<div id="techniciansList"></div></div></div>';
+    renderTechniciansTable();
+}
+
+function renderTechniciansTable(){
+    const container = document.getElementById('techniciansList');
+    if(!container) return;
+    const keys = getKeys();
+    const searchEl = document.getElementById('techSearch');
+    const search = (searchEl ? searchEl.value : '').toLowerCase();
+    const techs = getTechnicians().filter(t => {
+        const hay = [t.name,t.employeeId,t.email,t.department,t.skills].map(x=>String(x||'').toLowerCase()).join(' ');
+        return !search || hay.indexOf(search) !== -1;
+    });
+    techs.forEach(t => t.assignedKeys = keys.filter(k => k.assignedTechnician === t.name).length);
+    let html = '<div class="toolbar"><span class="result-count" style="margin-left:0">'+techs.length+' technician(s)</span></div>'
+        + '<div class="table-scroll"><table class="data-table"><thead><tr>'
+        + '<th class="no-sort">Name</th><th class="no-sort">Employee ID</th><th class="no-sort">Department</th><th class="no-sort">Level</th><th class="no-sort">Status</th><th class="no-sort">Keys</th><th class="no-sort">Actions</th>'
+        + '</tr></thead><tbody>';
+    if(techs.length === 0){
+        html += '<tr><td colspan="7" class="table-empty">No technicians found.</td></tr>';
+    } else {
+        techs.forEach(t => {
+            const id = escapeAttr(t.id);
+            const sb = t.status==='Active' ? 'badge-success' : (t.status==='On Leave' ? 'badge-warning' : 'badge-danger');
+            html += '<tr><td><strong>'+escapeHtml(t.name||'')+'</strong></td>'
+                + '<td class="cell-mono">'+escapeHtml(t.employeeId||'')+'</td>'
+                + '<td>'+escapeHtml(t.department||'\u2014')+'</td>'
+                + '<td>'+escapeHtml(t.certLevel||'\u2014')+'</td>'
+                + '<td><span class="badge '+sb+'">'+escapeHtml(t.status||'')+'</span></td>'
+                + '<td><span class="badge badge-info">'+t.assignedKeys+'</span></td>'
+                + '<td><div class="row-actions">'
+                + '<button class="btn btn-sm btn-primary" data-action="tech:edit" data-id="'+id+'">Edit</button>'
+                + '<button class="btn btn-sm btn-secondary" data-action="tech:keys" data-id="'+id+'">View Keys</button>'
+                + (t.assignedKeys>0 ? '<button class="btn btn-sm btn-warning" data-action="tech:unassignall" data-id="'+id+'">Unassign</button>' : '')
+                + '<button class="btn btn-sm btn-danger" data-action="tech:delete" data-id="'+id+'">Delete</button>'
+                + '</div></td></tr>';
+        });
+    }
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderNeedsAttention(){
+    const el = document.getElementById('needsAttention');
+    if(!el) return;
+    const keys = getKeys();
+    const loans = getLoans().filter(l => l.status === 'active');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const soonDays = appData.settings.overdueThreshold || 2;
+    const overdue = loans.filter(l => new Date(l.expectedReturnDate) < today);
+    const dueSoon = loans.filter(l => { const diff = (new Date(l.expectedReturnDate) - today) / 86400000; return diff >= 0 && diff <= soonDays; });
+    const unassigned = keys.filter(k => k.available && _isUnassigned(k));
+    const cabs = (appData.cabinets||[]).map(c => { const used = keys.filter(k => k.location === c.name).length; return { name:c.name, used:used, cap:c.capacity||50, pct: c.capacity ? used/c.capacity : 0 }; }).filter(c => c.pct >= 0.8);
+    const li = (items, fmt) => items.slice(0,4).map(fmt).join('') + (items.length>4 ? '<li style="cursor:default;color:var(--text-secondary)">+'+(items.length-4)+' more</li>' : '');
+    const card = (cls,title,num,body) => '<div class="na-card '+cls+'"><h4>'+title+'</h4><div class="na-num">'+num+'</div>'+body+'</div>';
+    el.innerHTML =
+        card('red','Overdue', overdue.length, overdue.length ? ('<ul>'+li(overdue, l=>'<li data-action="loan:return" data-id="'+escapeAttr(l.id)+'">'+escapeHtml(l.keyId)+' \u2014 '+escapeHtml(l.customerName||'')+'</li>')+'</ul>') : '<div class="na-ok">None overdue</div>')
+        + card('yellow','Due soon', dueSoon.length, dueSoon.length ? ('<ul>'+li(dueSoon, l=>'<li data-action="loan:extend" data-id="'+escapeAttr(l.id)+'">'+escapeHtml(l.keyId)+' \u2014 due '+escapeHtml(l.expectedReturnDate)+'</li>')+'</ul>') : ('<div class="na-ok">Nothing due within '+soonDays+' days</div>'))
+        + card('blue','Unassigned keys', unassigned.length, unassigned.length ? ('<ul>'+li(unassigned, k=>'<li data-action="key:assign" data-id="'+escapeAttr(k.id)+'">'+escapeHtml(k.id)+' \u2014 '+escapeHtml(k.description||'')+'</li>')+'</ul>') : '<div class="na-ok">All available keys assigned</div>')
+        + card(cabs.length?'yellow':'blue','Cabinets near capacity', cabs.length, cabs.length ? ('<ul>'+cabs.slice(0,4).map(c=>'<li style="cursor:default">'+escapeHtml(c.name)+' \u2014 '+c.used+'/'+c.cap+'</li>').join('')+'</ul>') : '<div class="na-ok">Plenty of space</div>');
+}
+
+function dispatchTableAction(scope, action, id){
+    if(scope === 'key'){
+        if(action === 'loan') return quickLoanKey(id);
+        if(action === 'edit') return editKey(id);
+        if(action === 'assign' || action === 'reassign') return assignTechnicianFromDB(id);
+        if(action === 'unassign') return unassignKeyFromTechnician(id);
+        if(action === 'delete') return deleteKey(id);
+    } else if(scope === 'loan'){
+        if(action === 'collect') return showCollectionModal(id);
+        if(action === 'remind') return sendReminder(id);
+        if(action === 'extend') return showExtendModal(id);
+        if(action === 'return') return showReturnModal(id);
+    } else if(scope === 'tech'){
+        if(action === 'edit') return editTechnician(id);
+        if(action === 'keys') return viewTechnicianKeys(id);
+        if(action === 'unassignall') return unassignAllKeysFromTechnician(id);
+        if(action === 'delete') return deleteTechnician(id);
+    }
+}
+
+(function initV21(){
+    if(window.__v21Init) return; window.__v21Init = true;
+
+    document.addEventListener('click', function(e){
+        const th = e.target.closest && e.target.closest('th[data-sort]');
+        if(th && th.closest('.data-table')){ setKeySort(th.getAttribute('data-sort')); return; }
+        const chip = e.target.closest && e.target.closest('.filter-chip[data-filter]');
+        if(chip){ const p = chip.getAttribute('data-filter').split(':'); if(p[0]==='key'){ keyFilters[p[1]] = chip.getAttribute('data-val'); renderKeysTable(); } return; }
+        const act = e.target.closest && e.target.closest('[data-action]');
+        if(act){ const p = act.getAttribute('data-action').split(':'); dispatchTableAction(p[0], p[1], act.getAttribute('data-id')); return; }
+        if(e.target.closest && e.target.closest('#menuToggle')){ const sb = document.querySelector('.sidebar'); if(sb) sb.classList.toggle('open'); return; }
+        if(e.target.closest && e.target.closest('.nav-item') && window.innerWidth <= 768){ const sb = document.querySelector('.sidebar'); if(sb) sb.classList.remove('open'); }
+    });
+
+    document.addEventListener('change', function(e){
+        const sel = e.target.closest && e.target.closest('.filter-select[data-filter]');
+        if(sel){ const p = sel.getAttribute('data-filter').split(':'); if(p[0]==='key'){ keyFilters[p[1]] = sel.value; renderKeysTable(); } }
+    });
+
+    document.addEventListener('input', function(e){ if(e.target.classList && e.target.classList.contains('invalid')) e.target.classList.remove('invalid'); });
+
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape'){
+            const open = Array.prototype.slice.call(document.querySelectorAll('.modal.show')).pop();
+            if(open){ if(open.id && typeof closeModal === 'function'){ closeModal(open.id); } else { open.classList.remove('show'); } }
+            return;
+        }
+        if(e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName || '')){
+            const box = document.querySelector('.content .search-input') || document.getElementById('globalSearch');
+            if(box){ e.preventDefault(); box.focus(); }
+        }
+    });
+
+    try{
+        new MutationObserver(function(muts){
+            muts.forEach(function(m){
+                const el = m.target;
+                if(el.classList && el.classList.contains('modal') && el.classList.contains('show')){
+                    const f = el.querySelector('input:not([type=hidden]):not([disabled]), select, textarea');
+                    if(f) setTimeout(function(){ try{ f.focus(); }catch(e){} }, 30);
+                }
+            });
+        }).observe(document.body, { attributes:true, subtree:true, attributeFilter:['class'] });
+    }catch(e){}
+})();
+
+
+// ===================== v2.2: searchable comboboxes for the loan form =====================
+function makeCombobox(opts){
+    const input = opts.input, menu = opts.menu;
+    if(!input || !menu || input.__comboBound) return;
+    input.__comboBound = true;
+    let items = [], active = -1;
+
+    function close(){ menu.classList.remove('open'); active = -1; }
+    function setActive(){
+        const els = menu.querySelectorAll('.combo-item');
+        els.forEach((el,idx)=> el.classList.toggle('active', idx===active));
+        if(els[active]) els[active].scrollIntoView({block:'nearest'});
+    }
+    function render(q){
+        items = opts.getItems(q) || [];
+        if(items.length === 0){
+            menu.innerHTML = '<div class="combo-empty">' + (opts.emptyText || 'No matches') + '</div>';
+        } else {
+            menu.innerHTML = items.map(function(it,i){
+                const sub = it.sub ? ('<div class="ci-sub">' + escapeHtml(it.sub) + '</div>') : '';
+                return '<div class="combo-item' + (it.isAdd ? ' combo-add' : '') + '" data-i="' + i + '" role="option"><div class="ci-main">' + escapeHtml(it.main || it.label || '') + '</div>' + sub + '</div>';
+            }).join('');
+        }
+        menu.classList.add('open');
+        active = -1;
+    }
+    function choose(i){ const it = items[i]; if(!it) return; if(opts.onSelect) opts.onSelect(it); close(); }
+
+    input.addEventListener('focus', function(){ render(input.value.trim()); });
+    input.addEventListener('input', function(){ if(opts.onInput) opts.onInput(input.value); render(input.value.trim()); });
+    input.addEventListener('keydown', function(e){
+        const open = menu.classList.contains('open');
+        if(e.key === 'ArrowDown'){ e.preventDefault(); if(!open){ render(input.value.trim()); return; } active = (active + 1) % items.length; setActive(); }
+        else if(e.key === 'ArrowUp'){ if(!open) return; e.preventDefault(); active = (active - 1 + items.length) % items.length; setActive(); }
+        else if(e.key === 'Enter'){ if(open && active >= 0){ e.preventDefault(); choose(active); } }
+        else if(e.key === 'Escape'){ if(open){ e.preventDefault(); e.stopPropagation(); close(); } }
+    });
+    menu.addEventListener('mousedown', function(e){
+        const it = e.target.closest('.combo-item'); if(!it) return;
+        e.preventDefault(); choose(parseInt(it.getAttribute('data-i'), 10));
+    });
+    input.addEventListener('blur', function(){ setTimeout(close, 150); });
+}
+
+// ----- key field -----
+function keyComboItems(q){
+    const ql = (q || '').toLowerCase();
+    return getKeys().filter(function(k){ return k.available; }).filter(function(k){
+        if(!ql) return true;
+        return [k.id,k.description,k.location,k.locationNumber,k.keyNumber,k.keySN].map(function(x){return String(x||'').toLowerCase();}).join(' ').indexOf(ql) !== -1;
+    }).slice(0, 50).map(function(k){
+        const sub = [k.location, (k.locationNumber && k.locationNumber!=='Unspecified') ? ('Hook ' + k.locationNumber) : '', (k.keySN && k.keySN!=='Unspecified') ? ('SN ' + k.keySN) : ''].filter(Boolean).join('  \u00b7  ');
+        return { value:k.id, main:k.id + ' \u2014 ' + (k.description||''), sub:sub, record:k };
+    });
+}
+function setLoanKey(keyId){
+    const key = getKeys().find(function(k){ return k.id === keyId; });
+    const hidden = document.getElementById('loanKeyId');
+    const search = document.getElementById('loanKeySearch');
+    const hint = document.getElementById('loanKeyHint');
+    if(hidden){ hidden.value = key ? key.id : ''; hidden.classList.remove('invalid'); }
+    if(search && key){ search.value = key.id + ' \u2014 ' + (key.description||''); }
+    if(hint){ if(key){ hint.className = 'combo-hint ok'; hint.textContent = 'Selected ' + key.id + (key.location ? (' \u00b7 ' + key.location) : ''); } else { hint.className = 'combo-hint'; hint.textContent = ''; } }
+}
+function keyComboInput(val){
+    const hidden = document.getElementById('loanKeyId');
+    if(hidden){ hidden.value = ''; hidden.classList.remove('invalid'); }
+    const hint = document.getElementById('loanKeyHint');
+    if(hint){ hint.className = 'combo-hint'; hint.textContent = val.trim() ? 'Pick a key from the list' : ''; }
+}
+
+// ----- customer field (customers are derived from past loans) -----
+function getLoanCustomerList(){
+    const seen = {}, out = [];
+    getLoans().forEach(function(l){
+        const key = (l.customerEmail||'').toLowerCase() || ('name:' + (l.customerName||'').toLowerCase());
+        if(key === 'name:') return;
+        if(!seen[key]){ seen[key] = { name:l.customerName||'', email:l.customerEmail||'', phone:l.customerPhone||'', company:l.customerCompany||'', count:0 }; out.push(seen[key]); }
+        seen[key].count++;
+    });
+    out.sort(function(a,b){ return (b.count - a.count) || a.name.localeCompare(b.name); });
+    return out;
+}
+function customerComboItems(q){
+    const ql = (q || '').toLowerCase();
+    const matches = getLoanCustomerList().filter(function(c){
+        if(!ql) return true;
+        return [c.name,c.email,c.company,c.phone].map(function(x){return String(x||'').toLowerCase();}).join(' ').indexOf(ql) !== -1;
+    }).slice(0, 30).map(function(c){
+        return { value:c.email||c.name, main:c.name + (c.company ? (' \u00b7 ' + c.company) : ''), sub:[c.email,c.phone].filter(Boolean).join('  \u00b7  ') + (c.count>1 ? ('    \u00b7 ' + c.count + ' prior loans') : ''), record:c };
+    });
+    const exact = ql && getLoanCustomerList().some(function(c){ return String(c.name||'').toLowerCase() === ql; });
+    if(ql && !exact){ matches.unshift({ isAdd:true, value:'__new', main:'Add new customer: "' + q.trim() + '"', sub:'No existing match \u2014 enter their details', record:{ __new:true, name:q.trim() } }); }
+    return matches;
+}
+function fillCustomer(c, isNew){
+    const set = function(id,v){ const el = document.getElementById(id); if(el){ el.value = v || ''; el.classList.remove('invalid'); } };
+    set('customerName', c.name); set('customerCompany', c.company); set('customerEmail', c.email); set('customerPhone', c.phone);
+    const hint = document.getElementById('customerHint');
+    if(hint){
+        if(isNew){ hint.className = 'combo-hint new'; hint.textContent = 'New customer \u2014 enter their contact details below.'; }
+        else { hint.className = 'combo-hint ok'; hint.textContent = 'Existing customer loaded' + (c.count>1 ? (' (' + c.count + ' prior loans)') : '') + ' \u2014 you can edit any field.'; }
+    }
+}
+function customerComboSelect(it){
+    if(it.record && it.record.__new){ fillCustomer({ name:it.record.name, email:'', phone:'', company:'' }, true); const em = document.getElementById('customerEmail'); if(em) em.focus(); }
+    else { fillCustomer(it.record, false); }
+}
+function customerComboInput(val){
+    const hint = document.getElementById('customerHint'); if(!hint) return;
+    const v = val.trim();
+    if(!v){ hint.className = 'combo-hint'; hint.textContent = ''; return; }
+    const exists = getLoanCustomerList().some(function(c){ return String(c.name||'').toLowerCase() === v.toLowerCase(); });
+    hint.className = 'combo-hint ' + (exists ? 'ok' : 'new');
+    hint.textContent = exists ? 'Matches an existing customer \u2014 select it to autofill.' : 'New customer.';
+}
+
+function ensureLoanComboboxes(){
+    const keyInput = document.getElementById('loanKeySearch'), keyMenu = document.getElementById('loanKeyMenu');
+    if(keyInput && keyMenu){ makeCombobox({ input:keyInput, menu:keyMenu, getItems:keyComboItems, onSelect:function(it){ setLoanKey(it.value); }, onInput:keyComboInput, emptyText:'No available keys match' }); }
+    const custInput = document.getElementById('customerName'), custMenu = document.getElementById('customerMenu');
+    if(custInput && custMenu){ makeCombobox({ input:custInput, menu:custMenu, getItems:customerComboItems, onSelect:customerComboSelect, onInput:customerComboInput, emptyText:'Type to add a new customer' }); }
+}
+function resetLoanForm(){
+    ['loanKeyId','loanKeySearch','customerName','customerCompany','customerEmail','customerPhone','siteName','siteNumber','siteAccessRequestNumber','accessPurpose','loanComments','loanType','expectedReturnDate'].forEach(function(id){ const el = document.getElementById(id); if(el){ el.value = ''; el.classList.remove('invalid'); } });
+    const kh = document.getElementById('loanKeyHint'); if(kh){ kh.className = 'combo-hint'; kh.textContent = ''; }
+    const ch = document.getElementById('customerHint'); if(ch){ ch.className = 'combo-hint'; ch.textContent = ''; }
+}
+
 // Make functions globally accessible
 // Complete list of window assignments
 window.editKey = editKey;
@@ -6068,6 +6537,18 @@ window.showAddKeyToCabinet = showAddKeyToCabinet;
 window.findNextAvailableNumber = findNextAvailableNumber;
 window.quickAddKeyToSlot = quickAddKeyToSlot;
 window.resetAddKeyForm = resetAddKeyForm;
+window.renderKeysTable = renderKeysTable;
+window.renderLoansTable = renderLoansTable;
+window.renderTechniciansTable = renderTechniciansTable;
+window.renderTechniciansPage = renderTechniciansPage;
+window.renderNeedsAttention = renderNeedsAttention;
+window.setKeyFilter = setKeyFilter;
+window.setKeySort = setKeySort;
+window.validateRequired = validateRequired;
+window.showUndoToast = showUndoToast;
+window.ensureLoanComboboxes = ensureLoanComboboxes;
+window.resetLoanForm = resetLoanForm;
+window.setLoanKey = setLoanKey;
 	</script>
 </body>
 </html>
