@@ -995,6 +995,50 @@
         .combo-hint.ok { color:var(--success); }
         .combo input[type=hidden].invalid ~ .combo-input { border-color:var(--danger) !important; box-shadow:0 0 0 3px rgba(239,68,68,.12) !important; }
 
+        /* ===== v2.3 key cabinet improvements ===== */
+        .tabs-header { overflow-x:auto; flex-wrap:nowrap; gap:4px; -webkit-overflow-scrolling:touch; }
+        .tab-button { flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-start; gap:1px; white-space:nowrap; }
+        .tab-cab-name { font-weight:600; }
+        .tab-cab-meta { font-size:0.72em; color:var(--text-secondary); font-weight:500; }
+        .tab-button.active .tab-cab-meta { color:var(--primary); }
+
+        .cabinet-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin-bottom:14px; }
+        .cabinet-toolbar .cabinet-search { flex:1 1 260px; min-width:180px; }
+        .cabinet-toggle { display:inline-flex; align-items:center; gap:6px; font-size:0.88em; color:var(--text-secondary); cursor:pointer; user-select:none; white-space:nowrap; }
+        .cabinet-legend { display:inline-flex; align-items:center; font-size:0.8em; color:var(--text-secondary); margin-left:auto; }
+        .cabinet-legend .lg { width:12px; height:12px; border-radius:3px; display:inline-block; margin:0 5px 0 12px; }
+        .cabinet-legend .lg-avail { background:#dbeafe; border:1px solid var(--primary); }
+        .cabinet-legend .lg-loan { background:#fef3c7; border:1px solid var(--warning); }
+        .cabinet-legend .lg-empty { background:#fff; border:1px dashed var(--border); }
+
+        .capacity-fill.cap-amber { background:var(--warning); }
+        .capacity-fill.cap-red { background:var(--danger); }
+
+        .cabinet-slot .slot-detail { font-size:0.66em; color:var(--text-secondary); margin-top:3px; line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cabinet-slot.overdue { outline:2px solid var(--danger); outline-offset:-2px; }
+        .cabinet-empty-msg { grid-column:1/-1; padding:24px; text-align:center; color:var(--text-secondary); }
+        .cabinet-unplaced { margin-top:14px; padding:12px 14px; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; display:none; }
+        .cabinet-unplaced .unplaced-head { font-size:0.85em; color:#9a3412; margin-bottom:8px; font-weight:600; }
+        .cabinet-unplaced .unplaced-list { display:flex; flex-wrap:wrap; gap:8px; }
+        .unplaced-item { display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid #fed7aa; border-radius:8px; padding:5px 8px 5px 12px; }
+        .unplaced-item .up-key { font-size:0.85em; font-weight:600; color:#9a3412; }
+        .audit-stale { color:var(--danger); font-weight:600; }
+
+        /* ===== v2.4 audit mode ===== */
+        .audit-bar { display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+        .audit-title { font-size:1.1em; font-weight:700; }
+        .audit-sub { font-size:0.85em; color:var(--text-secondary); margin-top:2px; }
+        .audit-progress { font-size:0.85em; color:var(--text-secondary); }
+        .audit-actions { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+        .audit-mark-group { display:inline-flex; gap:4px; }
+        .audit-mark { border:1px solid var(--border); background:#fff; color:var(--text-secondary); padding:5px 12px; border-radius:6px; font-size:0.82em; font-weight:600; cursor:pointer; transition:all .12s; }
+        .audit-mark:hover { border-color:var(--text-secondary); }
+        .audit-mark.am-found.active { background:var(--success); border-color:var(--success); color:#fff; }
+        .audit-mark.am-lost.active { background:var(--danger); border-color:var(--danger); color:#fff; }
+        .audit-mark.am-damaged.active { background:var(--warning); border-color:var(--warning); color:#fff; }
+        .audit-mark.am-onloan.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+        .audit-note { padding:6px 8px !important; font-size:0.85em !important; min-width:140px; }
+
         /* Toggle switch (settings) */
         .switch { display:inline-flex; align-items:center; }
         .switch input[type="checkbox"]{ width:40px; height:22px; -webkit-appearance:none; appearance:none; background:#cbd5e1; border-radius:999px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
@@ -1640,9 +1684,16 @@
 	   capacity bars, undo-on-delete, inline field validation, responsive hamburger nav,
 	   modal Esc/autofocus, '/' search shortcut, inline-SVG logo. */
 	/* v2.2.0: searchable key picker + customer lookup/add on the Loan Out Key form. */
+	/* v2.3.0: Key Cabinet view — full-capacity grid, unplaced-key surfacing, per-cabinet
+	   search + occupied-only filter, scrollable disambiguated tabs, loan details on tiles,
+	   capacity/audit indicators, delegated slot clicks. */
+	/* v2.3.1: fix cabinet tab selection (clicking the label); add “Allocate to hook” for
+	   keys not on a numbered hook. */
+	/* v2.4.0: cabinet audit mode — Perform Audit opens a checklist to mark each key
+	   Found/Lost/Damaged with notes; saves audit history + stamps last-audit date. */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.2.0',
+    version: '2.4.1',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -1655,6 +1706,7 @@ let appData = {
     sites: [],
 	technicians: [],  // NEW: Add technicians array
 	cabinets: [], //NEw: Add cabinets array
+	audits: [], // audit history
 
     settings: {
         dbLocation: 'Browser Storage',
@@ -1924,18 +1976,19 @@ function setupCabinetTabs() {
     if (window.__cabinetTabsBound) return;
     window.__cabinetTabsBound = true;
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('tab-button') && e.target.hasAttribute('data-tab')) {
-            const tabId = e.target.getAttribute('data-tab');
+        const tabBtn = e.target.closest ? e.target.closest('.tab-button[data-tab]') : null;
+        if (tabBtn) {
+            const tabId = tabBtn.getAttribute('data-tab');
             
             // Only process cabinet tabs
             if (tabId.startsWith('cabinet-')) {
                 // Update buttons
-                const container = e.target.closest('.tabs-container');
+                const container = tabBtn.closest('.tabs-container');
                 if (container) {
                     container.querySelectorAll('.tab-button').forEach(btn => {
                         btn.classList.remove('active');
                     });
-                    e.target.classList.add('active');
+                    tabBtn.classList.add('active');
                     
                     // Update panels
                     container.querySelectorAll('.tab-panel').forEach(panel => {
@@ -2090,13 +2143,7 @@ function updateCabinet(cabinetId) {
 
 // Audit Cabinet
 function auditCabinet(cabinetId) {
-    const cabinet = appData.cabinets.find(c => c.id === cabinetId);
-    if (!cabinet) return;
-    
-    cabinet.lastAudit = new Date().toISOString().split('T')[0];
-    markDataChanged();
-    showAlert(`Audit completed for ${cabinet.name}`, 'success');
-    updateDisplay();
+    return startCabinetAudit(cabinetId);
 }
 // Add this function after the assignTechnician functions (around line 2900)
 function unassignKeyFromTechnician(keyId) {
@@ -2490,6 +2537,7 @@ function loadAllDataFromStorage() {
             if (!Array.isArray(appData.backups)) appData.backups = [];
 			if (!Array.isArray(appData.technicians)) appData.technicians = [];
 			if (!Array.isArray(appData.cabinets)) appData.cabinets = [];
+			if (!Array.isArray(appData.audits)) appData.audits = [];
 			
         }
     } 
@@ -2636,6 +2684,7 @@ function createBackup(type = 'manual') {
                 sites: [...appData.sites],
                 technicians: [...(appData.technicians || [])],
                 cabinets: [...(appData.cabinets || [])],
+                audits: [...(appData.audits || [])],
                 settings: { ...appData.settings }
             },
             size: JSON.stringify(appData).length
@@ -2735,6 +2784,7 @@ function restoreBackup(backupId) {
         appData.sites = [...(backup.data.sites || [])];
         if (Array.isArray(backup.data.technicians)) appData.technicians = [...backup.data.technicians];
         if (Array.isArray(backup.data.cabinets)) appData.cabinets = [...backup.data.cabinets];
+        if (Array.isArray(backup.data.audits)) appData.audits = [...backup.data.audits];
         appData.settings = { ...appData.settings, ...backup.data.settings };
         
         // Save and update
@@ -3348,78 +3398,19 @@ function loadKeyCabinetContent(content) {
                 <!-- Cabinet Visual Overview -->
                 <div class="tabs-container" style="margin-bottom: 30px;">
                     <div class="tabs-header">
-                        ${cabinets.map((cab, index) => `
-                            <button class="tab-button ${index === 0 ? 'active' : ''}" 
-                                    data-tab="cabinet-${cab.id}">
-                                ${cab.name}
-                            </button>
-                        `).join('')}
-                    </div>
-                    <div class="tab-content">
-                        ${cabinets.map((cabinet, index) => {
-                            const cabinetKeys = keys.filter(k => k.location === cabinet.name);
-                            const maxSlots = cabinet.capacity || 50;
-                            
+                        ${cabinets.map((cab, index) => {
+                            const u = keys.filter(k => k.location === cab.name).length;
+                            const cap = cab.capacity || 50;
                             return `
-                            <div class="tab-panel ${index === 0 ? 'active' : ''}" id="cabinet-${cabinet.id}-panel">
-								<div style="margin-bottom: 20px;">
-									<div class="cabinet-info-row">
-										<span><strong>Location:</strong> ${cabinet.location}</span>
-										<span style="margin-left: 20px;"><strong>Capacity:</strong> ${cabinetKeys.length}/${maxSlots}</span>
-										<span style="margin-left: 20px;"><strong>Last Audit:</strong> ${cabinet.lastAudit || 'Never'}</span>
-									</div>
-									<div class="capacity-bar" title="${cabinetKeys.length} of ${maxSlots} slots used"><div class="capacity-fill" style="width:${maxSlots ? Math.min(100, Math.round(cabinetKeys.length / maxSlots * 100)) : 0}%"></div></div>
-								</div>
-                                
-                                <div class="cabinet-visual">
-                                    ${Array.from({length: Math.min(maxSlots, 50)}, (_, i) => {
-                                        const slotNumber = i + 1;
-                                        const keyInSlot = cabinetKeys.find(k => 
-                                            k.locationNumber === `Hook ${String(slotNumber).padStart(2, '0')}`
-                                        );
-                                        
-                                        if (keyInSlot) {
-                                            const isOnLoan = !keyInSlot.available;
-                                            return `
-                                                <div class="cabinet-slot ${isOnLoan ? 'on-loan' : 'occupied'}" 
-                                                     onclick="showKeyDetails('${keyInSlot.id}')"
-                                                     title="${keyInSlot.id} - ${keyInSlot.description}">
-                                                    <span class="slot-number">#${slotNumber}</span>
-                                                    <div class="slot-key-icon">🔑</div>
-                                                    <div class="slot-key-id">${keyInSlot.id}</div>
-                                                    <div class="slot-status">${isOnLoan ? 'On Loan' : 'Available'}</div>
-                                                </div>
-                                            `;
-                                        } else {
-                                            return `
-                                                <div class="cabinet-slot empty" 
-         onclick="quickAddKeyToSlot('${cabinet.id}', '${cabinet.name}', ${slotNumber})"
-         style="cursor: pointer;"
-         title="Click to add key to this slot">
-        <span class="slot-number">#${slotNumber}</span>
-        <div class="slot-key-icon" style="opacity: 0.3;">🔓</div>
-        <div class="slot-status">Empty</div>
-        <div style="font-size: 0.7em; margin-top: 2px; opacity: 0.5;">Click to add</div>
-    </div>
-                                            `;
-											
-                                        }
-                                    }).join('')}
-                                </div>
-                                
-                                <div style="margin-top: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
-									<button class="btn btn-primary btn-sm" onclick="showAddKeyToCabinet('${cabinet.id}', '${cabinet.name}')">
-											<span>➕</span> Add Key to Cabinet
-									</button>
-									<button class="btn btn-secondary btn-sm" onclick="editCabinet('${cabinet.id}')">Edit Cabinet</button>
-									<button class="btn btn-primary btn-sm" onclick="auditCabinet('${cabinet.id}')">Perform Audit</button>
-									<button class="btn btn-danger btn-sm" onclick="deleteCabinet('${cabinet.id}')">Delete Cabinet</button>
-								</div>
-								
-                            </div>
-							
+                            <button class="tab-button ${index === 0 ? 'active' : ''}" data-tab="cabinet-${cab.id}" title="${escapeAttr(cab.name)} \u2014 ${escapeAttr(cab.location||'')}">
+                                <span class="tab-cab-name">${escapeHtml(cab.name)}</span>
+                                <span class="tab-cab-meta">${escapeHtml(cab.location||'')} \u00b7 ${u}/${cap}</span>
+                            </button>
                             `;
                         }).join('')}
+                    </div>
+                    <div class="tab-content">
+                        ${cabinets.map((cabinet, index) => renderCabinetPanel(cabinet, index)).join('')}
 						
                     </div>
                 </div>
@@ -3432,6 +3423,7 @@ function loadKeyCabinetContent(content) {
     if (cabinets.length > 1) {
         setupCabinetTabs();
     }
+    renderAllCabinetSlots();
 }
 
 function quickAddKeyToSlot(cabinetId, cabinetName, slotNumber) {
@@ -4845,7 +4837,7 @@ function closeModal(modalId) {
     if (modal) {
         modal.classList.remove('show');
         // For dynamically created modals, remove them from DOM
-        if (['keyDetailsModal', 'unassignModal', 'editCabinetModal', 'addCabinetModal'].includes(modalId)) {
+        if (['keyDetailsModal', 'unassignModal', 'editCabinetModal', 'addCabinetModal', 'allocateHookModal'].includes(modalId)) {
             setTimeout(() => {
                 modal.remove();
             }, 300);
@@ -6014,7 +6006,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.2.0',
+                version: '2.4.1',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -6027,6 +6019,7 @@ function clearStorage() {
                 sites: [],
                 technicians: [],
                 cabinets: [],
+                audits: [],
                 settings: {
                     dbLocation: 'Browser Storage',
                     backupFrequency: 'daily',
@@ -6484,6 +6477,358 @@ function resetLoanForm(){
     const ch = document.getElementById('customerHint'); if(ch){ ch.className = 'combo-hint'; ch.textContent = ''; }
 }
 
+
+// ===================== v2.3: key cabinet view (search, occupied-only, full capacity) =====================
+function jsAttr(s){ return String(s==null?'':s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+function isAuditStale(d){ if(!d || d === 'Never') return true; const t = new Date(d); if(isNaN(t.getTime())) return true; return (Date.now() - t.getTime()) > 90 * 86400000; }
+
+let cabinetView = {};
+function getCabinetView(id){ if(!cabinetView[id]) cabinetView[id] = { search:'', occupiedOnly:false }; return cabinetView[id]; }
+function onCabinetSearch(id, val){ getCabinetView(id).search = val; renderCabinetSlots(id); }
+function onCabinetOccupiedToggle(id, checked){ getCabinetView(id).occupiedOnly = checked; renderCabinetSlots(id); }
+
+function renderCabinetPanel(cabinet, index){
+    const keys = getKeys();
+    const used = keys.filter(function(k){ return k.location === cabinet.name; }).length;
+    const maxSlots = cabinet.capacity || 50;
+    const pct = maxSlots ? Math.min(100, Math.round(used / maxSlots * 100)) : 0;
+    const barClass = pct >= 90 ? 'cap-red' : (pct >= 75 ? 'cap-amber' : '');
+    const stale = isAuditStale(cabinet.lastAudit);
+    const auditTxt = cabinet.lastAudit || 'Never';
+    const id = cabinet.id;
+    return `
+        <div class="tab-panel ${index === 0 ? 'active' : ''}" id="cabinet-${id}-panel">
+            <div style="margin-bottom:16px;">
+                <div class="cabinet-info-row">
+                    <span><strong>Location:</strong> ${escapeHtml(cabinet.location||'')}</span>
+                    <span style="margin-left:20px;"><strong>Capacity:</strong> ${used}/${maxSlots}</span>
+                    <span style="margin-left:20px;"><strong>Last Audit:</strong> <span class="${stale ? 'audit-stale' : ''}">${escapeHtml(auditTxt)}${stale ? ' (due)' : ''}</span></span>
+                </div>
+                <div class="capacity-bar" title="${used} of ${maxSlots} slots used"><div class="capacity-fill ${barClass}" style="width:${pct}%"></div></div>
+            </div>
+            <div class="cabinet-toolbar">
+                <input type="text" class="cabinet-search form-input" id="cabinetSearch-${id}" placeholder="Search keys or hook # in this cabinet..." autocomplete="off" oninput="onCabinetSearch('${jsAttr(id)}', this.value)">
+                <label class="cabinet-toggle"><input type="checkbox" id="cabinetOccupied-${id}" onchange="onCabinetOccupiedToggle('${jsAttr(id)}', this.checked)"> Occupied only</label>
+                <span class="cabinet-legend">Legend:<span class="lg lg-avail"></span>Available<span class="lg lg-loan"></span>On loan<span class="lg lg-empty"></span>Empty</span>
+            </div>
+            <div class="cabinet-visual" id="cabinetVisual-${id}"></div>
+            <div class="cabinet-unplaced" id="cabinetUnplaced-${id}"></div>
+            <div style="margin-top: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
+                <button class="btn btn-primary btn-sm" onclick="showAddKeyToCabinet('${jsAttr(id)}', '${jsAttr(cabinet.name)}')"><span>+</span> Add Key to Cabinet</button>
+                <button class="btn btn-secondary btn-sm" onclick="editCabinet('${jsAttr(id)}')">Edit Cabinet</button>
+                <button class="btn btn-primary btn-sm" onclick="auditCabinet('${jsAttr(id)}')">Perform Audit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCabinet('${jsAttr(id)}')">Delete Cabinet</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderCabinetSlots(cabinetId){
+    const container = document.getElementById('cabinetVisual-' + cabinetId);
+    if(!container) return;
+    const cabinet = (appData.cabinets||[]).find(function(c){ return c.id === cabinetId; });
+    if(!cabinet) return;
+    const keys = getKeys();
+    const cabinetKeys = keys.filter(function(k){ return k.location === cabinet.name; });
+    const maxSlots = cabinet.capacity || 50;
+    const view = getCabinetView(cabinetId);
+    const q = (view.search || '').toLowerCase().trim();
+    const loans = getLoans();
+    const today = new Date().toISOString().split('T')[0];
+
+    const slots = [];
+    const placed = {};
+    for(let i=1; i<=maxSlots; i++){
+        const padded = 'Hook ' + String(i).padStart(2, '0');
+        const alt = 'Hook ' + i;
+        const keyInSlot = cabinetKeys.find(function(k){ return k.locationNumber === padded || k.locationNumber === alt; });
+        if(keyInSlot) placed[keyInSlot.id] = true;
+        slots.push({ n:i, key:keyInSlot || null });
+    }
+    const unplaced = cabinetKeys.filter(function(k){ return !placed[k.id]; });
+
+    let visible = slots;
+    if(view.occupiedOnly) visible = visible.filter(function(s){ return s.key; });
+    if(q) visible = visible.filter(function(s){
+        if(('#' + s.n) === q || ('hook ' + s.n) === q || String(s.n) === q) return true;
+        if(!s.key) return false;
+        return [s.key.id, s.key.description, s.key.keySN, s.key.keyNumber, s.key.assignedTechnician].map(function(x){ return String(x||'').toLowerCase(); }).join(' ').indexOf(q) !== -1;
+    });
+
+    if(visible.length === 0){
+        container.innerHTML = '<div class="cabinet-empty-msg">No slots match \u2014 clear the search or the \u201cOccupied only\u201d filter.</div>';
+    } else {
+        container.innerHTML = visible.map(function(s){
+            if(s.key){
+                const k = s.key;
+                const onLoan = !k.available;
+                let detail = '', overdue = false;
+                if(onLoan){
+                    const loan = loans.find(function(l){ return l.keyId === k.id && l.status === 'active'; });
+                    if(loan){
+                        overdue = !!(loan.expectedReturnDate && loan.expectedReturnDate < today);
+                        detail = (loan.customerName || '') + (loan.expectedReturnDate ? (' \u00b7 due ' + loan.expectedReturnDate) : '');
+                    }
+                } else if(k.assignedTechnician && k.assignedTechnician !== 'Unassigned'){
+                    detail = k.assignedTechnician;
+                }
+                const cls = onLoan ? (overdue ? 'on-loan overdue' : 'on-loan') : 'occupied';
+                const tip = k.id + ' \u2014 ' + (k.description || '') + (detail ? (' (' + detail + ')') : '');
+                return '<div class="cabinet-slot ' + cls + '" data-cab-action="details" data-key-id="' + escapeAttr(k.id) + '" title="' + escapeAttr(tip) + '">'
+                    + '<span class="slot-number">#' + s.n + '</span>'
+                    + '<div class="slot-key-icon">\uD83D\uDD11</div>'
+                    + '<div class="slot-key-id">' + escapeHtml(k.id) + '</div>'
+                    + '<div class="slot-status">' + (onLoan ? (overdue ? 'Overdue' : 'On Loan') : 'Available') + '</div>'
+                    + ((k.auditStatus === 'Lost' || k.auditStatus === 'Damaged') ? ('<div class="slot-detail" style="color:var(--danger);font-weight:700;">' + escapeHtml(k.auditStatus) + '</div>') : '')
+                    + (detail ? ('<div class="slot-detail">' + escapeHtml(detail) + '</div>') : '')
+                    + '</div>';
+            } else {
+                return '<div class="cabinet-slot empty" data-cab-action="add" data-cab-id="' + escapeAttr(cabinetId) + '" data-slot="' + s.n + '" title="Add a key to hook ' + s.n + '">'
+                    + '<span class="slot-number">#' + s.n + '</span>'
+                    + '<div class="slot-key-icon" style="opacity:0.3;">\uD83D\uDD13</div>'
+                    + '<div class="slot-status">Empty</div>'
+                    + '<div class="slot-detail">Click to add</div>'
+                    + '</div>';
+            }
+        }).join('');
+    }
+
+    const up = document.getElementById('cabinetUnplaced-' + cabinetId);
+    if(up){
+        if(unplaced.length){
+            up.innerHTML = '<div class="unplaced-head">\u26a0\ufe0f ' + unplaced.length + ' key(s) in this cabinet are not on a numbered hook (1\u2013' + maxSlots + ') and aren\u2019t shown on the wall. Allocate each to an empty hook:</div>'
+                + '<div class="unplaced-list">' + unplaced.map(function(k){
+                    return '<span class="unplaced-item"><span class="up-key">' + escapeHtml(k.id) + (k.locationNumber ? (' \u00b7 ' + escapeHtml(k.locationNumber)) : ' \u00b7 no hook') + '</span>'
+                        + '<button class="btn btn-sm btn-primary" data-cab-action="allocate" data-key-id="' + escapeAttr(k.id) + '">Allocate to hook</button>'
+                        + '<button class="btn btn-sm btn-secondary" data-cab-action="details" data-key-id="' + escapeAttr(k.id) + '">View</button></span>';
+                  }).join('') + '</div>';
+            up.style.display = 'block';
+        } else {
+            up.innerHTML = ''; up.style.display = 'none';
+        }
+    }
+}
+
+function renderAllCabinetSlots(){ (appData.cabinets || []).forEach(function(c){ renderCabinetSlots(c.id); }); }
+
+function allocateKeyToHook(keyId){
+    const key = getKeys().find(function(k){ return k.id === keyId; });
+    if(!key){ showAlert('Key not found', 'error'); return; }
+    const cabinet = (appData.cabinets || []).find(function(c){ return c.name === key.location; });
+    if(!cabinet){ showAlert('"' + keyId + '" isn\u2019t assigned to a known cabinet, so there are no hooks to allocate. Edit the key to set its cabinet first.', 'error'); return; }
+    const maxSlots = cabinet.capacity || 50;
+    const occupied = {};
+    getKeys().forEach(function(k){ if(k.location === cabinet.name && k.id !== keyId && k.locationNumber){ occupied[k.locationNumber] = true; } });
+    const empties = [];
+    for(let i=1; i<=maxSlots; i++){
+        const padded = 'Hook ' + String(i).padStart(2, '0');
+        const alt = 'Hook ' + i;
+        if(!occupied[padded] && !occupied[alt]) empties.push(i);
+    }
+    if(empties.length === 0){ showAlert('No empty hooks available in "' + cabinet.name + '" (capacity ' + maxSlots + ').', 'error'); return; }
+
+    const existing = document.getElementById('allocateHookModal');
+    if(existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.id = 'allocateHookModal';
+    modal.innerHTML =
+        '<div class="modal-content" style="max-width:460px;">'
+        + '<div class="modal-header"><h3 class="modal-title">Allocate ' + escapeHtml(key.id) + ' to a hook</h3>'
+        + '<button class="modal-close" onclick="closeAllocateHookModal()">\u00d7</button></div>'
+        + '<div class="modal-body">'
+        + '<p style="margin-bottom:14px; color:var(--text-secondary); font-size:0.9em;">'
+        + escapeHtml(key.id) + ' \u2014 ' + escapeHtml(key.description || '') + '<br>Cabinet: <strong>' + escapeHtml(cabinet.name) + '</strong>'
+        + (key.locationNumber ? (' \u00b7 currently \u201c' + escapeHtml(key.locationNumber) + '\u201d') : ' \u00b7 currently no hook') + '</p>'
+        + '<div class="form-group"><label class="form-label">Choose an empty hook</label>'
+        + '<select id="allocateHookSelect" class="form-select">'
+        + empties.map(function(n){ return '<option value="' + n + '">Hook ' + String(n).padStart(2, '0') + '</option>'; }).join('')
+        + '</select></div>'
+        + '<p style="font-size:0.8em; color:var(--text-secondary);">' + empties.length + ' empty hook(s) of ' + maxSlots + '.</p>'
+        + '</div>'
+        + '<div class="modal-footer">'
+        + '<button class="btn btn-secondary" onclick="closeAllocateHookModal()">Cancel</button>'
+        + '<button class="btn btn-primary" onclick="confirmAllocateHook(\'' + jsAttr(key.id) + '\')">Allocate</button>'
+        + '</div></div>';
+    document.body.appendChild(modal);
+    setTimeout(function(){ const sel = document.getElementById('allocateHookSelect'); if(sel) sel.focus(); }, 30);
+}
+function closeAllocateHookModal(){ const m = document.getElementById('allocateHookModal'); if(m) m.remove(); }
+function confirmAllocateHook(keyId){
+    const sel = document.getElementById('allocateHookSelect');
+    if(!sel || !sel.value){ return; }
+    const key = getKeys().find(function(k){ return k.id === keyId; });
+    if(!key){ closeAllocateHookModal(); return; }
+    const n = parseInt(sel.value, 10);
+    key.locationNumber = 'Hook ' + String(n).padStart(2, '0');
+    markDataChanged();
+    closeAllocateHookModal();
+    showAlert(key.id + ' allocated to ' + key.locationNumber + ' in ' + key.location, 'success');
+    const cab = (appData.cabinets || []).find(function(c){ return c.name === key.location; });
+    if(cab && currentPage === 'keycabinet'){ renderCabinetSlots(cab.id); }
+}
+
+(function initCabinetDelegation(){
+    if(window.__cabinetDelegationBound) return; window.__cabinetDelegationBound = true;
+    document.addEventListener('click', function(e){
+        const el = e.target.closest ? e.target.closest('[data-cab-action]') : null;
+        if(!el) return;
+        const action = el.getAttribute('data-cab-action');
+        if(action === 'details'){ if(typeof showKeyDetails === 'function') showKeyDetails(el.getAttribute('data-key-id')); }
+        else if(action === 'allocate'){ allocateKeyToHook(el.getAttribute('data-key-id')); }
+        else if(action === 'add'){
+            const cid = el.getAttribute('data-cab-id');
+            const cab = (appData.cabinets || []).find(function(c){ return c.id === cid; });
+            quickAddKeyToSlot(cid, cab ? cab.name : '', parseInt(el.getAttribute('data-slot'), 10));
+        }
+    });
+})();
+
+
+// ===================== v2.4: cabinet audit mode =====================
+let currentAudit = null;
+
+function startCabinetAudit(cabinetId){
+    const cabinet = (appData.cabinets||[]).find(function(c){ return c.id === cabinetId; });
+    if(!cabinet){ showAlert('Cabinet not found', 'error'); return; }
+    function hookNum(k){ const m = /Hook\s+0*(\d+)/i.exec(k.locationNumber||''); return m ? parseInt(m[1], 10) : 9999; }
+    const keys = getKeys().filter(function(k){ return k.location === cabinet.name; })
+        .sort(function(a,b){ return (hookNum(a) - hookNum(b)) || String(a.id).localeCompare(String(b.id)); });
+    currentAudit = { cabinetId: cabinetId, cabinetName: cabinet.name, keyOrder: keys.map(function(k){ return k.id; }), results: {} };
+    keys.forEach(function(k){ currentAudit.results[k.id] = { status: k.available ? null : 'onloan', notes:'' }; });
+    renderAuditPage();
+}
+
+function auditCounts(){
+    const c = { found:0, lost:0, damaged:0, onloan:0, unset:0 };
+    if(!currentAudit) return c;
+    currentAudit.keyOrder.forEach(function(id){
+        const st = (currentAudit.results[id]||{}).status;
+        if(st === 'found') c.found++; else if(st === 'lost') c.lost++; else if(st === 'damaged') c.damaged++; else if(st === 'onloan') c.onloan++; else c.unset++;
+    });
+    return c;
+}
+function auditProgressText(){
+    const c = auditCounts(); const total = currentAudit ? currentAudit.keyOrder.length : 0; const done = total - c.unset;
+    return done + ' / ' + total + ' audited \u00b7 <span style="color:var(--success)">' + c.found + ' found</span> \u00b7 <span style="color:var(--danger)">' + c.lost + ' lost</span> \u00b7 <span style="color:var(--warning)">' + c.damaged + ' damaged</span> \u00b7 <span style="color:var(--primary)">' + c.onloan + ' on loan</span>';
+}
+function updateAuditProgress(){ const el = document.getElementById('auditProgress'); if(el) el.innerHTML = auditProgressText(); }
+
+function renderAuditPage(){
+    const content = document.querySelector('.content');
+    if(!content || !currentAudit) return;
+    const cabinet = (appData.cabinets||[]).find(function(c){ return c.id === currentAudit.cabinetId; });
+    const keys = getKeys();
+    const h2 = document.querySelector('.header-left h2'); if(h2) h2.textContent = 'Audit: ' + (currentAudit.cabinetName||'');
+    const sub = document.querySelector('.header-subtitle'); if(sub) sub.textContent = 'Mark each key as found, lost, or damaged';
+    const ha = document.querySelector('.header-actions'); if(ha) ha.style.display = 'none';
+    currentPage = 'audit';
+
+    const total = currentAudit.keyOrder.length;
+    const rows = currentAudit.keyOrder.map(function(keyId){
+        const k = keys.find(function(x){ return x.id === keyId; });
+        if(!k) return '';
+        const res = currentAudit.results[keyId] || { status:null, notes:'' };
+        const hookM = /Hook\s+0*(\d+)/i.exec(k.locationNumber||'');
+        const hook = hookM ? ('#' + hookM[1]) : '\u2014';
+        const onLoan = !k.available;
+        const btn = function(st, label, cls){ const active = res.status === st; return '<button class="audit-mark ' + cls + (active ? ' active' : '') + '" data-audit-action="mark" data-key-id="' + escapeAttr(keyId) + '" data-status="' + st + '">' + label + '</button>'; };
+        return '<tr data-audit-row="' + escapeAttr(keyId) + '">'
+            + '<td class="cell-mono">' + escapeHtml(hook) + '</td>'
+            + '<td class="cell-mono">' + escapeHtml(k.id) + '</td>'
+            + '<td>' + escapeHtml(k.description||'') + '</td>'
+            + '<td><span class="badge ' + (onLoan ? 'badge-warning' : 'badge-success') + '">' + (onLoan ? 'On loan' : 'Available') + '</span></td>'
+            + '<td><div class="audit-mark-group">' + btn('found','Found','am-found') + btn('lost','Lost','am-lost') + btn('damaged','Damaged','am-damaged') + btn('onloan','On loan','am-onloan') + '</div></td>'
+            + '<td><input type="text" class="form-input audit-note" data-audit-note data-key-id="' + escapeAttr(keyId) + '" placeholder="Optional note" value="' + escapeAttr(res.notes||'') + '"></td>'
+            + '</tr>';
+    }).join('');
+
+    content.innerHTML =
+        '<div class="card"><div class="card-body">'
+        + '<div class="audit-bar">'
+        + '<div><div class="audit-title">Auditing: ' + escapeHtml(currentAudit.cabinetName||'') + '</div>'
+        + '<div class="audit-sub">' + escapeHtml((cabinet && cabinet.location) || '') + ' \u00b7 ' + total + ' key(s)</div></div>'
+        + '<div class="audit-progress" id="auditProgress">' + auditProgressText() + '</div>'
+        + '<div class="audit-actions">'
+        + '<button class="btn btn-secondary btn-sm" onclick="auditMarkAllFound()">Mark all remaining Found</button>'
+        + '<button class="btn btn-secondary" onclick="cancelAudit()">Cancel</button>'
+        + '<button class="btn btn-primary" onclick="completeCabinetAudit()">Complete audit</button>'
+        + '</div></div>'
+        + (total === 0
+            ? '<div class="table-empty">No keys are recorded in this cabinet to audit. Add keys to it first, or check the cabinet name matches the keys\u2019 location.</div>'
+            : '<div class="table-scroll"><table class="data-table"><thead><tr>'
+              + '<th class="no-sort">Hook</th><th class="no-sort">Key ID</th><th class="no-sort">Description</th><th class="no-sort">Current</th><th class="no-sort">Audit result</th><th class="no-sort">Note</th>'
+              + '</tr></thead><tbody>' + rows + '</tbody></table></div>')
+        + '</div></div>';
+}
+
+function auditMarkAllFound(){
+    if(!currentAudit) return;
+    currentAudit.keyOrder.forEach(function(id){ if(!currentAudit.results[id].status) currentAudit.results[id].status = 'found'; });
+    renderAuditPage();
+}
+
+function cancelAudit(){ currentAudit = null; navigateToPage('keycabinet'); }
+
+function completeCabinetAudit(){
+    if(!currentAudit) return;
+    const c = auditCounts();
+    if(c.unset > 0){
+        if(!confirm(c.unset + ' key(s) are not marked yet. Complete the audit anyway? Unmarked keys are recorded as "not checked".')) return;
+    }
+    const cabinet = (appData.cabinets||[]).find(function(x){ return x.id === currentAudit.cabinetId; });
+    const today = new Date().toISOString().split('T')[0];
+    const items = [];
+    currentAudit.keyOrder.forEach(function(id){
+        const res = currentAudit.results[id] || { status:null, notes:'' };
+        const key = getKeys().find(function(k){ return k.id === id; });
+        if(key && res.status){
+            key.auditStatus = ({ found:'Found', lost:'Lost', damaged:'Damaged', onloan:'On loan' })[res.status] || res.status;
+            key.auditDate = today;
+            key.auditNotes = res.notes || '';
+        }
+        items.push({ keyId:id, status: res.status || 'unchecked', notes: res.notes || '' });
+    });
+    if(cabinet) cabinet.lastAudit = today;
+    if(!Array.isArray(appData.audits)) appData.audits = [];
+    appData.audits.unshift({
+        id: 'AUDIT-' + Date.now(),
+        cabinetId: currentAudit.cabinetId,
+        cabinetName: currentAudit.cabinetName,
+        date: today,
+        timestamp: new Date().toISOString(),
+        summary: { total: currentAudit.keyOrder.length, found:c.found, lost:c.lost, damaged:c.damaged, onloan:c.onloan, unchecked:c.unset },
+        items: items
+    });
+    markDataChanged();
+    const msg = 'Audit saved for ' + currentAudit.cabinetName + ': ' + c.found + ' found, ' + c.lost + ' lost, ' + c.damaged + ' damaged' + (c.onloan ? (', ' + c.onloan + ' on loan') : '') + (c.unset ? (', ' + c.unset + ' unchecked') : '') + '.';
+    currentAudit = null;
+    navigateToPage('keycabinet');
+    showAlert(msg, (c.lost || c.damaged) ? 'info' : 'success');
+}
+
+(function initAuditDelegation(){
+    if(window.__auditDelegationBound) return; window.__auditDelegationBound = true;
+    document.addEventListener('click', function(e){
+        const b = e.target.closest ? e.target.closest('.audit-mark[data-audit-action="mark"]') : null;
+        if(!b || !currentAudit) return;
+        const keyId = b.getAttribute('data-key-id');
+        const status = b.getAttribute('data-status');
+        if(!currentAudit.results[keyId]) currentAudit.results[keyId] = { status:null, notes:'' };
+        currentAudit.results[keyId].status = (currentAudit.results[keyId].status === status) ? null : status;
+        const row = b.closest('[data-audit-row]');
+        if(row){ row.querySelectorAll('.audit-mark').forEach(function(btn){ btn.classList.toggle('active', btn.getAttribute('data-status') === currentAudit.results[keyId].status); }); }
+        updateAuditProgress();
+    });
+    document.addEventListener('input', function(e){
+        const n = e.target.closest ? e.target.closest('[data-audit-note]') : null;
+        if(!n || !currentAudit) return;
+        const keyId = n.getAttribute('data-key-id');
+        if(!currentAudit.results[keyId]) currentAudit.results[keyId] = { status:null, notes:'' };
+        currentAudit.results[keyId].notes = n.value;
+    });
+})();
+
 // Make functions globally accessible
 // Complete list of window assignments
 window.editKey = editKey;
@@ -6549,6 +6894,18 @@ window.showUndoToast = showUndoToast;
 window.ensureLoanComboboxes = ensureLoanComboboxes;
 window.resetLoanForm = resetLoanForm;
 window.setLoanKey = setLoanKey;
+window.renderCabinetSlots = renderCabinetSlots;
+window.renderAllCabinetSlots = renderAllCabinetSlots;
+window.renderCabinetPanel = renderCabinetPanel;
+window.onCabinetSearch = onCabinetSearch;
+window.onCabinetOccupiedToggle = onCabinetOccupiedToggle;
+window.allocateKeyToHook = allocateKeyToHook;
+window.closeAllocateHookModal = closeAllocateHookModal;
+window.confirmAllocateHook = confirmAllocateHook;
+window.startCabinetAudit = startCabinetAudit;
+window.auditMarkAllFound = auditMarkAllFound;
+window.cancelAudit = cancelAudit;
+window.completeCabinetAudit = completeCabinetAudit;
 	</script>
 </body>
 </html>
