@@ -50,7 +50,15 @@
             align-items: center;
             gap: 8px;
             font-size: 0.85em;
-            transition: all 0.3s;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .auto-save-indicator.visible {
+            opacity: 1;
+            visibility: visible;
         }
 
         .auto-save-indicator.saving {
@@ -1689,9 +1697,13 @@
 	   keys not on a numbered hook. */
 	/* v2.4.0: cabinet audit mode — Perform Audit opens a checklist to mark each key
 	   Found/Lost/Damaged with notes; saves audit history + stamps last-audit date. */
+	/* v2.5.0: branded HTML email (collection + overdue reminder) with Outlook-safe
+	   preview, .eml draft export and plain-text fallback; sidebar logo image. */
+	/* v2.6.0: audit-time Add Key with new-vs-misplaced cross-check (moves a key in
+	   from another cabinet), empty-cabinet auditing, and a printable PDF audit report. */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.4.1',
+    version: '2.6.0',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -2573,21 +2585,21 @@ function updateSaveStatus(status) {
     
     switch(status) {
         case 'saving':
-            indicator.classList.add('saving');
+            indicator.classList.add('saving', 'visible');
             statusText.textContent = 'Saving...';
             syncStatus.classList.add('syncing');
             syncStatusText.textContent = 'Syncing...';
             break;
         case 'saved':
-            indicator.classList.add('saved');
+            indicator.classList.add('saved', 'visible');
             statusText.textContent = 'All changes saved';
             syncStatusText.textContent = 'All data saved';
             setTimeout(() => {
-                indicator.classList.remove('saved');
-            }, 2000);
+                indicator.classList.remove('saved', 'visible');
+            }, 1500);
             break;
         case 'error':
-            indicator.classList.add('error');
+            indicator.classList.add('error', 'visible');
             statusText.textContent = 'Save failed';
             syncStatus.classList.add('error');
             syncStatusText.textContent = 'Sync error';
@@ -5465,9 +5477,10 @@ function openEmailPreview(email, toAddr){
         + '#tt.on{opacity:1;}textarea{position:absolute;left:-9999px;top:0;}'
         + '</style></head><body>'
         + '<div class="bar"><h1>Email preview</h1>'
-        + '<button class="b1" onclick="cpH()">Copy formatted email</button>'
+        + '<button class="b1" onclick="dl()">Open in Outlook (formatted)</button>'
+        + '<button class="b2" onclick="cpH()">Copy formatted email</button>'
         + '<button class="b2" onclick="cpT()">Copy plain text</button>'
-        + '<button class="b2" onclick="om()">Open in mail app</button></div>'
+        + '<button class="b2" onclick="om()">Plain-text mail</button></div>'
         + '<div class="wrap"><div class="frame" id="fr"></div></div>'
         + '<textarea id="ta"></textarea><div id="tt"></div>'
         + '<scr' + 'ipt>'
@@ -5477,6 +5490,8 @@ function openEmailPreview(email, toAddr){
         + 'function cpH(){try{var r=document.createRange();r.selectNode(document.getElementById("fr"));var s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand("copy");s.removeAllRanges();tt("Formatted email copied \u2014 paste into Outlook");}catch(e){tt("Copy failed \u2014 select manually");}}'
         + 'function cpT(){try{var a=document.getElementById("ta");a.style.left="0";a.focus();a.select();document.execCommand("copy");a.style.left="-9999px";tt("Plain text copied");}catch(e){tt("Copy failed");}}'
         + 'function om(){window.location.href="mailto:"+encodeURIComponent(TO)+"?subject="+encodeURIComponent(S)+"&body="+encodeURIComponent(T);}'
+        + 'function san(x){x=String(x||"");return x.split(String.fromCharCode(13)).join(" ").split(String.fromCharCode(10)).join(" ");}'
+        + 'function dl(){var crlf=String.fromCharCode(13,10);var eml="X-Unsent: 1"+crlf+"To: "+san(TO)+crlf+"Subject: "+san(S)+crlf+"MIME-Version: 1.0"+crlf+"Content-Type: text/html; charset=UTF-8"+crlf+"Content-Transfer-Encoding: 8bit"+crlf+crlf+"<html><body>"+H+"</body></html>";var blob=new Blob([eml],{type:"message/rfc822"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=(san(S).replace(/[^a-z0-9]+/gi,"_").slice(0,60)||"email")+".eml";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove();},1500);tt("Outlook draft downloaded \u2014 double-click the .eml to open it in Outlook");}'
         + '<\/script>'
         + '</body></html>';
     w.document.open(); w.document.write(page); w.document.close();
@@ -6133,7 +6148,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.4.1',
+                version: '2.6.0',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -6821,7 +6836,7 @@ function startCabinetAudit(cabinetId){
     function hookNum(k){ const m = /Hook\s+0*(\d+)/i.exec(k.locationNumber||''); return m ? parseInt(m[1], 10) : 9999; }
     const keys = getKeys().filter(function(k){ return k.location === cabinet.name; })
         .sort(function(a,b){ return (hookNum(a) - hookNum(b)) || String(a.id).localeCompare(String(b.id)); });
-    currentAudit = { cabinetId: cabinetId, cabinetName: cabinet.name, keyOrder: keys.map(function(k){ return k.id; }), results: {} };
+    currentAudit = { cabinetId: cabinetId, cabinetName: cabinet.name, keyOrder: keys.map(function(k){ return k.id; }), results: {}, added: [], relocated: [], auditedBy: '' };
     keys.forEach(function(k){ currentAudit.results[k.id] = { status: k.available ? null : 'onloan', notes:'' }; });
     renderAuditPage();
 }
@@ -6877,12 +6892,14 @@ function renderAuditPage(){
         + '<div class="audit-sub">' + escapeHtml((cabinet && cabinet.location) || '') + ' \u00b7 ' + total + ' key(s)</div></div>'
         + '<div class="audit-progress" id="auditProgress">' + auditProgressText() + '</div>'
         + '<div class="audit-actions">'
+        + '<input type="text" id="auditBy" class="form-input" style="max-width:170px;padding:6px 10px;" placeholder="Audited by" value="' + escapeAttr(currentAudit.auditedBy||'') + '" oninput="auditSetBy(this.value)">'
+        + '<button class="btn btn-success btn-sm" onclick="auditAddKeyPrompt()">+ Add key</button>'
         + '<button class="btn btn-secondary btn-sm" onclick="auditMarkAllFound()">Mark all remaining Found</button>'
         + '<button class="btn btn-secondary" onclick="cancelAudit()">Cancel</button>'
-        + '<button class="btn btn-primary" onclick="completeCabinetAudit()">Complete audit</button>'
+        + '<button class="btn btn-primary" onclick="completeCabinetAudit()">Complete &amp; PDF</button>'
         + '</div></div>'
         + (total === 0
-            ? '<div class="table-empty">No keys are recorded in this cabinet to audit. Add keys to it first, or check the cabinet name matches the keys\u2019 location.</div>'
+            ? '<div class="table-empty">No keys recorded yet \u2014 use \u201c+ Add key\u201d above to register each key as you audit this cabinet. Brand-new keys are added to the database; a key found here but recorded in another cabinet is moved across.</div>'
             : '<div class="table-scroll"><table class="data-table"><thead><tr>'
               + '<th class="no-sort">Hook</th><th class="no-sort">Key ID</th><th class="no-sort">Description</th><th class="no-sort">Current</th><th class="no-sort">Audit result</th><th class="no-sort">Note</th>'
               + '</tr></thead><tbody>' + rows + '</tbody></table></div>')
@@ -6914,24 +6931,199 @@ function completeCabinetAudit(){
             key.auditDate = today;
             key.auditNotes = res.notes || '';
         }
-        items.push({ keyId:id, status: res.status || 'unchecked', notes: res.notes || '' });
+        items.push({ keyId:id, status: res.status || 'unchecked', notes: res.notes || '', origin: res.origin || 'existing', from: res.from || '' });
     });
     if(cabinet) cabinet.lastAudit = today;
     if(!Array.isArray(appData.audits)) appData.audits = [];
-    appData.audits.unshift({
+    const auditedBy = (document.getElementById('auditBy') ? document.getElementById('auditBy').value.trim() : (currentAudit.auditedBy || ''));
+    const nNew = (currentAudit.added || []).length;
+    const nMoved = (currentAudit.relocated || []).length;
+    const auditRec = {
         id: 'AUDIT-' + Date.now(),
         cabinetId: currentAudit.cabinetId,
         cabinetName: currentAudit.cabinetName,
         date: today,
         timestamp: new Date().toISOString(),
-        summary: { total: currentAudit.keyOrder.length, found:c.found, lost:c.lost, damaged:c.damaged, onloan:c.onloan, unchecked:c.unset },
+        auditedBy: auditedBy,
+        summary: { total: currentAudit.keyOrder.length, found:c.found, lost:c.lost, damaged:c.damaged, onloan:c.onloan, unchecked:c.unset, new:nNew, relocated:nMoved },
         items: items
-    });
+    };
+    appData.audits.unshift(auditRec);
     markDataChanged();
-    const msg = 'Audit saved for ' + currentAudit.cabinetName + ': ' + c.found + ' found, ' + c.lost + ' lost, ' + c.damaged + ' damaged' + (c.onloan ? (', ' + c.onloan + ' on loan') : '') + (c.unset ? (', ' + c.unset + ' unchecked') : '') + '.';
+    const msg = 'Audit saved for ' + currentAudit.cabinetName + ': ' + c.found + ' found, ' + c.lost + ' lost, ' + c.damaged + ' damaged' + (c.onloan ? (', ' + c.onloan + ' on loan') : '') + (nNew ? (', ' + nNew + ' new') : '') + (nMoved ? (', ' + nMoved + ' moved') : '') + (c.unset ? (', ' + c.unset + ' unchecked') : '') + '.';
+    const alertType = (c.lost || c.damaged) ? 'info' : 'success';
     currentAudit = null;
     navigateToPage('keycabinet');
-    showAlert(msg, (c.lost || c.damaged) ? 'info' : 'success');
+    showAlert(msg, alertType);
+    generateAuditPDF(auditRec);
+}
+
+function auditSetBy(v){ if(currentAudit) currentAudit.auditedBy = v; }
+
+function _cabByName(name){ return (appData.cabinets||[]).find(function(c){ return c.name === name; }) || null; }
+
+function auditNextHook(cabinetName){
+    var cab = _cabByName(cabinetName);
+    var cap = cab ? (cab.capacity || 50) : 50;
+    var used = {};
+    getKeys().forEach(function(k){ if(k.location === cabinetName && k.locationNumber){ used[k.locationNumber] = true; } });
+    for(var i = 1; i <= cap; i++){
+        var padded = 'Hook ' + String(i).padStart(2, '0'), alt = 'Hook ' + i;
+        if(!used[padded] && !used[alt]) return i;
+    }
+    return cap + 1;
+}
+
+function auditAddKeyPrompt(){
+    if(!currentAudit){ showAlert('Start an audit first', 'error'); return; }
+    var existing = document.getElementById('auditAddKeyModal'); if(existing) existing.remove();
+    var hook = auditNextHook(currentAudit.cabinetName);
+    var modal = document.createElement('div');
+    modal.className = 'modal show'; modal.id = 'auditAddKeyModal';
+    modal.innerHTML = ''
+        + '<div class="modal-content" style="max-width:560px;">'
+        + '<div class="modal-header"><h3 class="modal-title">Add / verify key \u2014 ' + escapeHtml(currentAudit.cabinetName) + '</h3>'
+        + '<button class="modal-close" onclick="closeAuditAddKeyModal()">\u00d7</button></div>'
+        + '<div class="modal-body">'
+        + '<div class="form-group"><label class="form-label">Key ID *</label>'
+        + '<input type="text" id="auditKeyId" class="form-input" placeholder="e.g., SITE-014" autocomplete="off" oninput="auditKeyIdCheck()"></div>'
+        + '<div id="auditKeyStatus" class="combo-hint"></div>'
+        + '<div class="form-row"><div class="form-group"><label class="form-label">Key SN</label><input type="text" id="auditKeySN" class="form-input" placeholder="e.g., 28"></div>'
+        + '<div class="form-group"><label class="form-label">Key Number</label><input type="text" id="auditKeyNumber" class="form-input" placeholder="e.g., N2B8"></div></div>'
+        + '<div class="form-group"><label class="form-label">Description</label><input type="text" id="auditKeyDesc" class="form-input" placeholder="e.g., Main entrance key"></div>'
+        + '<div class="form-row"><div class="form-group"><label class="form-label">Hook / location number</label><input type="text" id="auditKeyHook" class="form-input" value="Hook ' + String(hook).padStart(2, '0') + '"></div>'
+        + '<div class="form-group"><label class="form-label">Assigned technician</label><input type="text" id="auditKeyTech" class="form-input" placeholder="Optional"></div></div>'
+        + '</div>'
+        + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeAuditAddKeyModal()">Cancel</button>'
+        + '<button class="btn btn-primary" id="auditKeyAddBtn" onclick="auditAddKeyResolve()">Check &amp; add</button></div>'
+        + '</div>';
+    document.body.appendChild(modal);
+    setTimeout(function(){ var f = document.getElementById('auditKeyId'); if(f) f.focus(); }, 30);
+}
+function closeAuditAddKeyModal(){ var m = document.getElementById('auditAddKeyModal'); if(m) m.remove(); }
+
+function auditKeyIdCheck(){
+    var hint = document.getElementById('auditKeyStatus'); if(!hint || !currentAudit) return;
+    hint.style.color = '';
+    var id = (document.getElementById('auditKeyId').value || '').trim();
+    var btn = document.getElementById('auditKeyAddBtn');
+    if(!id){ hint.className = 'combo-hint'; hint.textContent = ''; if(btn) btn.textContent = 'Check & add'; return; }
+    var key = getKeys().find(function(k){ return String(k.id).toLowerCase() === id.toLowerCase(); });
+    if(!key){ hint.className = 'combo-hint new'; hint.textContent = '\u2713 New key \u2014 will be created in ' + currentAudit.cabinetName + '.'; if(btn) btn.textContent = 'Add new key'; return; }
+    if(key.location === currentAudit.cabinetName){ hint.className = 'combo-hint ok'; hint.textContent = 'Already recorded in this cabinet \u2014 will be marked Found.'; if(btn) btn.textContent = 'Mark found'; return; }
+    var where = _cabByName(key.location) ? ('cabinet \u201c' + key.location + '\u201d') : ('\u201c' + (key.location || 'Unassigned') + '\u201d');
+    hint.className = 'combo-hint'; hint.style.color = 'var(--warning)';
+    hint.innerHTML = '\u26a0\ufe0f Misplaced \u2014 currently in ' + escapeHtml(where) + '. Adding will move it into this cabinet.';
+    if(btn) btn.textContent = 'Move here';
+}
+
+function auditAddKeyResolve(){
+    if(!currentAudit) return;
+    var id = (document.getElementById('auditKeyId').value || '').trim();
+    if(!id){ showAlert('Enter a Key ID', 'error'); return; }
+    var hook = (document.getElementById('auditKeyHook').value || '').trim() || 'Unassigned';
+    var cabinetName = currentAudit.cabinetName;
+    var key = getKeys().find(function(k){ return String(k.id).toLowerCase() === id.toLowerCase(); });
+
+    if(!key){
+        var techNew = (document.getElementById('auditKeyTech').value || '').trim();
+        appData.keys.push({
+            id: id,
+            description: (document.getElementById('auditKeyDesc').value || '').trim(),
+            location: cabinetName,
+            locationNumber: hook,
+            keyNumber: (document.getElementById('auditKeyNumber').value || '').trim() || 'Unspecified',
+            keySN: (document.getElementById('auditKeySN').value || '').trim() || 'Unspecified',
+            assignedTechnician: techNew || 'Unassigned',
+            assignedDate: techNew ? new Date().toISOString().split('T')[0] : null,
+            available: true,
+            auditStatus: 'Found', auditDate: new Date().toISOString().split('T')[0]
+        });
+        currentAudit.keyOrder.push(id);
+        currentAudit.results[id] = { status:'found', notes:'New key registered during audit', origin:'new' };
+        if(currentAudit.added.indexOf(id) === -1) currentAudit.added.push(id);
+        markDataChanged();
+        showAlert('New key ' + id + ' added to ' + cabinetName, 'success');
+    } else if(key.location === cabinetName){
+        if(currentAudit.keyOrder.indexOf(key.id) === -1) currentAudit.keyOrder.push(key.id);
+        var prev = currentAudit.results[key.id] || {};
+        currentAudit.results[key.id] = { status:'found', notes: prev.notes || '', origin: prev.origin || 'existing', from: prev.from || '' };
+        showAlert(key.id + ' is already in this cabinet \u2014 marked Found', 'info');
+    } else {
+        var fromLoc = key.location || 'Unassigned';
+        if(!confirm('Key ' + key.id + ' is currently recorded in "' + fromLoc + '".\n\nMove it into "' + cabinetName + '" (' + hook + ') as part of this audit?')) return;
+        if(!key.assignmentHistory) key.assignmentHistory = [];
+        key.assignmentHistory.push({ action:'relocated', from:fromLoc, to:cabinetName, locationNumber:hook, date:new Date().toISOString(), notes:'Moved during cabinet audit' });
+        key.location = cabinetName;
+        key.locationNumber = hook;
+        key.auditStatus = 'Found'; key.auditDate = new Date().toISOString().split('T')[0];
+        currentAudit.keyOrder.push(key.id);
+        currentAudit.results[key.id] = { status:'found', notes:'Relocated from ' + fromLoc, origin:'relocated', from:fromLoc };
+        currentAudit.relocated.push({ keyId:key.id, from:fromLoc });
+        markDataChanged();
+        showAlert(key.id + ' moved from ' + fromLoc + ' to ' + cabinetName, 'success');
+    }
+    closeAuditAddKeyModal();
+    renderAuditPage();
+}
+
+function generateAuditPDF(audit){
+    if(!audit){ showAlert('No audit to report', 'error'); return; }
+    var keys = getKeys();
+    var cab = (appData.cabinets||[]).find(function(c){ return c.id === audit.cabinetId; });
+    var s = audit.summary || {};
+    function statusCell(st){
+        var map = { found:['Found','#16a34a'], lost:['Lost','#dc2626'], damaged:['Damaged','#d97706'], onloan:['On loan','#2563eb'], unchecked:['Not checked','#6b7280'] };
+        var m = map[st] || [st, '#374151'];
+        return '<span style="color:' + m[1] + ';font-weight:700;">' + m[0] + '</span>';
+    }
+    function hookOf(k){ if(!k || !k.locationNumber) return '\u2014'; var m = /Hook\s+0*(\d+)/i.exec(k.locationNumber); return m ? ('#' + m[1]) : escapeHtml(k.locationNumber); }
+    var rows = (audit.items||[]).map(function(it){
+        var k = keys.find(function(x){ return x.id === it.keyId; });
+        var tag = it.origin === 'new'
+            ? '<span style="background:#dcfce7;color:#166534;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:6px;">NEW</span>'
+            : (it.origin === 'relocated' ? '<span style="background:#fef9c3;color:#854d0e;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:6px;">MOVED</span>' : '');
+        return '<tr><td>' + hookOf(k) + '</td><td><strong>' + escapeHtml(it.keyId) + '</strong>' + tag + '</td><td>' + escapeHtml(k ? (k.description||'') : '') + '</td><td>' + statusCell(it.status) + '</td><td>' + escapeHtml(it.notes||'') + '</td></tr>';
+    }).join('');
+    var chip = function(label, val, color){ return '<div class="chip"><div class="cn" style="color:' + color + '">' + val + '</div><div class="cl">' + label + '</div></div>'; };
+    var html = ''
+        + '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Audit Report - ' + escapeHtml(audit.cabinetName||'') + '</title><style>'
+        + '@page{size:A4;margin:12mm;} body{font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#1f2937;font-size:11px;margin:0;}'
+        + '.hd{background:#0b2942;color:#fff;padding:16px 20px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;}'
+        + '.hd .t1{font-size:16px;font-weight:800;letter-spacing:.5px;}.hd .t2{font-size:11px;opacity:.85;}.hd .rep{font-size:13px;font-weight:700;}'
+        + '.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0;}'
+        + '.meta .b{border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;}.meta .l{font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;}.meta .v{font-size:12px;font-weight:600;margin-top:2px;}'
+        + '.chips{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:10px 0 16px;}'
+        + '.chip{border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center;}.chip .cn{font-size:18px;font-weight:800;line-height:1;}.chip .cl{font-size:8px;text-transform:uppercase;color:#6b7280;margin-top:3px;}'
+        + 'table{width:100%;border-collapse:collapse;font-size:10px;}th{background:#f3f4f6;text-align:left;padding:7px 8px;font-size:8px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;border-bottom:1px solid #e5e7eb;}td{padding:6px 8px;border-bottom:1px solid #eef0f2;vertical-align:top;}'
+        + '.sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:26px;}.sline{border-bottom:1px solid #1f2937;height:32px;}.slabel{font-size:9px;color:#6b7280;margin-top:4px;}'
+        + '.foot{margin-top:18px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;text-align:center;}'
+        + '.btnbar{margin-top:18px;text-align:center;}.btnbar button{padding:9px 18px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;}'
+        + '@media print{.btnbar{display:none;}}'
+        + '</style></head><body>'
+        + '<div class="hd"><div><div class="t1">BAI COMMUNICATIONS</div><div class="t2">Site Integrity Unit</div></div><div class="rep">KEY CABINET AUDIT REPORT</div></div>'
+        + '<div class="meta">'
+        + '<div class="b"><div class="l">Cabinet</div><div class="v">' + escapeHtml(audit.cabinetName||'') + '</div></div>'
+        + '<div class="b"><div class="l">Location</div><div class="v">' + escapeHtml((cab && cab.location) || '\u2014') + '</div></div>'
+        + '<div class="b"><div class="l">Audit date</div><div class="v">' + escapeHtml(audit.date||'') + '</div></div>'
+        + '<div class="b"><div class="l">Audited by</div><div class="v">' + escapeHtml(audit.auditedBy || '\u2014') + '</div></div>'
+        + '</div>'
+        + '<div class="chips">'
+        + chip('Total', (s.total||0), '#111827') + chip('Found', (s.found||0), '#16a34a') + chip('Lost', (s.lost||0), '#dc2626')
+        + chip('Damaged', (s.damaged||0), '#d97706') + chip('On loan', (s.onloan||0), '#2563eb') + chip('New', (s.new||0), '#16a34a') + chip('Moved', (s.relocated||0), '#854d0e')
+        + '</div>'
+        + '<table><thead><tr><th>Hook</th><th>Key ID</th><th>Description</th><th>Result</th><th>Notes</th></tr></thead><tbody>'
+        + (rows || '<tr><td colspan="5" style="text-align:center;color:#6b7280;padding:20px;">No keys audited.</td></tr>')
+        + '</tbody></table>'
+        + '<div class="sign"><div><div class="sline"></div><div class="slabel"><strong>Auditor</strong> &nbsp; ' + escapeHtml(audit.auditedBy||'') + ' &nbsp; ' + escapeHtml(audit.date||'') + '</div></div>'
+        + '<div><div class="sline"></div><div class="slabel"><strong>Reviewed by</strong> &nbsp; Date:</div></div></div>'
+        + '<div class="foot">BAI Communications &middot; Site Integrity Unit &middot; Cabinet ' + escapeHtml(audit.cabinetId||'') + ' &middot; Generated ' + new Date().toLocaleString() + '</div>'
+        + '<div class="btnbar"><button onclick="window.print()">Print / Save as PDF</button></div>'
+        + '</body></html>';
+    var w = window.open('', '_blank', 'width=900,height=1000,scrollbars=yes');
+    if(!w){ showAlert('Pop-up blocked \u2014 allow pop-ups to generate the report', 'error'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.onload = function(){ try{ w.focus(); w.print(); }catch(e){} };
 }
 
 (function initAuditDelegation(){
@@ -7030,6 +7222,12 @@ window.allocateKeyToHook = allocateKeyToHook;
 window.closeAllocateHookModal = closeAllocateHookModal;
 window.confirmAllocateHook = confirmAllocateHook;
 window.startCabinetAudit = startCabinetAudit;
+window.auditSetBy = auditSetBy;
+window.auditAddKeyPrompt = auditAddKeyPrompt;
+window.closeAuditAddKeyModal = closeAuditAddKeyModal;
+window.auditKeyIdCheck = auditKeyIdCheck;
+window.auditAddKeyResolve = auditAddKeyResolve;
+window.generateAuditPDF = generateAuditPDF;
 window.auditMarkAllFound = auditMarkAllFound;
 window.cancelAudit = cancelAudit;
 window.completeCabinetAudit = completeCabinetAudit;
