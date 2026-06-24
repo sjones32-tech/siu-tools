@@ -1083,9 +1083,7 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="logo-section">
-                <span class="logo-image" style="display:inline-flex;align-items:center;justify-content:center;">
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="9" r="3.4" stroke="#3b82f6" stroke-width="2"/><path d="M10.6 10.8 19 19M16.2 16.2l1.8-1.8M14.2 18.2l1.8-1.8" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/></svg>
-                </span>
+                <img src="https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png" alt="BAI Logo" class="logo-image" onerror="this.style.display='none'">
                 <div class="app-title">
                     <h1>Key Manager</h1>
                     <div class="app-subtitle">Site Key Management</div>
@@ -5352,7 +5350,138 @@ function getOverdueLoans() {
     const loans = getLoans();
     return loans.filter(l => l.status === 'active' && l.expectedReturnDate < today);
 }
-
+/* ===== Branded HTML email (v2.5.0) =====
+   Outlook-safe, table-based collection + reminder emails. Opens a preview window
+   with copy-to-clipboard; the existing plain-text body is reused as the mailto fallback.
+   Paste this whole block in immediately BEFORE  function sendReminder(loanId) {  */
+function _emEsc(v){
+    if (typeof escapeHtml === 'function') return escapeHtml(v);
+    return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function _emRow(label, val, opts){
+    opts = opts || {};
+    var vstyle = 'padding:9px 12px;border-bottom:1px solid #eef0f2;font-family:Segoe UI,Arial,sans-serif;font-size:13px;'
+        + (opts.color ? ('color:' + opts.color + ';font-weight:bold;') : 'color:#1f2937;font-weight:600;');
+    var inner = opts.color
+        ? ('<font color="' + opts.color + '" style="color:' + opts.color + ';">' + (val || '\u2014') + '</font>')
+        : (val || '\u2014');
+    return '<tr><td width="150" valign="top" style="padding:9px 12px;border-bottom:1px solid #eef0f2;font-family:Segoe UI,Arial,sans-serif;font-size:13px;color:#6b7280;">'
+        + label + '</td><td valign="top" style="' + vstyle + '">' + inner + '</td></tr>';
+}
+function _emShell(o){
+    var logo = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
+    var sections = (o.sections || []).map(function(s){
+        return '<tr><td style="padding:18px 28px 0 28px;">'
+            + '<div style="font-size:12px;font-weight:bold;letter-spacing:.5px;color:#6b7280;text-transform:uppercase;padding-bottom:6px;">' + s.title + '</div>'
+            + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:8px;border-collapse:separate;">' + s.rows + '</table>'
+            + '</td></tr>';
+    }).join('');
+    return ''
+        + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f4f6" style="background-color:#f3f4f6;margin:0;padding:0;">'
+        + '<tr><td align="center" style="padding:20px;">'
+        + '<table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width:100%;background-color:#ffffff;border-radius:10px;overflow:hidden;">'
+        + '<tr><td bgcolor="' + o.accent + '" style="background-color:' + o.accent + ';padding:22px 26px;">'
+        + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+        + '<td width="50" valign="middle" style="padding-right:12px;">'
+        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-radius:8px;padding:6px;line-height:0;">'
+        + '<img src="' + logo + '" width="34" height="34" alt="BAI" style="display:block;width:34px;height:34px;border:0;"></td></tr></table></td>'
+        + '<td valign="middle"><font color="#ffffff" style="color:#ffffff;font-family:Segoe UI,Arial,sans-serif;">'
+        + '<span style="display:block;font-size:17px;font-weight:bold;color:#ffffff;line-height:1.25;">BAI COMMUNICATIONS</span>'
+        + '<span style="display:block;font-size:12px;color:#ffffff;line-height:1.3;letter-spacing:.3px;">Site Integrity Unit</span></font></td>'
+        + '<td align="right" valign="middle">'
+        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-radius:14px;padding:6px 14px;">'
+        + '<font color="' + o.badgeColor + '" style="color:' + o.badgeColor + ';"><span style="font-size:11px;font-weight:bold;letter-spacing:.5px;color:' + o.badgeColor + ';">' + o.badge + '</span></font>'
+        + '</td></tr></table></td>'
+        + '</tr></table></td></tr>'
+        + '<tr><td bgcolor="' + o.strip + '" style="background-color:' + o.strip + ';height:4px;line-height:4px;font-size:0;">&nbsp;</td></tr>'
+        + '<tr><td style="padding:24px 28px 0 28px;font-family:Segoe UI,Arial,sans-serif;">'
+        + '<div style="font-size:18px;font-weight:bold;color:#111827;padding-bottom:10px;">' + o.heading + '</div>'
+        + '<div style="font-size:14px;color:#1f2937;padding-bottom:6px;">Dear ' + o.greeting + ',</div>'
+        + '<div style="font-size:14px;color:#374151;line-height:1.55;">' + o.intro + '</div></td></tr>'
+        + sections
+        + '<tr><td style="padding:18px 28px 0 28px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' + (o.noteBg || '#f9fafb') + '" style="background-color:' + (o.noteBg || '#f9fafb') + ';border:1px solid ' + (o.noteBorder || '#e5e7eb') + ';border-radius:8px;">'
+        + '<tr><td style="padding:12px 14px;font-family:Segoe UI,Arial,sans-serif;font-size:13px;color:' + (o.noteColor || '#374151') + ';line-height:1.5;">' + o.note + '</td></tr></table></td></tr>'
+        + '<tr><td style="padding:20px 28px 26px 28px;font-family:Segoe UI,Arial,sans-serif;">'
+        + '<div style="font-size:13px;color:#374151;">Best regards,<br><strong>BAI Communications &mdash; Site Integrity Unit</strong></div>'
+        + '<div style="font-size:11px;color:#9ca3af;padding-top:10px;border-top:1px solid #e5e7eb;margin-top:12px;">Automated message &middot; please retain for your records. Reference: ' + o.reference + '</div>'
+        + '</td></tr>'
+        + '</table></td></tr></table>';
+}
+function buildCollectionEmail(loan, key, subject, plainText){
+    var rows = _emRow('Key ID', _emEsc(loan.keyId))
+        + _emRow('Description', _emEsc(key ? (key.description || '') : ''))
+        + _emRow('Location', _emEsc(key ? (key.location || '') : ''));
+    var coll = _emRow('Collected by', _emEsc(loan.keyCollectedBy))
+        + _emRow('Collection date', _emEsc(loan.keyCollectionDate ? new Date(loan.keyCollectionDate).toLocaleString() : ''))
+        + _emRow('Site', _emEsc((loan.siteName || '') + (loan.siteNumber ? (' (' + loan.siteNumber + ')') : '')))
+        + _emRow('Access request', _emEsc(loan.siteAccessRequestNumber))
+        + (loan.keyCollectionNotes ? _emRow('Notes', _emEsc(loan.keyCollectionNotes)) : '');
+    var ln = _emRow('Loan type', _emEsc(loan.loanType || 'Temporary'))
+        + _emRow('Expected return', _emEsc(loan.expectedReturnDate));
+    var html = _emShell({
+        accent:'#0b2942', strip:'#2563eb', badge:'CONFIRMED', badgeColor:'#0b2942',
+        heading:'Key collection confirmed', greeting:_emEsc(loan.customerName),
+        intro:'This confirms that the following key has been collected. Please keep this email for your records.',
+        sections:[{title:'Key details', rows:rows}, {title:'Collection details', rows:coll}, {title:'Loan details', rows:ln}],
+        note:'Please return the key by the due date, keep it secure at all times, do not duplicate or share it, and report any loss or damage immediately.',
+        reference:_emEsc(loan.id)
+    });
+    return { subject: subject, html: html, text: plainText };
+}
+function buildReminderEmail(loan, daysOverdue, subject, plainText){
+    var n = loan.reminderCount || 1;
+    var rows = _emRow('Key ID', _emEsc(loan.keyId))
+        + _emRow('Site', _emEsc((loan.siteName || '') + (loan.siteNumber ? (' (' + loan.siteNumber + ')') : '')))
+        + _emRow('Access request', _emEsc(loan.siteAccessRequestNumber))
+        + _emRow('Due date', _emEsc(loan.expectedReturnDate))
+        + _emRow('Days overdue', _emEsc(String(daysOverdue)), { color:'#b91c1c' });
+    var html = _emShell({
+        accent:'#8a1c1c', strip:'#dc2626', badge:'OVERDUE &middot; ACTION REQUIRED', badgeColor:'#b91c1c',
+        heading:'Overdue key \u2014 immediate return required', greeting:_emEsc(loan.customerName),
+        intro:'This is reminder #' + n + ' regarding an overdue key that must be returned immediately.',
+        sections:[{title:'Key details', rows:rows}],
+        note:'Please return the key now to avoid additional fees, suspension of access privileges, or further action. Contact us immediately if you need to arrange an extension.',
+        noteBg:'#fef2f2', noteBorder:'#fecaca', noteColor:'#7f1d1d',
+        reference:_emEsc(loan.id)
+    });
+    return { subject: subject, html: html, text: plainText };
+}
+function openEmailPreview(email, toAddr){
+    var w = window.open('', '_blank', 'width=840,height=920,scrollbars=yes');
+    if (!w) { showAlert('Pop-up blocked \u2014 allow pop-ups to preview the email', 'error'); return; }
+    var H = JSON.stringify(email.html).replace(/<\//g, '<\\/');
+    var T = JSON.stringify(email.text).replace(/<\//g, '<\\/');
+    var S = JSON.stringify(email.subject || '').replace(/<\//g, '<\\/');
+    var TO = JSON.stringify(toAddr || '').replace(/<\//g, '<\\/');
+    var page = ''
+        + '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Email preview</title><style>'
+        + 'body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f3f4f6;color:#1f2937;}'
+        + '.bar{position:sticky;top:0;display:flex;gap:8px;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;z-index:5;}'
+        + '.bar h1{font-size:15px;margin:0 auto 0 0;font-weight:600;}'
+        + '.bar button{padding:8px 14px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;}'
+        + '.b1{background:#2563eb;color:#fff;}.b2{background:#fff;color:#1f2937;border:1px solid #e5e7eb;}'
+        + '.wrap{padding:24px;display:flex;justify-content:center;}.frame{max-width:660px;width:100%;}'
+        + '#tt{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111827;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;}'
+        + '#tt.on{opacity:1;}textarea{position:absolute;left:-9999px;top:0;}'
+        + '</style></head><body>'
+        + '<div class="bar"><h1>Email preview</h1>'
+        + '<button class="b1" onclick="cpH()">Copy formatted email</button>'
+        + '<button class="b2" onclick="cpT()">Copy plain text</button>'
+        + '<button class="b2" onclick="om()">Open in mail app</button></div>'
+        + '<div class="wrap"><div class="frame" id="fr"></div></div>'
+        + '<textarea id="ta"></textarea><div id="tt"></div>'
+        + '<scr' + 'ipt>'
+        + 'var H=' + H + ',T=' + T + ',S=' + S + ',TO=' + TO + ';'
+        + 'document.getElementById("fr").innerHTML=H;document.getElementById("ta").value=T;'
+        + 'function tt(m){var t=document.getElementById("tt");t.textContent=m;t.className="on";setTimeout(function(){t.className="";},1600);}'
+        + 'function cpH(){try{var r=document.createRange();r.selectNode(document.getElementById("fr"));var s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand("copy");s.removeAllRanges();tt("Formatted email copied \u2014 paste into Outlook");}catch(e){tt("Copy failed \u2014 select manually");}}'
+        + 'function cpT(){try{var a=document.getElementById("ta");a.style.left="0";a.focus();a.select();document.execCommand("copy");a.style.left="-9999px";tt("Plain text copied");}catch(e){tt("Copy failed");}}'
+        + 'function om(){window.location.href="mailto:"+encodeURIComponent(TO)+"?subject="+encodeURIComponent(S)+"&body="+encodeURIComponent(T);}'
+        + '<\/script>'
+        + '</body></html>';
+    w.document.open(); w.document.write(page); w.document.close();
+}
+/* ===== end branded HTML email ===== */
 // Additional Features Functions
 function sendReminder(loanId) {
     const loans = getLoans();
@@ -5393,8 +5522,8 @@ BAI Communications Site Management Team
 This is an automated reminder. Failure to return the key may result in further action.`;
 
     // Open email client
-    const mailtoLink = `mailto:${loan.customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoLink, '_blank');
+    const email = buildReminderEmail(loan, daysOverdue, subject, body);
+    openEmailPreview(email, loan.customerEmail);
 
     markDataChanged();
     showAlert(`Reminder #${loan.reminderCount} sent to ${loan.customerName}`, 'success');
@@ -5616,10 +5745,8 @@ This is an automated confirmation. Please keep this email for your records.
 Reference: ${loan.id}`;
 
     // Create mailto link
-    const mailtoLink = `mailto:${loan.customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-    
-    // Open email client
-    window.open(mailtoLink, '_blank');
+    const email = buildCollectionEmail(loan, key, subject, emailBody);
+    openEmailPreview(email, loan.customerEmail);
     
     console.log('Collection email prepared for:', loan.customerEmail);
 }
