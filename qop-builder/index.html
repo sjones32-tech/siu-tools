@@ -4234,7 +4234,7 @@ const district = STATE.settings.district;
       Name:                   techName,
       Comments:               notes,
       Email:                  src.email || '',
-      'Commencement Date':    src.commenced ? fmtQOPDateTime(shiftDateOneYear(src.commenced), extractTime(src.commenced, startTime)) : startDt,
+      'Commencement Date':    startDt,   // mirrors Start Date (QOP rule)
       'Service Class':        src.svcClass,
       'Programming Bulletin Conflicts': pbConflict,
       'Recommissioning Business Rules':  recommOut.rules,
@@ -4401,6 +4401,7 @@ const QOP_CELL_COLORS = {
   outageWin:    { bg: '#FFF2CC', fg: '#6e5a10' },  // AD – mild yellow
   svcVal:       { bg: '#BDD7EE', fg: '#11406b' },  // AE – distinct blue
   autoChanged:  { bg: '#FFCC99', fg: '#6e3c0a' },  // auto-changed fields – mild orange
+  attention:    { bg: '#FFE0C0', fg: '#7a4510' },  // soft attention tint (date needs review)
   missing:      { bg: '#FFC7CE', fg: '#7a1220' },  // missing mandatory – light red
 };
 
@@ -4424,6 +4425,25 @@ function qopCellColor(col, row) {
   // ── Cross-highlight the Service cell when its validation failed ──
   if (col === 'Service' && (row['Service Name Validation'] || '').trim())
     return QOP_CELL_COLORS.svcVal;
+
+  // ── Start Date cell: flag when PB conflict / public holiday / outage
+  //    window issue makes the chosen date/time the thing to change ──────
+  if (col === 'Start Date' &&
+      ((row['Programming Bulletin Conflicts'] || '').trim() ||
+       (row['Public Holiday'] || '').trim() ||
+       /OUTSIDE|EXCEPTION/i.test(row['Outage Window'] || '')))
+    return QOP_CELL_COLORS.attention;
+
+  // ── AI / SS cells: flag when an antenna VERIFY message requires OFF/OFF
+  if ((col === 'Audience Impact' || col === 'Service State') &&
+      /VERIFY: Antenna tests must be/i.test(row['Antenna Testing'] || '') &&
+      (row[col] || '').toUpperCase() !== 'OFF')
+    return QOP_CELL_COLORS.missing;
+
+  // ── Activity Number cell: flag the Activity-40-should-be-41 note ─────
+  if (col === 'Maintenance Activity Number' &&
+      /Activity 40 is .*should be Activity 41/i.test(row['Antenna Testing'] || ''))
+    return QOP_CELL_COLORS.attention;
 
   // ── End Date must be after Start Date → light red on both ────
   if ((col === 'End Date' || col === 'Start Date') && dateOrderInvalid(row))
@@ -4902,8 +4922,26 @@ function openRebuildDialog() {
 }
 
 function closeRebuildDialog() {
-  document.getElementById('rebuild-modal').style.display = 'none';
+  const modal = document.getElementById('rebuild-modal');
+  if (modal) modal.style.display = 'none';
+  // Reset the panels so reopening always starts on the choose screen
+  const choose = document.getElementById('rebuild-choose');
+  const step   = document.getElementById('rebuild-step');
+  if (choose) choose.style.display = 'block';
+  if (step)   step.style.display = 'none';
   _rebuildState = null;
+}
+
+// Stop button: keep decisions made so far, re-validate, then close cleanly
+function rebuildStop() {
+  const st = _rebuildState;
+  if (st && (st.accepted || st.declined)) {
+    try { revalidateQOP(); } catch(e) { renderQOPPreview(qopBuiltRows); }
+    persist();
+    invalidateTripCache();
+    toast(`Rebuild stopped — ${st.accepted} accepted, ${st.declined} declined`, 'info');
+  }
+  closeRebuildDialog();
 }
 
 // Build a fresh set for the current quarter selection
@@ -4938,7 +4976,7 @@ function rebuildStepStart() {
   const diffs = [];
   const FIELDS = ['Audience Impact','Service State','RPW','RAC','Start Date','End Date',
     'Timing','Timing Reason','Description of Work','Maintenance Activity Number',
-    'Service','Commencement Date'];
+    'Service'];   // Commencement Date mirrors Start Date — not a separate diff
   fresh.forEach(fr => {
     const key = fr._uid || tripTagKey(fr);
     const cur = curByKey[key];
@@ -4961,7 +4999,9 @@ function rebuildStepStart() {
 
 function renderRebuildStep() {
   const st = _rebuildState;
+  if (!st || !st.diffs || st.idx >= st.diffs.length) { closeRebuildDialog(); return; }
   const d = st.diffs[st.idx];
+  if (!d) { closeRebuildDialog(); return; }
   const box = document.getElementById('rebuild-step-body');
   const FIELD_LABELS = {
     'Audience Impact':'AI','Service State':'SS','Maintenance Activity Number':'Activity'};
@@ -4996,7 +5036,9 @@ function renderRebuildStep() {
 
 function rebuildStepDecision(accept) {
   const st = _rebuildState;
+  if (!st || !st.diffs) { closeRebuildDialog(); return; }
   const d = st.diffs[st.idx];
+  if (!d) { closeRebuildDialog(); return; }
   if (accept) {
     if (d.type === 'new') {
       qopBuiltRows.push(d.fresh);
@@ -5022,6 +5064,7 @@ function rebuildStepDecision(accept) {
 
 function rebuildAcceptRemaining() {
   const st = _rebuildState;
+  if (!st || !st.diffs) { closeRebuildDialog(); return; }
   while (st.idx < st.diffs.length) {
     const d = st.diffs[st.idx];
     if (d.type === 'new') qopBuiltRows.push(d.fresh);
@@ -7442,7 +7485,7 @@ document.addEventListener("DOMContentLoaded", init);
           <button class="btn btn-ghost" onclick="rebuildStepDecision(false)">✕ Decline (keep mine)</button>
           <div style="flex:1"></div>
           <button class="btn btn-warn" onclick="rebuildAcceptRemaining()" title="Accept this and all remaining changes">⚡ Accept all remaining</button>
-          <button class="btn btn-ghost" onclick="closeRebuildDialog()">Stop</button>
+          <button class="btn btn-ghost" onclick="rebuildStop()">Stop</button>
         </div>
       </div>
     </div>
