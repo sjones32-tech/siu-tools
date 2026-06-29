@@ -688,7 +688,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
               <th style="min-width:110px;cursor:pointer" data-sort="status" onclick="schedSortBy('status')" title="Sort">Status</th>
               <th style="width:80px;cursor:pointer" data-sort="snow" onclick="schedSortBy('snow')" title="Sort">SNOW WO#</th>
               <th style="min-width:120px;cursor:pointer" data-sort="notes" onclick="schedSortBy('notes')" title="Sort">Notes</th>
-              <th style="width:50px;cursor:pointer" data-sort="qop" onclick="schedSortBy('qop')" title="Sort">QOP ✓</th>
+              <th style="width:52px;cursor:pointer" data-sort="qop" onclick="schedSortBy('qop')" title="Reconciliation vs actual QOP outages: ✓ covered · ≠ outages exist but different month · ✗ no outage (missed)">QOP ⇄</th>
               <th style="min-width:120px;background:#1a0f00;color:#ff6b35">PB Conflict</th>
               <th style="min-width:120px;background:#150a2e;color:#a78bfa">Recomm Flag</th>
               <th style="min-width:110px;background:#0a1a2e;color:var(--accent)">Antenna</th>
@@ -1112,6 +1112,8 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
           <button class="set-nav-btn" onclick="showSetPage('pbdata',this)">📡 Prog. Bulletins</button>
           <button class="set-nav-btn" onclick="showSetPage('recommdata',this)">🔄 Recomm. Schedule</button>
           <button class="set-nav-btn" onclick="showSetPage('antennasnp',this)">📶 Antenna SNP</button>
+          <button class="set-nav-btn" onclick="showSetPage('sitesdata',this)">🗓 SITES Data</button>
+          <button class="set-nav-btn" onclick="showSetPage('prevqop',this)">📜 Previous QOP</button>
           <button class="set-nav-btn" onclick="showSetPage('valrules',this)">📋 Validation Rules</button>
         </div>
 
@@ -1685,6 +1687,64 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
               <div style="margin-top:14px;padding:10px 14px;background:var(--surf2);border-radius:var(--radius);font-size:11px;color:var(--muted)">
                 ℹ Run order matches the Excel: Import [1] → Shift Dates [2] → PB [3] → Holidays [4] → Recomm [5] → Antenna [6] → THSS [7] → Build QOP → checks [13]–[18] run per row → review colour-coded grid → ↻ Re-run Validations after edits → Export CSV.
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: SITES Data (planning grid editor) -->
+        <div class="set-page" id="sp-sitesdata">
+          <div class="lk-section">
+            <div class="lk-header">
+              <h3>SITES Planning Data</h3>
+              <span class="lk-count" id="sites-count"></span>
+              <input type="text" id="sites-search" placeholder="🔍 Search…" oninput="renderSitesData()"
+                style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:4px 8px;font-size:11px;width:150px">
+              <button class="btn btn-ghost" style="font-size:11px" onclick="sitesAddRow()">+ Add Site</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="document.getElementById('sites-import-file').click()">⬆ Import CSV</button>
+              <input type="file" id="sites-import-file" accept=".csv" style="display:none" onchange="sitesImportCSV(event)">
+              <button class="btn btn-ghost" style="font-size:11px" onclick="sitesExportCSV()">⬇ Export CSV</button>
+              <button class="btn btn-warn" style="font-size:11px" onclick="sitesRebuildSchedule()" title="Rebuild Annual Schedule / Site Grid from edited SITES">↻ Apply Changes</button>
+            </div>
+            <div style="padding:6px 14px;font-size:11px;color:var(--muted)">
+              The 12-month planning matrix that drives the Annual Schedule, Site Grid, and Coverage Check.
+              Columns: Site No, 7-net, WIN, Site Name, Class, EPP, Y1, Y2, then Jan–Dec activities.
+              Edit inline — changes save automatically; click <strong>Apply Changes</strong> to refresh the schedule views.
+            </div>
+            <div style="overflow:auto;max-height:calc(100vh - 230px)">
+              <table class="lk-table" style="width:100%;font-size:11px">
+                <thead><tr id="sites-head"></tr></thead>
+                <tbody id="sites-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: Previous Year Actual QOP -->
+        <div class="set-page" id="sp-prevqop">
+          <div class="lk-section">
+            <div class="lk-header">
+              <h3>Previous Year — Actual QOP</h3>
+              <span class="lk-count" id="prevqop-count"></span>
+              <input type="text" id="prevqop-search" placeholder="🔍 Search…" oninput="renderPrevQOP()"
+                style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:4px 8px;font-size:11px;width:160px">
+              <select id="prevqop-month" onchange="renderPrevQOP()" style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:4px 8px;font-size:11px">
+                <option value="">All Months</option>
+                <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+              </select>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="prevQOPExportCSV()">⬇ Export CSV</button>
+            </div>
+            <div style="padding:6px 14px;font-size:11px;color:var(--muted)">
+              The raw previous-year QOP rows imported from <strong>Automated_QOP_Builder.xlsm</strong> (Sheet1) —
+              the source the QOP Export builds from (dates shifted +1 year). Read-only reference.
+            </div>
+            <div style="overflow:auto;max-height:calc(100vh - 230px)">
+              <table class="lk-table" style="width:100%;font-size:11px">
+                <thead><tr id="prevqop-head"></tr></thead>
+                <tbody id="prevqop-body"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2598,7 +2658,7 @@ const SCHED_SORT_KEYS = {
   'status': r => getRow(r.id).status || '',
   'snow':   r => getRow(r.id).snowWO || '',
   'notes':  r => getRow(r.id).notes || '',
-  'qop':    r => getRow(r.id).qopReady || 'N',
+  'qop':    r => ({covered:0, wrongmonth:1, missing:2, none:3}[reconForRow(r).status] ?? 9),
 };
 
 function schedSortBy(key) {
@@ -2630,7 +2690,43 @@ function updateSchedSortHeaders() {
   });
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAN ↔ ACTUAL reconciliation (Annual Schedule "QOP" column)
+//  For each planned site/month, check whether the QOP (full year)
+//  actually has outages — linking the plan to the real outages.
+// ═══════════════════════════════════════════════════════════════
+let _reconCache = null;        // sno -> Set(monthNo) of QOP outage months
+let _reconCacheStamp = 0;
+
+function reconOutageMonths() {
+  // Cache per render pass (cheap to rebuild when QOP changes)
+  const yearRows = (STATE.qopSource && STATE.qopSource.length)
+    ? (qopBuiltRows.length ? qopBuiltRows : buildQOPRowsForMonths(null))
+    : qopBuiltRows;
+  const map = {};
+  yearRows.forEach(r => {
+    const sno = (r['Site Number'] || '').toString().trim();
+    const d = parseDate(r['Start Date']);
+    if (sno && d) (map[sno] = map[sno] || new Set()).add(d.getMonth() + 1);
+  });
+  return map;
+}
+
+function reconForRow(r) {
+  if (!_reconCache) _reconCache = reconOutageMonths();
+  const have = _reconCache[r.sno];
+  const hasQOP = (STATE.qopSource && STATE.qopSource.length) || qopBuiltRows.length;
+  if (!hasQOP) return { status:'none', label:'–', color:'var(--muted)', title:'No QOP built yet' };
+  if (have && have.has(r.mNo))
+    return { status:'covered', label:'✓', color:'var(--success)', title:`QOP has outage(s) for ${r.sname} in ${r.mName}` };
+  if (have && have.size)
+    return { status:'wrongmonth', label:'≠', color:'var(--warn)', title:`QOP has outages for this site but NOT in ${r.mName} — possible wrong month` };
+  return { status:'missing', label:'✗', color:'var(--danger)', title:`No QOP outage for ${r.sname} — planned work may be missed` };
+}
+
 function renderSchedule() {
+  _reconCache = null;   // refresh reconciliation each render
   filteredRows = [...scheduleRows];
   applySchedSort();
   renderScheduleRows(filteredRows);
@@ -2698,11 +2794,10 @@ function renderScheduleRows(rows) {
           <input type="text" class="txt-inp" value="${rd.notes||''}" placeholder="Notes…"
             onchange="rowChange('${r.id}','notes',this.value)" style="width:120px">
         </td>
-        <td style="text-align:center">
-          <select class="sel-inp" style="min-width:52px" onchange="rowChange('${r.id}','qopReady',this.value)">
-            <option value="N"${rd.qopReady!=='Y'?" selected":""} class="qop-n">N</option>
-            <option value="Y"${rd.qopReady==='Y'?" selected":""} class="qop-y">Y</option>
-          </select>
+        <td style="text-align:center" title="${(() => { const x = reconForRow(r); return x.title; })()}">
+          ${(() => { const x = reconForRow(r);
+            return `<span style="font-weight:800;font-size:14px;color:${x.color};cursor:default">${x.label}</span>`;
+          })()}
         </td>
         <td>${rd.pbConflict
           ? `<span class="pb-conflict" title="${rd.pbConflict}">⚠ ${rd.pbConflict.substring(0,30)}${rd.pbConflict.length>30?'…':''}</span>`
@@ -4906,6 +5001,150 @@ function qopDuplicateSelected() {
 }
 
 
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS — SITES Planning Data (editor + CSV import/export)
+// ═══════════════════════════════════════════════════════════════
+const SITES_COLS = ['Site No','7Net','WIN','Site Name','Class','EPP','Y1','Y2',
+  'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function renderSitesData() {
+  const head = document.getElementById('sites-head');
+  const body = document.getElementById('sites-body');
+  const cnt  = document.getElementById('sites-count');
+  if (!head) return;
+  head.innerHTML = SITES_COLS.map(c => `<th style="white-space:nowrap">${c}</th>`).join('') + '<th></th>';
+
+  const term = (document.getElementById('sites-search').value || '').toLowerCase();
+  const idxs = SITES.map((_, i) => i).filter(i => {
+    if (!term) return true;
+    return SITES[i].join(' ').toLowerCase().includes(term);
+  });
+  cnt.textContent = `${idxs.length}${term?` of ${SITES.length}`:''} sites`;
+
+  body.innerHTML = idxs.map(i => {
+    const s = SITES[i];
+    const cells = SITES_COLS.map((c, ci) => `
+      <td style="padding:1px 2px">
+        <input value="${esc(s[ci]||'')}" onchange="sitesEdit(${i},${ci},this.value)"
+          style="background:transparent;border:1px solid transparent;color:var(--text);font-size:11px;padding:2px 4px;width:${ci===3?'130px':ci<8?'52px':'74px'};border-radius:3px"
+          onfocus="this.style.borderColor='var(--accent)';this.style.background='var(--surf2)'"
+          onblur="this.style.borderColor='transparent';this.style.background='transparent'">
+      </td>`).join('');
+    return `<tr class="${i%2?'':'alt'}">${cells}<td style="padding:1px 4px"><button class="del-btn" onclick="sitesDelete(${i})">✕</button></td></tr>`;
+  }).join('');
+}
+
+function sitesEdit(i, ci, val) {
+  if (SITES[i]) { SITES[i][ci] = val; toast('Edited — click Apply Changes to refresh schedule', 'info'); }
+}
+function sitesDelete(i) {
+  if (!confirm(`Delete site ${SITES[i][0]} ${SITES[i][3]}?`)) return;
+  SITES.splice(i, 1);
+  renderSitesData();
+}
+function sitesAddRow() {
+  SITES.unshift(['', '', '', 'New Site', 'D', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  renderSitesData();
+}
+function sitesRebuildSchedule() {
+  scheduleRows = buildScheduleRows();
+  filteredRows = [...scheduleRows];
+  STATE.lookups._sitesOverride = SITES;   // mark customised
+  persist();
+  if (typeof renderSchedule === 'function') renderSchedule();
+  if (typeof renderSiteGrid === 'function') renderSiteGrid();
+  toast('Annual Schedule & Site Grid rebuilt from SITES', 'success');
+}
+function sitesExportCSV() {
+  const lines = [SITES_COLS.map(c=>`"${c}"`).join(',')]
+    .concat(SITES.map(s => SITES_COLS.map((_,ci)=>`"${(s[ci]||'').toString().replace(/"/g,'""')}"`).join(',')));
+  const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `BAI_SITES_${STATE.settings.district||'data'}.csv`;
+  a.click();
+  toast('SITES exported', 'success');
+}
+function sitesImportCSV(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if (!rows.length) { toast('No rows parsed', 'error'); return; }
+      // Map by header to SITES_COLS order (tolerant of header naming)
+      const norm = h => h.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const newSites = rows.map(r => {
+        const keys = Object.keys(r);
+        return SITES_COLS.map(col => {
+          const want = norm(col);
+          const k = keys.find(kk => norm(kk) === want || norm(kk).includes(want) || want.includes(norm(kk)));
+          return k ? String(r[k]).trim() : '';
+        });
+      }).filter(s => s[0] || s[3]);   // must have site no or name
+      if (!newSites.length) { toast('No valid site rows found', 'error'); return; }
+      SITES.length = 0; newSites.forEach(s => SITES.push(s));
+      renderSitesData();
+      sitesRebuildSchedule();
+      toast(`Imported ${newSites.length} sites`, 'success');
+    } catch(err) { console.error(err); toast('Import failed', 'error'); }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS — Previous Year Actual QOP (read-only viewer + filter)
+// ═══════════════════════════════════════════════════════════════
+const PREVQOP_COLS = [
+  ['sno','Site No'],['sname','Site Name'],['service','Service'],
+  ['ai','AI'],['ss','SS'],['rpw','RPW'],['rac','RAC'],
+  ['startDate','Start Date'],['endDate','End Date'],['timing','Timing'],
+  ['descr','Description'],['code','Activity'],['svcClass','Class'],
+  ['modulation','Modulation'],['name','Name'],['comments','Comments'],
+];
+
+function renderPrevQOP() {
+  const head = document.getElementById('prevqop-head');
+  const body = document.getElementById('prevqop-body');
+  const cnt  = document.getElementById('prevqop-count');
+  if (!head) return;
+  const data = STATE.qopSource || [];
+  head.innerHTML = PREVQOP_COLS.map(([,lbl]) => `<th style="white-space:nowrap">${lbl}</th>`).join('');
+
+  if (!data.length) {
+    cnt.textContent = 'no data';
+    body.innerHTML = `<tr><td colspan="${PREVQOP_COLS.length}" style="text-align:center;color:var(--muted);padding:28px">
+      No previous QOP imported — use the Import tab to load Automated_QOP_Builder.xlsm</td></tr>`;
+    return;
+  }
+  const term  = (document.getElementById('prevqop-search').value || '').toLowerCase();
+  const month = document.getElementById('prevqop-month').value;
+
+  const rows = data.filter(r => {
+    if (month) { const d = parseDate(r.startDate); if (!d || (d.getMonth()+1) !== parseInt(month)) return false; }
+    if (term) { const hay = PREVQOP_COLS.map(([k])=>r[k]||'').join(' ').toLowerCase(); if (!hay.includes(term)) return false; }
+    return true;
+  });
+  cnt.textContent = `${rows.length}${(term||month)?` of ${data.length}`:''} rows`;
+  body.innerHTML = rows.map((r,i) => `<tr class="${i%2?'':'alt'}">${
+    PREVQOP_COLS.map(([k]) => `<td style="padding:3px 8px;white-space:nowrap;${k==='descr'?'white-space:normal;min-width:200px':''}">${esc(r[k]||'')}</td>`).join('')
+  }</tr>`).join('');
+}
+function prevQOPExportCSV() {
+  const data = STATE.qopSource || [];
+  if (!data.length) { toast('No data', 'error'); return; }
+  const lines = [PREVQOP_COLS.map(([,l])=>`"${l}"`).join(',')]
+    .concat(data.map(r => PREVQOP_COLS.map(([k])=>`"${(r[k]||'').toString().replace(/"/g,'""')}"`).join(',')));
+  const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `BAI_Previous_QOP_${STATE.settings.year-1}.csv`;
+  a.click();
+  toast('Previous QOP exported', 'success');
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  REBUILD ROWS — from source, re-applying ALL rules.
 //  Two modes: Auto (apply everything) or Step-through (accept/decline
@@ -6735,6 +6974,8 @@ function showSetPage(page, btn) {
   if (page === "recommdata")  renderRecommView();
   if (page === "antennasnp")  renderAntennaView();
   if (page === "connections") renderConnectionsPage();
+  if (page === "sitesdata")   renderSitesData();
+  if (page === "prevqop")     renderPrevQOP();
 }
 
 // ── Service Map ─────────────────────────────────────────────────
