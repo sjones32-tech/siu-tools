@@ -1704,6 +1704,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
               <input type="file" id="sites-import-file" accept=".csv" style="display:none" onchange="sitesImportCSV(event)">
               <button class="btn btn-ghost" style="font-size:11px" onclick="sitesExportCSV()">⬇ Export CSV</button>
               <button class="btn btn-warn" style="font-size:11px" onclick="sitesRebuildSchedule()" title="Rebuild Annual Schedule / Site Grid from edited SITES">↻ Apply Changes</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="sitesResetDefault()" title="Discard custom SITES and restore the built-in Sydney list">⟲ Reset to default</button>
             </div>
             <div style="padding:6px 14px;font-size:11px;color:var(--muted)">
               The 12-month planning matrix that drives the Annual Schedule, Site Grid, and Coverage Check.
@@ -2279,6 +2280,13 @@ function persist() {
   }
 }
 
+// Replace the SITES array contents in place (SITES is const but mutable)
+function applySitesArray(arr) {
+  if (!Array.isArray(arr) || !arr.length) return;
+  SITES.length = 0;
+  arr.forEach(s => SITES.push(s));
+}
+
 function loadPersisted() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -2291,6 +2299,10 @@ function loadPersisted() {
       if (data.lookups.phMap)         STATE.lookups.phMap         = data.lookups.phMap;
       if (data.lookups.actRules)      STATE.lookups.actRules      = data.lookups.actRules;
       if (data.lookups.owRules)       STATE.lookups.owRules       = data.lookups.owRules;
+      if (data.lookups._sitesOverride) {
+        STATE.lookups._sitesOverride = data.lookups._sitesOverride;
+        applySitesArray(data.lookups._sitesOverride);   // restore custom SITES
+      }
       // Rehydrate Date objects (JSON serialises them as ISO strings)
       const reDate = v => (typeof v === 'string' && v) ? new Date(v) : v;
       if (data.lookups.pbEntries)
@@ -5005,6 +5017,17 @@ function qopDuplicateSelected() {
 // ═══════════════════════════════════════════════════════════════
 //  SETTINGS — SITES Planning Data (editor + CSV import/export)
 // ═══════════════════════════════════════════════════════════════
+// Pristine copy of the built-in SITES (deep clone, captured at load)
+const SITES_DEFAULT = JSON.parse(JSON.stringify(SITES));
+function sitesResetDefault() {
+  if (!confirm('Discard your custom SITES and restore the built-in Sydney list?')) return;
+  applySitesArray(JSON.parse(JSON.stringify(SITES_DEFAULT)));
+  delete STATE.lookups._sitesOverride;
+  renderSitesData();
+  sitesRebuildSchedule();
+  toast('Restored built-in SITES', 'info');
+}
+
 const SITES_COLS = ['Site No','7Net','WIN','Site Name','Class','EPP','Y1','Y2',
   'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -5524,6 +5547,7 @@ function importDataJSON(evt) {
         if (L.thssDetail)    T.thssDetail    = L.thssDetail;
         if (L.tripTags)      T.tripTags      = L.tripTags;
         if (L.dateOverrides) T.dateOverrides = L.dateOverrides;
+        if (L._sitesOverride) { T._sitesOverride = L._sitesOverride; applySitesArray(L._sitesOverride); }
         // Rehydrate Date objects (JSON serialises them to ISO strings)
         const reDate = v => (typeof v === 'string' && v) ? new Date(v) : v;
         if (L.pbEntries)     T.pbEntries     = L.pbEntries.map(x => ({...x, startDt: reDate(x.startDt), endDt: reDate(x.endDt)}));
@@ -5535,6 +5559,8 @@ function importDataJSON(evt) {
       // Refresh date objects on schedule rows
       if (typeof rehydrateDates === 'function') rehydrateDates();
 
+      scheduleRows = buildScheduleRows();
+      filteredRows = [...scheduleRows];
       persist();
       _tripFullYear = [];   // force trip rebuild from restored data
       toast("Full backup restored", "success");
