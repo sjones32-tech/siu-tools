@@ -4421,6 +4421,10 @@ function qopCellColor(col, row) {
   if (col === 'Outage Window' && val)             return QOP_CELL_COLORS.outageWin;
   if (col === 'Service Name Validation' && val)   return QOP_CELL_COLORS.svcVal;
 
+  // ── Cross-highlight the Service cell when its validation failed ──
+  if (col === 'Service' && (row['Service Name Validation'] || '').trim())
+    return QOP_CELL_COLORS.svcVal;
+
   // ── End Date must be after Start Date → light red on both ────
   if ((col === 'End Date' || col === 'Start Date') && dateOrderInvalid(row))
     return QOP_CELL_COLORS.missing;
