@@ -287,6 +287,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 }
 .site-grid-table .month-cell.empty { background: transparent !important; color: var(--muted); font-weight: 400; }
 .month-cell.dimmed { background: transparent !important; color: #3a4555; font-weight: 400; }
+.qop-rebuild-focus { outline: 3px solid var(--accent) !important; outline-offset:-3px; box-shadow: inset 0 0 0 9999px rgba(59,130,246,.12); }
 /* Ensure activity background always wins inside the site grid */
 .month-cell.act-annually  { background: var(--act-annually); color:#000; }
 .month-cell.act-6monthly  { background: var(--act-6monthly); color:#000; }
@@ -4934,14 +4935,10 @@ function closeRebuildDialog() {
 
 // Stop button: keep decisions made so far, re-validate, then close cleanly
 function rebuildStop() {
-  const st = _rebuildState;
-  if (st && (st.accepted || st.declined)) {
-    try { revalidateQOP(); } catch(e) { renderQOPPreview(qopBuiltRows); }
-    persist();
-    invalidateTripCache();
-    toast(`Rebuild stopped — ${st.accepted} accepted, ${st.declined} declined`, 'info');
-  }
+  // Cancel — discard all decisions, no changes applied
+  document.querySelectorAll('.qop-rebuild-focus').forEach(el => el.classList.remove('qop-rebuild-focus'));
   closeRebuildDialog();
+  toast('Rebuild cancelled — no changes applied', 'info');
 }
 
 // Build a fresh set for the current quarter selection
@@ -4991,17 +4988,39 @@ function rebuildStepStart() {
     return;
   }
 
-  _rebuildState = { fresh, diffs, idx: 0, accepted: 0, declined: 0 };
+  _rebuildState = { fresh, diffs, idx: 0, decisions: new Array(diffs.length) };
   document.getElementById('rebuild-choose').style.display = 'none';
   document.getElementById('rebuild-step').style.display = 'block';
   renderRebuildStep();
 }
 
+// Highlight + scroll the QOP grid row that this diff refers to
+function focusRebuildRow(d) {
+  document.querySelectorAll('.qop-rebuild-focus').forEach(el => el.classList.remove('qop-rebuild-focus'));
+  if (!d) return;
+  const key = (d.cur && (d.cur._uid)) || (d.fresh && d.fresh._uid);
+  // Find the displayed row index in qopBuiltRows
+  let idx = -1;
+  if (d.cur) idx = qopBuiltRows.indexOf(d.cur);
+  if (idx < 0 && key) idx = qopBuiltRows.findIndex(r => r._uid === key);
+  if (idx < 0) return;
+  const tr = document.querySelector(`#qop-tbody tr[data-qrow="${idx}"]`);
+  if (tr) {
+    tr.classList.add('qop-rebuild-focus');
+    tr.scrollIntoView({ block:'center', behavior:'smooth' });
+  }
+}
+
 function renderRebuildStep() {
   const st = _rebuildState;
-  if (!st || !st.diffs || st.idx >= st.diffs.length) { closeRebuildDialog(); return; }
+  if (!st || !st.diffs || !st.diffs.length) { closeRebuildDialog(); return; }
+  if (st.idx < 0) st.idx = 0;
+  if (st.idx >= st.diffs.length) st.idx = st.diffs.length - 1;
   const d = st.diffs[st.idx];
   if (!d) { closeRebuildDialog(); return; }
+
+  focusRebuildRow(d);   // highlight the row in the grid behind the modal
+
   const box = document.getElementById('rebuild-step-body');
   const FIELD_LABELS = {
     'Audience Impact':'AI','Service State':'SS','Maintenance Activity Number':'Activity'};
@@ -5014,9 +5033,18 @@ function renderRebuildStep() {
       <td style="padding:4px 8px;background:rgba(34,197,94,.08)">${esc(d.fresh[f]||'—')}</td>
     </tr>`).join('');
 
+  const decided = st.decisions[st.idx];
+  const decidedBadge = decided === 'accept'
+    ? '<span style="background:var(--success);color:#062b12;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700">✓ will accept</span>'
+    : decided === 'decline'
+    ? '<span style="background:var(--surf3);color:var(--muted);border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700">✕ will keep mine</span>'
+    : '<span style="color:var(--muted);font-size:11px">no decision yet</span>';
+
+  const decidedCount = st.decisions.filter(Boolean).length;
   box.innerHTML = `
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-      Change ${st.idx+1} of ${st.diffs.length} · accepted ${st.accepted} · declined ${st.declined}
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between">
+      <span>Change ${st.idx+1} of ${st.diffs.length} · ${decidedCount} decided</span>
+      ${decidedBadge}
     </div>
     <div style="font-weight:700;margin-bottom:8px">
       ${esc(d.fresh['Site Number'])} ${esc(d.fresh['Site Name'])}
@@ -5034,45 +5062,47 @@ function renderRebuildStep() {
   `;
 }
 
+// Record a decision for the CURRENT diff and advance (does not apply yet)
 function rebuildStepDecision(accept) {
   const st = _rebuildState;
   if (!st || !st.diffs) { closeRebuildDialog(); return; }
-  const d = st.diffs[st.idx];
-  if (!d) { closeRebuildDialog(); return; }
-  if (accept) {
-    if (d.type === 'new') {
-      qopBuiltRows.push(d.fresh);
-    } else {
-      // Apply only the changed fields onto the current row (preserves trip tags)
-      d.changed.forEach(f => { d.cur[f] = d.fresh[f]; });
-    }
-    st.accepted++;
-  } else {
-    st.declined++;
-  }
-  st.idx++;
-  if (st.idx >= st.diffs.length) {
-    revalidateQOP();
-    closeRebuildDialog();
-    persist();
-    invalidateTripCache();
-    toast(`Rebuild complete — ${st.accepted} accepted, ${st.declined} declined`, 'success');
-    return;
-  }
-  renderRebuildStep();
+  st.decisions[st.idx] = accept ? 'accept' : 'decline';
+  if (st.idx < st.diffs.length - 1) { st.idx++; renderRebuildStep(); }
+  else { rebuildFinish(); }   // last one decided → finish
+}
+
+function rebuildPrev() {
+  const st = _rebuildState; if (!st) return;
+  if (st.idx > 0) { st.idx--; renderRebuildStep(); }
+}
+function rebuildNext() {
+  const st = _rebuildState; if (!st) return;
+  if (st.idx < st.diffs.length - 1) { st.idx++; renderRebuildStep(); }
+}
+
+// Apply all recorded decisions; undecided diffs default to DECLINE (keep mine)
+function rebuildFinish() {
+  const st = _rebuildState;
+  if (!st || !st.diffs) { closeRebuildDialog(); return; }
+  let accepted = 0, declined = 0;
+  st.diffs.forEach((d, i) => {
+    if (st.decisions[i] === 'accept') {
+      if (d.type === 'new') qopBuiltRows.push(d.fresh);
+      else d.changed.forEach(f => { d.cur[f] = d.fresh[f]; });
+      accepted++;
+    } else { declined++; }
+  });
+  document.querySelectorAll('.qop-rebuild-focus').forEach(el => el.classList.remove('qop-rebuild-focus'));
+  revalidateQOP(); closeRebuildDialog(); persist(); invalidateTripCache();
+  toast(`Rebuild applied — ${accepted} accepted, ${declined} kept as-is`, 'success');
 }
 
 function rebuildAcceptRemaining() {
   const st = _rebuildState;
   if (!st || !st.diffs) { closeRebuildDialog(); return; }
-  while (st.idx < st.diffs.length) {
-    const d = st.diffs[st.idx];
-    if (d.type === 'new') qopBuiltRows.push(d.fresh);
-    else d.changed.forEach(f => { d.cur[f] = d.fresh[f]; });
-    st.accepted++; st.idx++;
-  }
-  revalidateQOP(); closeRebuildDialog(); persist(); invalidateTripCache();
-  toast(`Rebuild complete — ${st.accepted} accepted`, 'success');
+  // Mark every not-yet-declined diff as accept, then finish
+  st.diffs.forEach((d, i) => { if (st.decisions[i] !== 'decline') st.decisions[i] = 'accept'; });
+  rebuildFinish();
 }
 
 // ── QOP grid edit handlers ─────────────────────────────────────
@@ -7450,7 +7480,7 @@ document.addEventListener("DOMContentLoaded", init);
 </script>
 
   <!-- REBUILD MODAL -->
-  <div id="rebuild-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
+  <div id="rebuild-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:flex-start;justify-content:center;padding-top:60px">
     <div style="background:var(--surf);border:1px solid var(--border2);border-radius:10px;width:640px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)">
       <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">⟳ Rebuild QOP Rows</h3>
@@ -7480,12 +7510,16 @@ document.addEventListener("DOMContentLoaded", init);
 
       <div id="rebuild-step" style="display:none;padding:18px">
         <div id="rebuild-step-body"></div>
-        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-          <button class="btn btn-success" onclick="rebuildStepDecision(true)">✓ Accept change</button>
-          <button class="btn btn-ghost" onclick="rebuildStepDecision(false)">✕ Decline (keep mine)</button>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-ghost" onclick="rebuildPrev()" title="Previous change">‹ Prev</button>
+          <button class="btn btn-ghost" onclick="rebuildNext()" title="Next change">Next ›</button>
+          <div style="width:8px"></div>
+          <button class="btn btn-success" onclick="rebuildStepDecision(true)">✓ Accept</button>
+          <button class="btn btn-ghost" onclick="rebuildStepDecision(false)">✕ Keep mine</button>
           <div style="flex:1"></div>
-          <button class="btn btn-warn" onclick="rebuildAcceptRemaining()" title="Accept this and all remaining changes">⚡ Accept all remaining</button>
-          <button class="btn btn-ghost" onclick="rebuildStop()">Stop</button>
+          <button class="btn btn-warn" onclick="rebuildAcceptRemaining()" title="Accept all remaining undecided changes">⚡ Accept all</button>
+          <button class="btn btn-primary" onclick="rebuildFinish()" title="Apply decisions made so far">✓ Apply &amp; Finish</button>
+          <button class="btn btn-ghost" onclick="rebuildStop()">Cancel</button>
         </div>
       </div>
     </div>
