@@ -822,15 +822,15 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
     <!-- ══════════ QOP EXPORT ══════════ -->
     <div class="tab-pane" id="pane-qop">
       <div class="qop-meta">
-        <label>Quarter</label>
-        <select id="qop-quarter">
-          <option>Q1 (Jan–Mar)</option>
-          <option selected>Q2 (Apr–Jun)</option>
-          <option>Q3 (Jul–Sep)</option>
-          <option>Q4 (Oct–Dec)</option>
-          <option value="ALL">Full Year</option>
+        <button class="btn btn-primary" onclick="buildQOP()" title="Build the full year from source — then filter the view by quarter below">▶ Build QOP Import</button>
+        <label style="margin-left:6px">View</label>
+        <select id="qop-quarter" onchange="applyQuarterView()" title="Filter the displayed rows by quarter — no rebuild">
+          <option value="ALL" selected>Full Year</option>
+          <option value="Q1">Q1 (Jan–Mar)</option>
+          <option value="Q2">Q2 (Apr–Jun)</option>
+          <option value="Q3">Q3 (Jul–Sep)</option>
+          <option value="Q4">Q4 (Oct–Dec)</option>
         </select>
-        <button class="btn btn-primary" onclick="buildQOP()">▶ Build QOP Import</button>
         <button class="btn btn-warn" onclick="revalidateQOP()" title="Re-run all validation checks on the current rows (keeps your edits)">↻ Re-run Validations</button>
         <button class="btn btn-danger" onclick="openRebuildDialog()" title="Rebuild every row from source and re-apply ALL rules — overwrites edits">⟳ Rebuild Rows…</button>
         <button class="btn btn-success" onclick="exportQOPCSV()" id="qop-export-btn" disabled>⬇ Export CSV</button>
@@ -3538,33 +3538,50 @@ function tripClearSelection() {
 let qopBuiltRows = [];
 
 function buildQOP() {
-  const qSel   = document.getElementById('qop-quarter').value;
-  const isAll  = qSel === 'ALL';
-  const q      = isAll ? null : qSel.substring(0,2);
-  const months = q ? quarterMonths(q) : null;
+  // Always build the FULL YEAR — the quarter dropdown only filters the view.
+  // This keeps every quarter's rows available so you can see and re-date
+  // outages that need to move between quarters without rebuilding.
 
   // ── PATH A: Sheet1 data imported (qopSource) — carry forward + shift ──
-  // This is the primary path matching the Excel VBA workflow.
   if (STATE.qopSource && STATE.qopSource.length > 0) {
-    buildQOPFromSource(qSel, isAll, months, q);
+    buildQOPFromSource('Full Year', true, null, null);
+    applyQuarterView();
     return;
   }
 
   // ── PATH B: No Sheet1 data — build from Annual Schedule confirmed rows ─
-  const rows = scheduleRows.filter(r => {
-    if (months && !months.includes(r.mNo)) return false;
-    return !!getRow(r.id).confirmedDate;
-  });
-
+  const rows = scheduleRows.filter(r => !!getRow(r.id).confirmedDate);
   if (!rows.length) {
-    toast('No confirmed dates for selected quarter. Import previous QOP first (Import tab → card 1).', 'error');
+    toast('No confirmed dates. Import previous QOP first (Import tab → card 1).', 'error');
     document.getElementById('qop-status').textContent =
       'No data. Import Automated_QOP_Builder.xlsm on the Import tab first.';
     return;
   }
-
   qopBuiltRows = rows.map(r => buildQOPRow(r, getRow(r.id)));
-  finaliseQOP(qSel, isAll, rows.length, 0);
+  finaliseQOP('Full Year', true, rows.length, 0);
+  applyQuarterView();
+}
+
+// View-only quarter filter — applied as a column filter, no rebuild.
+// Uses the existing per-column filter mechanism on the Start Date month.
+let _qopQuarterView = 'ALL';
+function applyQuarterView() {
+  _qopQuarterView = (document.getElementById('qop-quarter') || {}).value || 'ALL';
+  renderQOPPreview(qopBuiltRows);
+}
+
+// Month → quarter helper
+function monthQuarter(m) {
+  if (m >= 1 && m <= 3)  return 'Q1';
+  if (m >= 4 && m <= 6)  return 'Q2';
+  if (m >= 7 && m <= 9)  return 'Q3';
+  if (m >= 10 && m <= 12) return 'Q4';
+  return '';
+}
+function rowInQuarterView(row) {
+  if (_qopQuarterView === 'ALL') return true;
+  const d = parseDate(row['Start Date']);
+  return d ? monthQuarter(d.getMonth() + 1) === _qopQuarterView : true;
 }
 
 
@@ -4484,8 +4501,8 @@ function finaliseQOP(qSel, isAll, sourceCount, extraCount) {
   renderQOPPreview(qopBuiltRows);
   const total = qopBuiltRows.length;
   document.getElementById('qop-status').textContent =
-    `${total} rows built for ${isAll ? 'all quarters' : qSel}` +
-    (extraCount > 0 ? ` (${sourceCount} matched + ${extraCount} extra)` : '');
+    `${total} rows built (full year) — use the View dropdown to filter by quarter` +
+    (extraCount > 0 ? ` · ${sourceCount} matched + ${extraCount} extra` : '');
   document.getElementById('qop-export-btn').disabled = false;
   document.getElementById('qop-copy-btn').disabled   = false;
   // Mark matched schedule rows as QOP Ready
@@ -4610,6 +4627,7 @@ function renderQOPPreview(rows) {
   // ── Apply filters → list of original indexes to display ──────────
   const visibleIdx = [];
   rows.forEach((row, i) => {
+    if (!rowInQuarterView(row)) return;     // quarter VIEW filter (no rebuild)
     for (const [fc, fv] of Object.entries(_qopFilters)) {
       if (!fv) continue;
       const cell = (row[fc] || '').toString().toLowerCase();
@@ -4710,7 +4728,8 @@ function renderQOPPreview(rows) {
 
   document.getElementById("qop-preview").innerHTML = `
     <div style="padding:8px 12px;background:var(--surf);border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-      <span style="color:var(--success);font-weight:600">${visibleIdx.length}${filterActive ? ` of ${rows.length}` : ''} rows</span>
+      <span style="color:var(--success);font-weight:600">${visibleIdx.length}${(filterActive || _qopQuarterView !== 'ALL') ? ` of ${rows.length}` : ''} rows</span>
+      ${_qopQuarterView !== 'ALL' ? `<span style="background:var(--accent);color:#04243f;border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Viewing ${_qopQuarterView}</span>` : '<span style="background:var(--surf3);color:var(--muted);border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Full Year</span>'}
       ${(() => {
         let pb=0, rc=0, hol=0, ant=0, ow=0, sv=0, miss=0, dord=0;
         rows.forEach(r => {
@@ -4736,7 +4755,7 @@ function renderQOPPreview(rows) {
           miss ? `<span style="background:#FFC7CE;color:#7a1220;border-radius:9px;padding:1px 8px;font-size:10px;font-weight:700">⚠ Missing fields: ${miss}</span>` : '',
         ].filter(Boolean).join(' ');
       })()}
-      ${filterActive ? `<span style="color:var(--warn)">⊸ filters active — export includes ALL ${rows.length} rows</span>` : ''}
+      ${filterActive ? `<span style="color:var(--warn)">⊸ column filters active (display only) — export uses the View quarter</span>` : ''}
       <span class="text-muted text-sm">✏ Click cell to edit · click header to sort · type in filter row</span>
       ${_qopSelected.size ? `<span style="color:var(--accent);font-weight:600">${_qopSelected.size} selected</span>` : ''}
       <div style="flex:1"></div>
@@ -5452,28 +5471,32 @@ function qopClearAll() {
 
 function exportQOPCSV() {
   if (!qopBuiltRows.length) return;
+  // Export the currently-viewed quarter (or the full year when "Full Year")
+  const exportRows = qopBuiltRows.filter(rowInQuarterView);
+  if (!exportRows.length) { toast('No rows in the selected quarter view', 'error'); return; }
   const cols = Object.keys(qopBuiltRows[0]);
   const lines = [
     cols.map(c => `"${c}"`).join(","),
-    ...qopBuiltRows.map(row =>
+    ...exportRows.map(row =>
       cols.map(c => `"${(row[c]||"").replace(/"/g,'""')}"`).join(",")
     )
   ];
   const blob = new Blob([lines.join("\r\n")], {type:"text/csv"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  const q = document.getElementById("qop-quarter").value.replace(/\s+/g,'_');
+  const q = _qopQuarterView === 'ALL' ? 'FullYear' : _qopQuarterView;
   a.download = `BAI_QOP_Import_${q}_${STATE.settings.year}.csv`;
   a.click();
-  toast("CSV exported", "success");
+  toast(`CSV exported — ${exportRows.length} rows (${_qopQuarterView === 'ALL' ? 'full year' : _qopQuarterView})`, "success");
 }
 
 function copyQOPClipboard() {
   if (!qopBuiltRows.length) return;
+  const copyRows = qopBuiltRows.filter(rowInQuarterView);
   const cols = Object.keys(qopBuiltRows[0]);
   const lines = [
     cols.join("\t"),
-    ...qopBuiltRows.map(row => cols.map(c => row[c]||"").join("\t"))
+    ...copyRows.map(row => cols.map(c => row[c]||"").join("\t"))
   ];
   navigator.clipboard.writeText(lines.join("\r\n"))
     .then(() => toast("Copied to clipboard (tab-separated)", "success"))
