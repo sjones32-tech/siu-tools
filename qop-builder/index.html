@@ -4703,7 +4703,7 @@ function renderQOPPreview(rows) {
           return `<td style="${tdStyle}">
             <input type="datetime-local" value="${qopToDTLocal(val)}"
               data-qrow="${origIdx}" data-qcol="${c.replace(/"/g,'&quot;')}"
-              onchange="qopDateEdit(this)"
+              onchange="qopDateEdit(this)" onblur="qopDateBlur(this)"
               style="background:${cc ? 'transparent' : 'var(--surf2)'};border:1px solid ${cc ? 'transparent' : 'var(--border)'};
                      color:${inpFg};font-weight:${inpW};color-scheme:dark;
                      font-size:11px;padding:2px 4px;width:165px;border-radius:3px"
@@ -4950,19 +4950,56 @@ function qopDateEdit(input) {
   const col = input.dataset.qcol;
   if (!qopBuiltRows[i]) return;
   const newVal = dtLocalToQOP(input.value);
-  qopBuiltRows[i][col] = newVal;
+  if (!newVal) return;            // ignore partial/empty mid-typing values
+  const row = qopBuiltRows[i];
+  row[col] = newVal;
   if (col === 'Start Date') {
-    qopBuiltRows[i]['Commencement Date'] = newVal;
-    qopBuiltRows[i]['Week Commencing'] = weekCommencing(newVal);
+    row['Commencement Date'] = newVal;
+    row['Week Commencing']   = weekCommencing(newVal);
+    // Mirror into the sibling Commencement / Week cells WITHOUT a full re-render
+    const tr = input.closest('tr');
+    if (tr) {
+      const cInp = tr.querySelector('input[data-qcol="Commencement Date"]');
+      if (cInp) cInp.value = qopToDTLocal(newVal);
+      const wInp = tr.querySelector('input[data-qcol="Week Commencing"]');
+      if (wInp) wInp.value = row['Week Commencing'];
+    }
   }
   _qopSelectedRow = i;
-  // Push the date change through to the Trip Planner (and persist it)
-  syncQOPDateToTrip(qopBuiltRows[i], col, newVal);
-  // Re-render so the End-after-Start highlight refreshes immediately
-  renderQOPPreview(qopBuiltRows);
-  if (dateOrderInvalid(qopBuiltRows[i])) {
-    toast('⚠ End Date must be after Start Date', 'error');
+  syncQOPDateToTrip(row, col, newVal);
+  // Recolour just this row's date cells in place (no DOM rebuild → keeps the
+  // native datetime picker's editing state intact while you type)
+  qopRecolorRowDates(input.closest('tr'), row);
+  if (dateOrderInvalid(row)) toast('⚠ End Date must be after Start Date', 'error');
+}
+
+// When a date field loses focus, re-apply the quarter view if the row has
+// moved out of the currently-viewed quarter (deferred, so it never interrupts
+// typing). Also persists the change.
+function qopDateBlur(input) {
+  persist();
+  if (_qopQuarterView === 'ALL') return;
+  const i = parseInt(input.dataset.qrow);
+  const row = qopBuiltRows[i];
+  if (row && !rowInQuarterView(row)) {
+    // Row moved out of the viewed quarter — refresh the grid so it drops out
+    setTimeout(() => renderQOPPreview(qopBuiltRows), 0);
   }
+}
+
+// Update the background colour of the Start/End/Commencement cells of one row
+// without re-rendering the whole grid.
+function qopRecolorRowDates(tr, row) {
+  if (!tr) return;
+  ['Start Date','End Date','Commencement Date'].forEach(c => {
+    const inp = tr.querySelector(`input[data-qcol="${c}"]`);
+    if (!inp) return;
+    const td = inp.closest('td');
+    const cc = qopCellColor(c, row);
+    if (td) td.style.background = cc ? cc.bg : '';
+    inp.style.color = cc ? cc.fg : 'var(--text)';
+    inp.style.fontWeight = cc ? '600' : '400';
+  });
 }
 
 // Propagate a QOP date edit to the full-year trip cache + durable date store
