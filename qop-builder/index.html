@@ -833,7 +833,8 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
         </select>
         <button class="btn btn-warn" onclick="revalidateQOP()" title="Re-run all validation checks on the current rows (keeps your edits)">↻ Re-run Validations</button>
         <button class="btn btn-danger" onclick="openRebuildDialog()" title="Rebuild every row from source and re-apply ALL rules — overwrites edits">⟳ Rebuild Rows…</button>
-        <button class="btn btn-success" onclick="exportQOPCSV()" id="qop-export-btn" disabled>⬇ Export CSV</button>
+        <button class="btn btn-success" onclick="exportQOPSubmission()" id="qop-submit-btn" disabled>⬇ Export Submission (XLSX)</button>
+        <button class="btn btn-ghost" onclick="exportQOPCSV()" id="qop-export-btn" disabled>⬇ Export CSV</button>
         <button class="btn btn-ghost" onclick="copyQOPClipboard()" id="qop-copy-btn" disabled>⎘ Copy to Clipboard</button>
         <button class="btn btn-ghost" onclick="qopClearFilters()" title="Clear all column filters and sort">⌫ Clear Filters</button>
         <div class="sep"></div>
@@ -2365,6 +2366,7 @@ function showTab(name) {
   if (name === "qop" && qopBuiltRows.length) {
     renderQOPPreview(qopBuiltRows);
     const eb = document.getElementById('qop-export-btn'); if (eb) eb.disabled = false;
+    const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = false;
     const cb = document.getElementById('qop-copy-btn');   if (cb) cb.disabled = false;
     if (_pendingQOPRestore) {
       document.getElementById('qop-status').textContent =
@@ -4359,6 +4361,9 @@ const district = STATE.settings.district;
       Name:                   techName,
       Comments:               notes,
       Email:                  src.email || '',
+      'Week Commencing':        weekCommencing(useDate),
+      'Trip Activity':          '',
+      'Trip Team':              '',
       'Commencement Date':    startDt,   // mirrors Start Date (QOP rule)
       'Service Class':        src.svcClass,
       'Programming Bulletin Conflicts': pbConflict,
@@ -4373,9 +4378,6 @@ const district = STATE.settings.district;
       'Outage Window':        outageWindow(src.descr || '', useDate),
       'Service Name Validation': svcValid,
       'SPM Completion Notes': '',
-      'Week Commencing':        weekCommencing(useDate),
-      'Trip Activity':          '',
-      'Trip Team':              '',
       'Remedy Source of Truth': src.thssService || '',
       'Modulation':             src.modulation  || '',
     };
@@ -4473,6 +4475,9 @@ function buildQOPRow(r, rd) {
     Name: rd.techName || STATE.settings.tech,
     Comments: rd.notes || prev.comments || '',
     Email: prev.email || '',
+    'Week Commencing':        weekCommencing(cd),
+    'Trip Activity':          '',
+    'Trip Team':              '',
     'Commencement Date': fmtDateTime(cd, startHour(r.act)),
     'Service Class': prev.svcClass || r.cls,
     'Programming Bulletin Conflicts': _pbC,
@@ -4487,9 +4492,6 @@ function buildQOPRow(r, rd) {
     'Outage Window': outageWindow(r.act, cd),
     'Service Name Validation': svcNameValidationForRow(svc, r.sno),
     'SPM Completion Notes': '',
-    'Week Commencing':        weekCommencing(cd),
-    'Trip Activity':          '',
-    'Trip Team':              '',
     'Remedy Source of Truth': prev.thssService || '',
     'Modulation':             prev.modulation  || '',
   };
@@ -4504,6 +4506,7 @@ function finaliseQOP(qSel, isAll, sourceCount, extraCount) {
     `${total} rows built (full year) — use the View dropdown to filter by quarter` +
     (extraCount > 0 ? ` · ${sourceCount} matched + ${extraCount} extra` : '');
   document.getElementById('qop-export-btn').disabled = false;
+  { const b = document.getElementById('qop-submit-btn'); if (b) b.disabled = false; }
   document.getElementById('qop-copy-btn').disabled   = false;
   // Mark matched schedule rows as QOP Ready
   scheduleRows.forEach(r => {
@@ -5504,6 +5507,124 @@ function qopClearAll() {
   document.getElementById('qop-export-btn').disabled = true;
   document.getElementById('qop-copy-btn').disabled   = true;
   document.getElementById('qop-status').textContent  = 'Cleared';
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  EXPORT — BAI submission XLSX (matches Q?_YYYY_District_Submission)
+//  Title banner (A1:R1) · District/date block (row 3) · 18-col header
+//  (row 5) · data from row 6 · dd/mm/yyyy hh:mm date cells.
+// ═══════════════════════════════════════════════════════════════
+const SUBMISSION_HEADERS = [
+  'District', 'Population <,1,500 between >15,000', 'Site Number', 'Site Name',
+  'Audience Impact', 'Service State', 'RPW', 'RAC', 'Start Date', 'End Date',
+  'Timing', 'Timing Reason', 'Description of Work', 'Maintenance Activity Number',
+  'Service', 'Name', 'Comments', 'Email'
+];
+// Map submission column → internal qopBuiltRows field
+const SUBMISSION_MAP = {
+  'District':'District', 'Population <,1,500 between >15,000':'Population',
+  'Site Number':'Site Number', 'Site Name':'Site Name',
+  'Audience Impact':'Audience Impact', 'Service State':'Service State',
+  'RPW':'RPW', 'RAC':'RAC', 'Start Date':'Start Date', 'End Date':'End Date',
+  'Timing':'Timing', 'Timing Reason':'Timing Reason',
+  'Description of Work':'Description of Work',
+  'Maintenance Activity Number':'Maintenance Activity Number',
+  'Service':'Service', 'Name':'Name', 'Comments':'Comments', 'Email':'Email'
+};
+
+// Parse "DD/MM/YYYY HH:MM" → JS Date (for real Excel date cells)
+function qopToJSDate(s) {
+  const m = String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2})?:?(\d{2})?/);
+  if (!m) return null;
+  return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0));
+}
+
+function quarterDateRange() {
+  const y = STATE.settings.year;
+  const map = { Q1:[0,1,2,31], Q2:[3,4,5,30], Q3:[6,7,8,30], Q4:[9,10,11,31] };
+  const q = _qopQuarterView;
+  if (q === 'ALL') return [new Date(y,0,1), new Date(y,11,31)];
+  const [ , , m3, lastDay] = map[q];
+  const startM = { Q1:0, Q2:3, Q3:6, Q4:9 }[q];
+  return [new Date(y,startM,1), new Date(y,startM+2, lastDay)];
+}
+
+async function exportQOPSubmission() {
+  if (!qopBuiltRows.length) return;
+  let XLSX;
+  try { XLSX = await loadSheetJS(); }
+  catch(e) { toast('Excel export needs SheetJS (run via http/https, not file://). Use CSV instead.', 'error'); return; }
+
+  const rows = qopBuiltRows.filter(rowInQuarterView);
+  if (!rows.length) { toast('No rows in the selected quarter view', 'error'); return; }
+
+  const district = STATE.settings.district || 'Sydney';
+  const [qStart, qEnd] = quarterDateRange();
+  const fmtDMY = 'dd/mm/yyyy';
+  const fmtDMYHM = 'dd/mm/yyyy hh:mm';
+
+  // Build an array-of-arrays sheet; we'll set formats after.
+  const aoa = [];
+  aoa.push(['MAINTENANCE ACTIVITY PLAN / QUARTERLY OUTAGE PLAN']);          // row 1
+  aoa.push([]);                                                             // row 2
+  aoa.push(['', 'DISTRICT:', '', district, '', '', '', 'Start Date', qStart, '', 'End Date', qEnd]); // row 3
+  aoa.push([]);                                                             // row 4
+  aoa.push(SUBMISSION_HEADERS.slice());                                     // row 5 header
+
+  rows.forEach(r => {
+    const line = SUBMISSION_HEADERS.map(h => {
+      const key = SUBMISSION_MAP[h];
+      let v = r[key];
+      if (h === 'Start Date' || h === 'End Date') { const d = qopToJSDate(v); return d || (v||''); }
+      if (h === 'RPW') { const n = parseFloat(v); return isNaN(n) ? (v||'') : n; }
+      return (v === undefined || v === null) ? '' : v;
+    });
+    aoa.push(line);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates:true });
+
+  // Merges: title A1:R1, and Q3:R4 (comment box in template)
+  ws['!merges'] = [
+    { s:{r:0,c:0}, e:{r:0,c:17} },
+    { s:{r:2,c:16}, e:{r:3,c:17} },
+  ];
+
+  // Column widths (chars) matching the template
+  ws['!cols'] = [
+    {wch:7.7},{wch:13.7},{wch:9.7},{wch:18.7},{wch:12.7},{wch:9},{wch:5.4},
+    {wch:10},{wch:15.6},{wch:15.6},{wch:10.1},{wch:17.7},{wch:47.7},{wch:16.7},
+    {wch:36.7},{wch:22.7},{wch:37.7},{wch:20}
+  ];
+
+  // Date cell number formats + banner date cells
+  const setFmt = (addr, fmt) => { if (ws[addr]) ws[addr].z = fmt; };
+  setFmt('I3', fmtDMY); setFmt('L3', fmtDMY);
+  for (let i = 0; i < rows.length; i++) {
+    const excelRow = 6 + i;              // data starts row 6
+    setFmt('I' + excelRow, fmtDMYHM);    // Start Date (col I = index 8)
+    setFmt('J' + excelRow, fmtDMYHM);    // End Date  (col J = index 9)
+  }
+
+  // Bold the title (row1) and header (row5) cells
+  const bold = { font:{ bold:true } };
+  if (ws['A1']) ws['A1'].s = { font:{ bold:true, sz:14 } };
+  SUBMISSION_HEADERS.forEach((_, ci) => {
+    const addr = XLSX.utils.encode_cell({ r:4, c:ci });
+    if (ws[addr]) ws[addr].s = bold;
+  });
+  if (ws['B3']) ws['B3'].s = bold;
+  if (ws['H3']) ws['H3'].s = bold;
+  if (ws['K3']) ws['K3'].s = bold;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'QOP');
+
+  const qLabel = _qopQuarterView === 'ALL' ? 'FullYear' : _qopQuarterView;
+  const fname = `${qLabel}_${STATE.settings.year}_${district}_-_Submission.xlsx`;
+  XLSX.writeFile(wb, fname, { cellStyles:true });
+  toast(`Submission exported — ${rows.length} rows (${_qopQuarterView === 'ALL' ? 'full year' : _qopQuarterView})`, 'success');
 }
 
 function exportQOPCSV() {
