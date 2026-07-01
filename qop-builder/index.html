@@ -1115,6 +1115,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
           <button class="set-nav-btn" onclick="showSetPage('antennasnp',this)">📶 Antenna SNP</button>
           <button class="set-nav-btn" onclick="showSetPage('sitesdata',this)">🗓 SITES Data</button>
           <button class="set-nav-btn" onclick="showSetPage('prevqop',this)">📜 Previous QOP</button>
+          <button class="set-nav-btn" onclick="showSetPage('thssdata',this)">📶 THSS Data</button>
           <button class="set-nav-btn" onclick="showSetPage('valrules',this)">📋 Validation Rules</button>
         </div>
 
@@ -1721,6 +1722,35 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
           </div>
         </div>
 
+
+        <!-- PAGE: THSS Live Data -->
+        <div class="set-page" id="sp-thssdata">
+          <div class="lk-section">
+            <div class="lk-header">
+              <h3>THSS Live Data</h3>
+              <span class="lk-count" id="thss-count"></span>
+              <input type="text" id="thss-search" placeholder="🔍 Search…" oninput="renderTHSSData()"
+                style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:4px 8px;font-size:11px;width:160px">
+              <select id="thss-class" onchange="renderTHSSData()" style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:4px 8px;font-size:11px">
+                <option value="">All Classes</option>
+                <option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>R</option>
+              </select>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="thssExportCSV()">⬇ Export CSV</button>
+            </div>
+            <div style="padding:6px 14px;font-size:11px;color:var(--muted)">
+              The <strong>THSS_Live</strong> service register imported from Automated_QOP_Builder.xlsm — the source
+              of truth for service names, site classes, modulations, and <strong>Commenced_Date</strong>
+              (which populates the QOP Commencement Date column). Read-only reference.
+            </div>
+            <div style="overflow:auto;max-height:calc(100vh - 230px)">
+              <table class="lk-table" style="width:100%;font-size:11px">
+                <thead><tr id="thss-head"></tr></thead>
+                <tbody id="thss-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- PAGE: Previous Year Actual QOP -->
         <div class="set-page" id="sp-prevqop">
           <div class="lk-section">
@@ -2208,7 +2238,8 @@ const STATE = {
     antennaSNP:    [],   // [6] Antenna SNP
     siteNames:     {},   // siteNo → siteName (from THSS + previous QOP)
     spmTestReqs:   [],   // SPM_Test_Requirements sheet rows
-    thssDetail:    [],   // Service Grid rows: {sno,sname,service,svcClass,modulation,area}
+    thssDetail:    [],   // Service Grid rows: {sno,sname,service,svcClass,modulation,area,commenced}
+    thssCommenced: {},   // "sno|SERVICE" → Commenced_Date from THSS
     tripTags:      {},   // outage signature → {tripActivity, tripTeam, comments}
     dateOverrides: {},   // _uid → {Start Date, End Date, Commencement Date}
   },
@@ -2318,6 +2349,7 @@ function loadPersisted() {
       if (data.lookups.siteNames)  STATE.lookups.siteNames  = data.lookups.siteNames;
       if (data.lookups.spmTestReqs) STATE.lookups.spmTestReqs = data.lookups.spmTestReqs;
       if (data.lookups.thssDetail)  STATE.lookups.thssDetail  = data.lookups.thssDetail;
+      if (data.lookups.thssCommenced) STATE.lookups.thssCommenced = data.lookups.thssCommenced;
       if (data.lookups.tripTags)      STATE.lookups.tripTags      = data.lookups.tripTags;
       if (data.lookups.dateOverrides) STATE.lookups.dateOverrides = data.lookups.dateOverrides;
     }
@@ -3763,6 +3795,17 @@ function antennaNoteForRow(sno, actCodeStr) {
 }
 
 // [18] Service Name Validation → Column AE
+// Split a service string on ; or , and normalise each name for comparison
+function splitServiceNames(s) {
+  return String(s || '')
+    .split(/[;,]/)
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+function normServiceName(s) {
+  return s.toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
 function svcNameValidationForRow(service, sno, thssServiceName) {
   if (!service) return 'MISSING SERVICE NAME';
   // Stage 10 (v3.21): site-level THSS comparison — Remedy Source of Truth
@@ -3775,9 +3818,11 @@ function svcNameValidationForRow(service, sno, thssServiceName) {
     const haveAnyTHSS = Object.keys(STATE.lookups.serviceMap).length > 5;
     return haveAnyTHSS ? `Site ${sno} not in THSS service map — verify manually` : '';
   }
-  const refUp = reference.toUpperCase();
-  const bad = service.split(';').map(s => s.trim())
-    .filter(s => s && !refUp.includes(s.toUpperCase()));
+  // Order-independent, delimiter-agnostic comparison: every service name on
+  // the row must appear in the Remedy source-of-truth service set.
+  const refSet = new Set(splitServiceNames(reference).map(normServiceName));
+  const bad = splitServiceNames(service)
+    .filter(s => !refSet.has(normServiceName(s)));
   if (bad.length) return `NOT IN THSS for site ${sno}: ${bad.join('; ')}`;
   return '';
 }
@@ -4385,7 +4430,7 @@ const district = STATE.settings.district;
       'Week Commencing':        weekCommencing(useDate),
       'Trip Activity':          '',
       'Trip Team':              '',
-      'Commencement Date':    startDt,   // mirrors Start Date (QOP rule)
+      'Commencement Date':    commencedDateForRow(src.sno, svc) || startDt,   // THSS Commenced_Date (fallback Start Date)
       'Service Class':        src.svcClass,
       'Programming Bulletin Conflicts': pbConflict,
       'Recommissioning Business Rules':  recommOut.rules,
@@ -4499,7 +4544,7 @@ function buildQOPRow(r, rd) {
     'Week Commencing':        weekCommencing(cd),
     'Trip Activity':          '',
     'Trip Team':              '',
-    'Commencement Date': fmtDateTime(cd, startHour(r.act)),
+    'Commencement Date': commencedDateForRow(r.sno, svc) || fmtDateTime(cd, startHour(r.act)),
     'Service Class': prev.svcClass || r.cls,
     'Programming Bulletin Conflicts': _pbC,
     'Recommissioning Business Rules': _recomm.rules,
@@ -4919,9 +4964,11 @@ function revalidateQOP() {
     row['Service Name Validation'] = svcNameValidationForRow(svc, sno, row['Remedy Source of Truth']);
     if (row['Service Name Validation']) counts.sv++;
 
-    // Commencement Date + Week Commencing mirror Start Date
-    row['Commencement Date'] = row['Start Date'];
+    // Week Commencing mirrors Start Date; Commencement Date comes from THSS
+    // (do NOT overwrite it with Start Date).
     row['Week Commencing']   = weekCommencing(row['Start Date']);
+    if (!row['Commencement Date'])
+      row['Commencement Date'] = commencedDateForRow(row['Site Number'], row['Service']) || row['Start Date'];
 
     // Stage 7 cleanup re-applied (idempotent)
     stage7_CleanupRow(row);
@@ -4937,6 +4984,24 @@ function revalidateQOP() {
 }
 
 
+
+// Commencement Date = the service's Commenced_Date from THSS, matched by
+// site + service name. Falls back to '' if no THSS match (so it's clearly
+// blank rather than wrong). For multi-service rows, uses the earliest date.
+function commencedDateForRow(sno, service) {
+  const map = STATE.lookups.thssCommenced || {};
+  if (!Object.keys(map).length) return '';
+  const names = splitServiceNames(service);
+  let best = null, bestStr = '';
+  for (const nm of names) {
+    const s = map[`${sno}|${nm.toUpperCase()}`];
+    if (s) {
+      const d = parseDate(s);
+      if (d && (!best || d < best)) { best = d; bestStr = s; }
+    }
+  }
+  return bestStr;
+}
 
 // Week-commencing (Monday) for a QOP date string → "DD/MM/YYYY"
 function weekCommencing(dateStr) {
@@ -5108,6 +5173,59 @@ function qopDuplicateSelected() {
 }
 
 
+
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS — THSS Live Data viewer (read-only + filter + export)
+// ═══════════════════════════════════════════════════════════════
+const THSS_COLS = [
+  ['sno','Site No'],['sname','Site Name'],['service','Service'],
+  ['svcClass','Class'],['modulation','Modulation'],['area','Area Served'],
+  ['commenced','Commenced Date'],
+];
+function renderTHSSData() {
+  const head = document.getElementById('thss-head');
+  const body = document.getElementById('thss-body');
+  const cnt  = document.getElementById('thss-count');
+  if (!head) return;
+  const data = STATE.lookups.thssDetail || [];
+  head.innerHTML = THSS_COLS.map(([,l]) => `<th style="white-space:nowrap">${l}</th>`).join('');
+  if (!data.length) {
+    cnt.textContent = 'no data';
+    body.innerHTML = `<tr><td colspan="${THSS_COLS.length}" style="text-align:center;color:var(--muted);padding:28px">
+      No THSS data — import Automated_QOP_Builder.xlsm on the Import tab (THSS_Live sheet)</td></tr>`;
+    return;
+  }
+  const term = (document.getElementById('thss-search').value || '').toLowerCase();
+  const cls  = document.getElementById('thss-class').value;
+  const rows = data.filter(d => {
+    if (cls && d.svcClass !== cls) return false;
+    if (term) { const hay = `${d.sno} ${d.sname} ${d.service} ${d.area}`.toLowerCase(); if (!hay.includes(term)) return false; }
+    return true;
+  });
+  cnt.textContent = `${rows.length}${(term||cls)?` of ${data.length}`:''} services`;
+  body.innerHTML = rows.map((d,i) => `<tr class="${i%2?'':'alt'}">
+    <td style="padding:3px 8px" class="mono">${esc(d.sno)}</td>
+    <td style="padding:3px 8px">${esc(d.sname)}</td>
+    <td style="padding:3px 8px">${esc(d.service)}</td>
+    <td style="padding:3px 8px;text-align:center">${d.svcClass?`<span class="cls-badge ${clsClass(d.svcClass)}">${esc(d.svcClass)}</span>`:'–'}</td>
+    <td style="padding:3px 8px">${esc(d.modulation)}</td>
+    <td style="padding:3px 8px;color:var(--muted)">${esc(d.area)}</td>
+    <td style="padding:3px 8px;white-space:nowrap">${esc(d.commenced)}</td>
+  </tr>`).join('');
+}
+function thssExportCSV() {
+  const data = STATE.lookups.thssDetail || [];
+  if (!data.length) { toast('No THSS data', 'error'); return; }
+  const lines = [THSS_COLS.map(([,l])=>`"${l}"`).join(',')]
+    .concat(data.map(d => THSS_COLS.map(([k])=>`"${(d[k]||'').toString().replace(/"/g,'""')}"`).join(',')));
+  const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `BAI_THSS_${STATE.settings.district||'data'}.csv`;
+  a.click();
+  toast('THSS data exported', 'success');
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  SETTINGS — SITES Planning Data (editor + CSV import/export)
@@ -5470,13 +5588,11 @@ function qopCellEdit(input) {
   const col = input.dataset.qcol;
   if (qopBuiltRows[i]) {
     qopBuiltRows[i][col] = input.value;
-    // Commencement Date + Week Commencing mirror Start Date
+    // Start Date change updates Week Commencing only — Commencement Date is
+    // the THSS Commenced_Date and stays independent (still user-editable).
     if (col === 'Start Date') {
-      qopBuiltRows[i]['Commencement Date'] = input.value;
       qopBuiltRows[i]['Week Commencing'] = weekCommencing(input.value);
       const tr = input.closest('tr');
-      const cInp = tr && tr.querySelector('input[data-qcol="Commencement Date"]');
-      if (cInp) cInp.value = input.value;
       const wInp = tr && tr.querySelector('input[data-qcol="Week Commencing"]');
       if (wInp) wInp.value = qopBuiltRows[i]['Week Commencing'];
     }
@@ -7287,6 +7403,7 @@ function showSetPage(page, btn) {
   if (page === "connections") renderConnectionsPage();
   if (page === "sitesdata")   renderSitesData();
   if (page === "prevqop")     renderPrevQOP();
+  if (page === "thssdata")    renderTHSSData();
 }
 
 // ── Service Map ─────────────────────────────────────────────────
@@ -7873,6 +7990,7 @@ async function xlProcessTHSS(wb) {
   const district = STATE.settings.district;
 
   STATE.lookups.thssDetail = [];
+  STATE.lookups.thssCommenced = {};   // "sno|SERVICENAME" → Commenced_Date (DD/MM/YYYY HH:MM)
   const siteServices = {};
   for (const r of rows) {
     const dist = r['District'] || '';
@@ -7885,11 +8003,17 @@ async function xlProcessTHSS(wb) {
     if (!siteServices[sno]) siteServices[sno] = [];
     if (!siteServices[sno].includes(svc)) siteServices[sno].push(svc);
     if (sname && !STATE.lookups.siteNames[sno]) STATE.lookups.siteNames[sno] = sname;
+    const commenced = r['Commenced_Date'] || r['Commencement_Date'] || '';
+    const commencedStr = commenced ? fmtQOPDateTime(parseDate(commenced), extractTime(commenced, '00:00')) : '';
     STATE.lookups.thssDetail.push({
       sno, sname, service: svc, svcClass: cls,
       modulation: (r['Modulation'] || '').trim(),
       area: (r['Area_Served'] || '').trim(),
+      commenced: commencedStr,
     });
+    if (commencedStr) {
+      STATE.lookups.thssCommenced[`${sno}|${svc.toUpperCase()}`] = commencedStr;
+    }
   }
 
   for (const [sno, svcs] of Object.entries(siteServices)) {
