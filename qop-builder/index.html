@@ -4405,12 +4405,15 @@ const district = STATE.settings.district;
     // daytime works stay Primary.
     let timing, timingRsn;
     if (src.timing) {
+      // Source provided timing — honour it
       timing    = src.timing;
       timingRsn = src.timingReason || timingReason(src.timing);
     } else {
-      const _tc = calcTimingForRow(src.descr, src.startDate, src.ai, src.ss);
-      timing    = _tc.timing || timingCategory('', src.svcClass);
-      timingRsn = _tc.reason || timingReason(timing);
+      // Source blank — derive from the Activity Rules via the description
+      // (the activity type, e.g. "Quarterly ACU" → Secondary, "EPP" → Outside).
+      const ruleTiming = timingCategory(src.descr || '', src.svcClass);
+      timing    = ruleTiming;
+      timingRsn = timingReason(timing);
     }
 
     // Service: THSS service map preferred, fallback to source service name
@@ -5418,7 +5421,8 @@ function sitesImportCSV(evt) {
 const PREVQOP_COLS = [
   ['sno','Site No'],['sname','Site Name'],['service','Service'],
   ['ai','AI'],['ss','SS'],['rpw','RPW'],['rac','RAC'],
-  ['startDate','Start Date'],['endDate','End Date'],['timing','Timing'],
+  ['startDate','Start Date'],['endDate','End Date'],
+  ['timing','Timing'],['timingReason','Timing Reason'],
   ['descr','Description'],['code','Activity'],['svcClass','Class'],
   ['modulation','Modulation'],['name','Name'],['comments','Comments'],
 ];
