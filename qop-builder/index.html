@@ -4825,6 +4825,19 @@ function renderQOPPreview(rows) {
         }
 
         // Trip Activity → dropdown linked to Activity Rules
+        // Timing → dropdown (Primary / Secondary / Outside)
+        if (c === 'Timing') {
+          const topts = ['Primary','Secondary','Outside'];
+          const isOut = val === 'Outside';
+          return `<td style="${tdStyle}">
+            <select data-qrow="${origIdx}" data-qcol="Timing" onchange="qopCellEdit(this)"
+              style="background:${cc?'transparent':'var(--surf2)'};border:1px solid ${cc?'transparent':'var(--border)'};color:${isOut?'var(--danger)':'var(--text)'};font-weight:${isOut?'600':inpW};font-size:11px;padding:2px 4px;border-radius:3px;min-width:95px">
+              <option value=""${!val?' selected':''}>—</option>
+              ${topts.map(o => `<option${val===o?' selected':''}>${o}</option>`).join('')}
+            </select>
+          </td>`;
+        }
+
         if (c === 'Trip Activity') {
           const opts = tripActivityOptions();
           return `<td style="${tdStyle}">
