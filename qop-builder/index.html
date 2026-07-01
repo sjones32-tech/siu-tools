@@ -4971,7 +4971,8 @@ function qopDateEdit(input) {
     }
   }
   _qopSelectedRow = i;
-  syncQOPDateToTrip(row, col, newVal);
+  syncQOPDateToTrip(row, col, newVal);   // (this persists date overrides)
+  persist();
   // Recolour just this row's date cells in place (no DOM rebuild → keeps the
   // native datetime picker's editing state intact while you type)
   qopRecolorRowDates(input.closest('tr'), row);
@@ -5057,6 +5058,7 @@ function qopDeleteSelected() {
   idxs.forEach(i => qopBuiltRows.splice(i, 1));
   _qopSelected.clear();
   invalidateTripCache();
+  persist();
   renderQOPPreview(qopBuiltRows);
   toast(`${idxs.length} row(s) deleted`, 'info');
 }
@@ -5069,6 +5071,7 @@ function qopDuplicateSelected() {
   });
   _qopSelected.clear();
   invalidateTripCache();
+  persist();
   renderQOPPreview(qopBuiltRows);
   toast(`${idxs.length} row(s) duplicated`, 'success');
 }
@@ -5458,8 +5461,23 @@ function qopCellEdit(input) {
                    input.value.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/));
       // (visual refresh on next build — keep simple)
     }
+    // Trip-tag columns also save to the durable store (survive rebuilds +
+    // sync with the Trip Planner) — keyed by the row's stable _uid.
+    if (col === 'Trip Activity' || col === 'Trip Team' || col === 'Comments') {
+      const uid = qopBuiltRows[i]._uid;
+      if (uid) {
+        if (!STATE.lookups.tripTags) STATE.lookups.tripTags = {};
+        const key = tripTagKey(qopBuiltRows[i]);
+        if (!STATE.lookups.tripTags[key]) STATE.lookups.tripTags[key] = {};
+        STATE.lookups.tripTags[key][col] = input.value;
+      }
+      // reflect onto the trip cache row if present
+      const trow = _tripFullYear.find(r => r._uid === qopBuiltRows[i]._uid);
+      if (trow) trow[col] = input.value;
+    }
+    persist();   // commit the edit to localStorage
     document.getElementById('qop-status').textContent =
-      `${qopBuiltRows.length} rows — edited (unsaved edits apply to export)`;
+      `${qopBuiltRows.length} rows — saved ✓`;
   }
 }
 
@@ -5467,6 +5485,7 @@ function qopDeleteRow(i) {
   if (!confirm(`Delete row ${i+1} (${qopBuiltRows[i]?.['Site Name']||''} — ${qopBuiltRows[i]?.['Service']||''})?`)) return;
   qopBuiltRows.splice(i, 1);
   invalidateTripCache();
+  persist();
   renderQOPPreview(qopBuiltRows);
   toast('Row deleted', 'info');
 }
@@ -5479,8 +5498,10 @@ function qopAddRow() {
   template['District'] = STATE.settings.district;
   template['Name']     = STATE.settings.tech;
   template['RPW']      = '0';
+  template['_uid']     = 'q' + Math.random().toString(36).slice(2,8);
   qopBuiltRows.push(template);
   invalidateTripCache();
+  persist();
   renderQOPPreview(qopBuiltRows);
   // Scroll to bottom
   const wrap = document.querySelector('#qop-preview div[style*="overflow:auto"]');
