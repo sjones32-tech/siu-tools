@@ -2325,6 +2325,7 @@ function loadPersisted() {
     if (data.qopSource)    STATE.qopSource = data.qopSource;
     if (data.qopBuiltRows && data.qopBuiltRows.length) {
       qopBuiltRows = data.qopBuiltRows;
+      reorderAllQOPRows();          // migrate legacy column order
       _pendingQOPRestore = true;   // render once the QOP tab/preview is ready
     }
     if (data.connections) {
@@ -2364,6 +2365,7 @@ function showTab(name) {
   if (name === "sitegrid")   renderSiteGrid();
   if (name === "servicegrid") renderServiceGrid();
   if (name === "qop" && qopBuiltRows.length) {
+    reorderAllQOPRows();
     renderQOPPreview(qopBuiltRows);
     const eb = document.getElementById('qop-export-btn'); if (eb) eb.disabled = false;
     const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = false;
@@ -5510,6 +5512,32 @@ function qopClearAll() {
 }
 
 
+
+// Canonical QOP column order (Week Commencing/Trip Activity/Trip Team between
+// Email and Commencement Date). Legacy/restored rows are reordered to match.
+const QOP_COL_ORDER = [
+  '_uid','District','Population','Site Number','Site Name','Audience Impact',
+  'Service State','RPW','RAC','Start Date','End Date','Timing','Timing Reason',
+  'Description of Work','Maintenance Activity Number','Service','Name','Comments',
+  'Email','Week Commencing','Trip Activity','Trip Team','Commencement Date',
+  'Service Class','Programming Bulletin Conflicts','Recommissioning Business Rules',
+  'Recommissioning Action Required','Public Holiday','Antenna Testing',
+  'Original Activity Code','Original Audience Impact','Original Service State',
+  'Original Description','Outage Window','Service Name Validation',
+  'SPM Completion Notes','Remedy Source of Truth','Modulation'
+];
+function reorderQOPRow(row) {
+  const out = {};
+  QOP_COL_ORDER.forEach(k => { if (k in row) out[k] = row[k]; });
+  // Preserve any extra keys not in the canonical list (future-proofing)
+  Object.keys(row).forEach(k => { if (!(k in out)) out[k] = row[k]; });
+  return out;
+}
+function reorderAllQOPRows() {
+  if (Array.isArray(qopBuiltRows) && qopBuiltRows.length)
+    qopBuiltRows = qopBuiltRows.map(reorderQOPRow);
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  EXPORT — BAI submission XLSX (matches Q?_YYYY_District_Submission)
 //  Title banner (A1:R1) · District/date block (row 3) · 18-col header
@@ -5552,78 +5580,87 @@ function quarterDateRange() {
 
 async function exportQOPSubmission() {
   if (!qopBuiltRows.length) return;
-  let XLSX;
-  try { XLSX = await loadSheetJS(); }
-  catch(e) { toast('Excel export needs SheetJS (run via http/https, not file://). Use CSV instead.', 'error'); return; }
+  let ExcelJS;
+  try { ExcelJS = await loadExcelJS(); }
+  catch(e) { toast('Excel export needs internet (ExcelJS) and http/https. Use CSV instead.', 'error'); return; }
 
   const rows = qopBuiltRows.filter(rowInQuarterView);
   if (!rows.length) { toast('No rows in the selected quarter view', 'error'); return; }
 
   const district = STATE.settings.district || 'Sydney';
   const [qStart, qEnd] = quarterDateRange();
-  const fmtDMY = 'dd/mm/yyyy';
-  const fmtDMYHM = 'dd/mm/yyyy hh:mm';
 
-  // Build an array-of-arrays sheet; we'll set formats after.
-  const aoa = [];
-  aoa.push(['MAINTENANCE ACTIVITY PLAN / QUARTERLY OUTAGE PLAN']);          // row 1
-  aoa.push([]);                                                             // row 2
-  aoa.push(['', 'DISTRICT:', '', district, '', '', '', 'Start Date', qStart, '', 'End Date', qEnd]); // row 3
-  aoa.push([]);                                                             // row 4
-  aoa.push(SUBMISSION_HEADERS.slice());                                     // row 5 header
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('QOP');
 
-  rows.forEach(r => {
-    const line = SUBMISSION_HEADERS.map(h => {
+  // Column widths (match template)
+  const widths = [7.7,13.7,9.7,18.7,12.7,9,5.4,10,15.6,15.6,10.1,17.7,47.7,16.7,36.7,22.7,37.7,20];
+  ws.columns = widths.map(w => ({ width: w }));
+
+  const thin = { style:'thin', color:{ argb:'FF000000' } };
+  const allBorders = { top:thin, left:thin, bottom:thin, right:thin };
+
+  // Row 1 — title banner (merged A1:R1)
+  ws.mergeCells('A1:R1');
+  const t = ws.getCell('A1');
+  t.value = 'MAINTENANCE ACTIVITY PLAN / QUARTERLY OUTAGE PLAN';
+  t.font = { bold:true, size:14 };
+  t.alignment = { horizontal:'center', vertical:'center' };
+
+  // Row 3 — district + date block
+  ws.getCell('B3').value = 'DISTRICT:'; ws.getCell('B3').font = { bold:true };
+  ws.getCell('D3').value = district;
+  ws.getCell('H3').value = 'Start Date'; ws.getCell('H3').font = { bold:true };
+  ws.getCell('I3').value = qStart; ws.getCell('I3').numFmt = 'dd/mm/yyyy';
+  ws.getCell('K3').value = 'End Date'; ws.getCell('K3').font = { bold:true };
+  ws.getCell('L3').value = qEnd;   ws.getCell('L3').numFmt = 'dd/mm/yyyy';
+  ws.mergeCells('Q3:R4');   // comment box merge (as template)
+
+  // Row 5 — header
+  const hdrRow = ws.getRow(5);
+  SUBMISSION_HEADERS.forEach((h, i) => {
+    const cell = hdrRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { bold:true };
+    cell.alignment = { horizontal:'center', vertical:'center', wrapText:true };
+    cell.border = allBorders;
+  });
+  hdrRow.height = 51;
+
+  // Data rows from row 6
+  rows.forEach((r, ri) => {
+    const excelRow = ws.getRow(6 + ri);
+    SUBMISSION_HEADERS.forEach((h, ci) => {
       const key = SUBMISSION_MAP[h];
       let v = r[key];
-      if (h === 'Start Date' || h === 'End Date') { const d = qopToJSDate(v); return d || (v||''); }
-      if (h === 'RPW') { const n = parseFloat(v); return isNaN(n) ? (v||'') : n; }
-      return (v === undefined || v === null) ? '' : v;
+      const cell = excelRow.getCell(ci + 1);
+      if (h === 'Start Date' || h === 'End Date') {
+        const d = qopToJSDate(v);
+        if (d) { cell.value = d; cell.numFmt = 'dd/mm/yyyy hh:mm'; }
+        else cell.value = v || '';
+      } else if (h === 'RPW') {
+        const n = parseFloat(v); cell.value = isNaN(n) ? (v||'') : n;
+      } else {
+        cell.value = (v === undefined || v === null) ? '' : v;
+      }
+      cell.border = allBorders;
+      if (h === 'Description of Work' || h === 'Service' || h === 'Comments')
+        cell.alignment = { wrapText:true, vertical:'top' };
     });
-    aoa.push(line);
   });
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates:true });
+  // AutoFilter across the header + data
+  const lastRow = 5 + rows.length;
+  ws.autoFilter = { from:{ row:5, column:1 }, to:{ row:lastRow, column:18 } };
 
-  // Merges: title A1:R1, and Q3:R4 (comment box in template)
-  ws['!merges'] = [
-    { s:{r:0,c:0}, e:{r:0,c:17} },
-    { s:{r:2,c:16}, e:{r:3,c:17} },
-  ];
-
-  // Column widths (chars) matching the template
-  ws['!cols'] = [
-    {wch:7.7},{wch:13.7},{wch:9.7},{wch:18.7},{wch:12.7},{wch:9},{wch:5.4},
-    {wch:10},{wch:15.6},{wch:15.6},{wch:10.1},{wch:17.7},{wch:47.7},{wch:16.7},
-    {wch:36.7},{wch:22.7},{wch:37.7},{wch:20}
-  ];
-
-  // Date cell number formats + banner date cells
-  const setFmt = (addr, fmt) => { if (ws[addr]) ws[addr].z = fmt; };
-  setFmt('I3', fmtDMY); setFmt('L3', fmtDMY);
-  for (let i = 0; i < rows.length; i++) {
-    const excelRow = 6 + i;              // data starts row 6
-    setFmt('I' + excelRow, fmtDMYHM);    // Start Date (col I = index 8)
-    setFmt('J' + excelRow, fmtDMYHM);    // End Date  (col J = index 9)
-  }
-
-  // Bold the title (row1) and header (row5) cells
-  const bold = { font:{ bold:true } };
-  if (ws['A1']) ws['A1'].s = { font:{ bold:true, sz:14 } };
-  SUBMISSION_HEADERS.forEach((_, ci) => {
-    const addr = XLSX.utils.encode_cell({ r:4, c:ci });
-    if (ws[addr]) ws[addr].s = bold;
-  });
-  if (ws['B3']) ws['B3'].s = bold;
-  if (ws['H3']) ws['H3'].s = bold;
-  if (ws['K3']) ws['K3'].s = bold;
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'QOP');
-
+  // Write + download
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
   const qLabel = _qopQuarterView === 'ALL' ? 'FullYear' : _qopQuarterView;
-  const fname = `${qLabel}_${STATE.settings.year}_${district}_-_Submission.xlsx`;
-  XLSX.writeFile(wb, fname, { cellStyles:true });
+  a.download = `${qLabel}_${STATE.settings.year}_${district}_-_Submission.xlsx`;
+  a.click();
   toast(`Submission exported — ${rows.length} rows (${_qopQuarterView === 'ALL' ? 'full year' : _qopQuarterView})`, 'success');
 }
 
@@ -5714,7 +5751,7 @@ function importDataJSON(evt) {
       if (data.rows)         Object.assign(STATE.rows, data.rows);
       if (data.settings)     Object.assign(STATE.settings, data.settings);
       if (data.qopSource)    STATE.qopSource    = data.qopSource;
-      if (data.qopBuiltRows) { qopBuiltRows = data.qopBuiltRows; _pendingQOPRestore = true; }
+      if (data.qopBuiltRows) { qopBuiltRows = data.qopBuiltRows; reorderAllQOPRows(); _pendingQOPRestore = true; }
       if (data.importStatus) Object.assign(STATE.importStatus, data.importStatus);
 
       if (data.lookups) {
@@ -6851,6 +6888,21 @@ function parseCSVText(text) {
   // Wrapper around existing parseCSV but returns array of plain objects
   const rows = parseCSV(text);
   return rows; // parseCSV already returns [{colName: value}]
+}
+
+
+// Load ExcelJS (full styling support) for the submission export
+async function loadExcelJS() {
+  if (window.ExcelJS) return window.ExcelJS;
+  if (location.protocol === 'file:')
+    throw new Error('ExcelJS cannot load on file:// — run via http/https');
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    s.onload  = () => resolve(window.ExcelJS);
+    s.onerror = () => reject(new Error('Failed to load ExcelJS'));
+    document.head.appendChild(s);
+  });
 }
 
 // Load SheetJS from CDN for Excel (.xlsm) parsing
