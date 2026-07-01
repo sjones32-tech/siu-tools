@@ -6336,6 +6336,41 @@ function runImport3() {
   if (currentTab === 'schedule') renderSchedule();
 }
 
+
+// Dry-run conflict counter over the imported previous-QOP source. Shifts each
+// row's dates +1 year (as the real build does) and counts how many would be
+// flagged by PB / recommissioning / antenna rules. Used for the import-card
+// status readouts. Defensive against missing lookups (returns zeros).
+function countQOPSourceConflicts() {
+  const out = { pb: 0, recomm: 0, antenna: 0 };
+  const src = STATE.qopSource || [];
+  if (!src.length) return out;
+
+  for (const s of src) {
+    try {
+      const startISO = shiftDateOneYear(s.startDate || '');
+      const endISO   = shiftDateOneYear(s.endDate || s.startDate || '');
+
+      // PB conflict
+      if ((STATE.lookups.pbEntries || []).length) {
+        const pb = pbConflictsForRow(s.service || '', s.district || STATE.settings.district, startISO, endISO);
+        if (pb) out.pb++;
+      }
+      // Recommissioning
+      if ((STATE.lookups.recommEntries || []).length) {
+        const rc = recommFlagsForRow(s.sno || '', s.sname || '', s.service || '', startISO);
+        if (rc && (rc.rules || rc.action)) out.recomm++;
+      }
+      // Antenna
+      if ((STATE.lookups.antennaSNP || []).length) {
+        const an = antennaNoteForRow(s.sno || '', s.code || '');
+        if (an) out.antenna++;
+      }
+    } catch (e) { /* skip a bad row, keep counting */ }
+  }
+  return out;
+}
+
 function checkPBConflicts() {
   let count = 0;
   const pbs = STATE.lookups.pbEntries;
