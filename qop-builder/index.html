@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BAI Annual Maintenance Planner 20276</title>
+<title>BAI Annual Maintenance Planner 2026</title>
 <style>
 /* ═══════════════════════════════════════════════════════
    DESIGN TOKENS  – broadcast ops control-room palette
@@ -304,6 +304,17 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 .qop-meta { display: flex; gap: 16px; padding: 12px; background: var(--surf); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
 .qop-meta label { color: var(--muted); font-size: 11px; }
 .qop-meta select { background: var(--surf2); border: 1px solid var(--border2); color: var(--text); border-radius: var(--radius); padding: 5px 8px; font-size: 12px; }
+/* Force dark rendering of ALL native select controls and their option popups
+   (browsers otherwise draw the option list with a white background). */
+select { color-scheme: dark; }
+select option, select optgroup {
+  background-color: #12233A;   /* --surf2-ish, opaque so it never shows white */
+  color: #E6EDF5;
+}
+select option:checked, select option:hover {
+  background-color: #1E2D3E;
+  color: #FFFFFF;
+}
 
 /* ── Settings ── */
 #settings-content { padding: 20px; overflow: auto; flex: 1; }
@@ -447,20 +458,25 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 .imp-meta span { color: var(--accent); }
 
 .imp-textarea {
-  width: 100%; height: 90px; background: var(--surf2);
+  width: 100%; box-sizing: border-box; height: 90px; background: var(--surf2);
   border: 1px solid var(--border2); color: var(--text);
   border-radius: 4px; padding: 6px 8px; font-size: 11px;
   font-family: var(--mono); resize: vertical;
 }
+.imp-card, .imp-card * { box-sizing: border-box; }
+.imp-card { overflow: hidden; }
+.imp-body { min-width: 0; }
+.imp-fetch-btn { min-width: 0; }
 .imp-textarea:focus { outline: none; border-color: var(--accent); }
 .imp-textarea::placeholder { color: var(--muted); }
 
 .imp-footer {
-  display: flex; gap: 8px; align-items: center;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
   padding: 8px 14px; border-top: 1px solid var(--border);
   background: var(--surf2); border-radius: 0 0 var(--radius) var(--radius);
 }
-.imp-last { font-size: 10px; color: var(--muted); flex: 1; }
+.imp-footer .btn, .imp-footer .imp-fetch-btn { flex: 0 1 auto; }
+.imp-last { font-size: 10px; color: var(--muted); flex: 1 0 100%; margin-top: 2px; }
 
 /* PB conflict + recomm + antenna columns */
 .pb-conflict  { color: #ff6b35; font-size: 10px; font-weight: 600; }
@@ -516,10 +532,11 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 .imp-fetch-btn {
   background: linear-gradient(135deg,#1a3a5c,#0d2540);
   border: 1px solid var(--accent); color: var(--accent);
-  border-radius: 4px; padding: 5px 11px; font-size: 12px;
+  border-radius: 4px; padding: 5px 9px; font-size: 11px;
   font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap;
 }
+.imp-footer .btn { padding: 5px 9px; font-size: 11px; white-space: nowrap; }
 .imp-fetch-btn:hover { background: rgba(59,130,246,.2); }
 .imp-fetch-btn:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -575,7 +592,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
     </div>
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;">Annual Maintenance Planner</div>
-      <div class="sub">Sydney SIU · 20267</div>
+      <div class="sub">Sydney SIU · 2026</div>
     </div>
     <div class="spacer"></div>
     <div class="pill">District: <span id="hdr-district">Sydney</span></div>
@@ -3820,12 +3837,21 @@ function svcNameValidationForRow(service, sno, thssServiceName) {
     const haveAnyTHSS = Object.keys(STATE.lookups.serviceMap).length > 5;
     return haveAnyTHSS ? `Site ${sno} not in THSS service map — verify manually` : '';
   }
-  // Order-independent, delimiter-agnostic comparison: every service name on
-  // the row must appear in the Remedy source-of-truth service set.
-  const refSet = new Set(splitServiceNames(reference).map(normServiceName));
-  const bad = splitServiceNames(service)
-    .filter(s => !refSet.has(normServiceName(s)));
-  if (bad.length) return `NOT IN THSS for site ${sno}: ${bad.join('; ')}`;
+  // Order-independent, delimiter-agnostic comparison in BOTH directions:
+  //  • services on the row NOT in Remedy  → hard flag (wrong / unknown)
+  //  • services in Remedy NOT on the row   → minor warning (missing)
+  const rowNames = splitServiceNames(service);
+  const refNames = splitServiceNames(reference);
+  const rowSet = new Set(rowNames.map(normServiceName));
+  const refSet = new Set(refNames.map(normServiceName));
+
+  const unknown = rowNames.filter(s => !refSet.has(normServiceName(s)));   // on row, not in Remedy
+  const missing = refNames.filter(s => !rowSet.has(normServiceName(s)));   // in Remedy, not on row
+
+  if (unknown.length)
+    return `NOT IN THSS for site ${sno}: ${unknown.join('; ')}`;          // hard flag
+  if (missing.length)
+    return `MISSING (warn): ${missing.join('; ')} listed in THSS but not on this row`;
   return '';
 }
 
@@ -4432,7 +4458,7 @@ const district = STATE.settings.district;
       'Week Commencing':        weekCommencing(useDate),
       'Trip Activity':          '',
       'Trip Team':              '',
-      'Commencement Date':    commencedDateForRow(src.sno, svc) || startDt,   // THSS Commenced_Date (fallback Start Date)
+      'Commencement Date':    commencedDateForRow(src.sno, svc) || String(startDt).replace(/\s+\d{1,2}:\d{2}.*$/, ''),   // THSS Commenced_Date, date only
       'Service Class':        src.svcClass,
       'Programming Bulletin Conflicts': pbConflict,
       'Recommissioning Business Rules':  recommOut.rules,
@@ -4546,7 +4572,7 @@ function buildQOPRow(r, rd) {
     'Week Commencing':        weekCommencing(cd),
     'Trip Activity':          '',
     'Trip Team':              '',
-    'Commencement Date': commencedDateForRow(r.sno, svc) || fmtDateTime(cd, startHour(r.act)),
+    'Commencement Date': commencedDateForRow(r.sno, svc) || String(fmtDateTime(cd, startHour(r.act))).replace(/\s+\d{1,2}:\d{2}.*$/, ''),
     'Service Class': prev.svcClass || r.cls,
     'Programming Bulletin Conflicts': _pbC,
     'Recommissioning Business Rules': _recomm.rules,
@@ -4595,7 +4621,8 @@ const QOP_CELL_COLORS = {
   holiday:      { bg: '#FFE0C0', fg: '#7a4510' },  // X  – light orange
   antenna:      { bg: '#DDEBF7', fg: '#16456e' },  // Y  – mild blue
   outageWin:    { bg: '#FFF2CC', fg: '#6e5a10' },  // AD – mild yellow
-  svcVal:       { bg: '#BDD7EE', fg: '#11406b' },  // AE – distinct blue
+  svcVal:       { bg: '#BDD7EE', fg: '#11406b' },  // AE – distinct blue (hard flag)
+  svcWarn:      { bg: '#FFF2CC', fg: '#6e5a10' },  // AE – soft yellow (missing name warning)
   autoChanged:  { bg: '#FFCC99', fg: '#6e3c0a' },  // auto-changed fields – mild orange
   attention:    { bg: '#FFE0C0', fg: '#7a4510' },  // soft attention tint (date needs review)
   missing:      { bg: '#FFC7CE', fg: '#7a1220' },  // missing mandatory – light red
@@ -4616,11 +4643,14 @@ function qopCellColor(col, row) {
   if (col === 'Public Holiday' && val)            return QOP_CELL_COLORS.holiday;
   if (col === 'Antenna Testing' && val)           return QOP_CELL_COLORS.antenna;
   if (col === 'Outage Window' && val)             return QOP_CELL_COLORS.outageWin;
-  if (col === 'Service Name Validation' && val)   return QOP_CELL_COLORS.svcVal;
+  if (col === 'Service Name Validation' && val)
+    return /^MISSING \(warn\)/.test(val) ? QOP_CELL_COLORS.svcWarn : QOP_CELL_COLORS.svcVal;
 
   // ── Cross-highlight the Service cell when its validation failed ──
-  if (col === 'Service' && (row['Service Name Validation'] || '').trim())
-    return QOP_CELL_COLORS.svcVal;
+  if (col === 'Service' && (row['Service Name Validation'] || '').trim()) {
+    return /^MISSING \(warn\)/.test(row['Service Name Validation'])
+      ? QOP_CELL_COLORS.svcWarn : QOP_CELL_COLORS.svcVal;
+  }
 
   // ── Start Date cell: flag when PB conflict / public holiday / outage
   //    window issue makes the chosen date/time the thing to change ──────
@@ -4770,6 +4800,18 @@ function renderQOPPreview(rows) {
         const tdStyle = `padding:2px 4px;font-size:11px;white-space:nowrap;${cellBg}`;
 
         // Date columns → native date & time picker
+        if (c === 'Commencement Date') {
+          // Date only — no time component
+          return `<td style="${tdStyle}">
+            <input type="date" value="${qopToDateOnly(val)}"
+              data-qrow="${origIdx}" data-qcol="Commencement Date"
+              onchange="qopDateOnlyEdit(this)"
+              style="background:${cc ? 'transparent' : 'var(--surf2)'};border:1px solid ${cc ? 'transparent' : 'var(--border)'};
+                     color:${inpFg};font-weight:${inpW};color-scheme:dark;
+                     font-size:11px;padding:2px 4px;width:130px;border-radius:3px"
+              title="${(cc ? '[FLAG] ' : '') + val.replace(/"/g,"'")}">
+          </td>`;
+        }
         if (QOP_DATE_COLS.includes(c)) {
           return `<td style="${tdStyle}">
             <input type="datetime-local" value="${qopToDTLocal(val)}"
@@ -4814,14 +4856,15 @@ function renderQOPPreview(rows) {
       <span style="color:var(--success);font-weight:600">${visibleIdx.length}${(filterActive || _qopQuarterView !== 'ALL') ? ` of ${rows.length}` : ''} rows</span>
       ${_qopQuarterView !== 'ALL' ? `<span style="background:var(--accent);color:#04243f;border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Viewing ${_qopQuarterView}</span>` : '<span style="background:var(--surf3);color:var(--muted);border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Full Year</span>'}
       ${(() => {
-        let pb=0, rc=0, hol=0, ant=0, ow=0, sv=0, miss=0, dord=0;
+        let pb=0, rc=0, hol=0, ant=0, ow=0, sv=0, svw=0, miss=0, dord=0;
         rows.forEach(r => {
           if (r['Programming Bulletin Conflicts']) pb++;
           if (r['Recommissioning Action Required'] || r['Recommissioning Business Rules']) rc++;
           if (r['Public Holiday']) hol++;
           if (r['Antenna Testing']) ant++;
           if (r['Outage Window']) ow++;
-          if (r['Service Name Validation']) sv++;
+          const sn = r['Service Name Validation'] || '';
+          if (sn) { if (/^MISSING \(warn\)/.test(sn)) svw++; else sv++; }
           if (dateOrderInvalid(r)) dord++;
           for (const f of QOP_MANDATORY) if (!(r[f]||'').toString().trim()) { miss++; break; }
         });
@@ -4834,6 +4877,7 @@ function renderQOPPreview(rows) {
           pill(ant, 'Antenna',  '#DDEBF7','#16456e','Antenna Testing'),
           pill(ow,  'Window',   '#FFF2CC','#6e5a10','Outage Window'),
           pill(sv,  'SvcName',  '#BDD7EE','#11406b','Service Name Validation'),
+          svw ? `<span onclick="qopFilterCol('Service Name Validation','MISSING (warn)')" style="cursor:pointer;background:#FFF2CC;color:#6e5a10;border-radius:9px;padding:1px 8px;font-size:10px;font-weight:700" title="Services listed in THSS but not on the row (minor warning)">⚠ SvcName missing: ${svw}</span>` : '',
           dord ? `<span style="background:#FFC7CE;color:#7a1220;border-radius:9px;padding:1px 8px;font-size:10px;font-weight:700" title="End Date is on/before Start Date">⚠ Date order: ${dord}</span>` : '',
           miss ? `<span style="background:#FFC7CE;color:#7a1220;border-radius:9px;padding:1px 8px;font-size:10px;font-weight:700">⚠ Missing fields: ${miss}</span>` : '',
         ].filter(Boolean).join(' ');
@@ -5002,7 +5046,9 @@ function commencedDateForRow(sno, service) {
       if (d && (!best || d < best)) { best = d; bestStr = s; }
     }
   }
-  return bestStr;
+  // Return date only (strip time) — Commencement Date is a date, not a datetime
+  if (bestStr) return bestStr.replace(/\s+\d{1,2}:\d{2}.*$/, '');
+  return '';
 }
 
 // Week-commencing (Monday) for a QOP date string → "DD/MM/YYYY"
@@ -5017,6 +5063,19 @@ function weekCommencing(dateStr) {
 
 // ── QOP datetime helpers ──────────────────────────────────────
 // "28/04/2026 08:00" → "2026-04-28T08:00" (datetime-local value)
+// Date-only (YYYY-MM-DD) from a QOP date string, for <input type=date>
+function qopToDateOnly(s) {
+  const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const d = parseDate(s);
+  return d ? toISO(d) : '';
+}
+// Date-only input value (YYYY-MM-DD) → QOP "DD/MM/YYYY" (no time)
+function dateOnlyToQOP(v) {
+  const m = String(v || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  return m ? `${m[3].padStart(2,'0')}/${m[2].padStart(2,'0')}/${m[1]}` : v;
+}
+
 function qopToDTLocal(s) {
   const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2})?:?(\d{2})?/);
   if (m && m[3]) {
@@ -5080,6 +5139,14 @@ function qopDateEdit(input) {
 // When a date field loses focus, re-apply the quarter view if the row has
 // moved out of the currently-viewed quarter (deferred, so it never interrupts
 // typing). Also persists the change.
+function qopDateOnlyEdit(input) {
+  const i = parseInt(input.dataset.qrow);
+  if (!qopBuiltRows[i]) return;
+  qopBuiltRows[i]['Commencement Date'] = dateOnlyToQOP(input.value);
+  persist();
+  document.getElementById('qop-status').textContent = `${qopBuiltRows.length} rows — saved ✓`;
+}
+
 function qopDateBlur(input) {
   persist();
   if (_qopQuarterView === 'ALL') return;
