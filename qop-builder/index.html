@@ -1370,7 +1370,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
                 <input type="file" id="import-file" accept=".json" style="display:none" onchange="importDataJSON(event)">
                 <div class="sep-line"></div>
                 <button class="btn btn-danger" onclick="clearAllData()">🗑 Reset All Data</button>
-                <div class="text-muted text-sm">Clears confirmed dates and status. Lookup edits are kept.</div>
+                <div class="text-muted text-sm">Clears confirmed dates, built QOP, imported source & overrides. Settings, lookups, SITES & THSS are kept.</div>
               </div>
             </div>
             <div class="setting-group">
@@ -5970,11 +5970,53 @@ function importDataJSON(evt) {
 }
 
 function clearAllData() {
-  if (!confirm("Reset all confirmed dates, status and notes?\n\nThe site schedule (which sites have what activities) will not change.\n\nThis cannot be undone.")) return;
+  if (!confirm(
+    "Reset ALL working data?\n\n" +
+    "This clears:\n" +
+    "  • Confirmed dates, status & notes (Annual Schedule)\n" +
+    "  • The built QOP grid and all your QOP edits\n" +
+    "  • Imported previous-QOP source & date overrides\n" +
+    "  • Import pipeline status\n\n" +
+    "This KEEPS: settings, service map, activity rules, holidays,\n" +
+    "custom SITES, and THSS data.\n\n" +
+    "This cannot be undone."
+  )) return;
+
+  // Working data
   STATE.rows = {};
+  qopBuiltRows = [];
+  STATE.qopSource = [];
+  STATE.importStatus = {};
+  _tripFullYear = [];
+  _qopSelected && _qopSelected.clear && _qopSelected.clear();
+
+  // Overrides + tags that belong to the (now-cleared) QOP
+  if (STATE.lookups) {
+    STATE.lookups.dateOverrides = {};
+    STATE.lookups.tripTags = {};
+  }
+
+  // Clear the persisted QOP grid too
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      delete d.qopBuiltRows;
+      delete d.qopQuarter;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    }
+  } catch(e) {}
+
   persist();
-  toast("Data reset", "info");
+  toast("All working data reset", "info");
+
+  // Refresh every view
   renderSchedule();
+  if (typeof renderImportTab === 'function') renderImportTab();
+  const qp = document.getElementById('qop-preview'); if (qp) qp.innerHTML = '';
+  const qs = document.getElementById('qop-status'); if (qs) qs.textContent = 'No QOP built';
+  const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = true;
+  const eb = document.getElementById('qop-export-btn'); if (eb) eb.disabled = true;
   updateBadges();
 }
 
@@ -6063,7 +6105,7 @@ function parseDate(str) {
 // ═══════════════════════════════════════════════════════════════
 function renderImportTab() {
   // Update card statuses from STATE.importStatus
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 7; i++) {
     const st = STATE.importStatus[i];
     if (!st) continue;
     const card = document.getElementById(`imp-card-${i}`);
@@ -8061,7 +8103,14 @@ async function xlProcessTHSS(wb) {
     if (!siteServices[sno].includes(svc)) siteServices[sno].push(svc);
     if (sname && !STATE.lookups.siteNames[sno]) STATE.lookups.siteNames[sno] = sname;
     const commenced = r['Commenced_Date'] || r['Commencement_Date'] || '';
-    const commencedStr = commenced ? fmtQOPDateTime(parseDate(commenced), extractTime(commenced, '00:00')) : '';
+    let commencedStr = '';
+    if (commenced) {
+      const cd = parseDate(commenced);
+      if (cd) {
+        const iso = `${cd.getFullYear()}-${String(cd.getMonth()+1).padStart(2,'0')}-${String(cd.getDate()).padStart(2,'0')}`;
+        commencedStr = fmtQOPDateTime(iso, extractTime(commenced, '00:00'));
+      }
+    }
     STATE.lookups.thssDetail.push({
       sno, sname, service: svc, svcClass: cls,
       modulation: (r['Modulation'] || '').trim(),
