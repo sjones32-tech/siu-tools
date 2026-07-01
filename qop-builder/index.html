@@ -3225,7 +3225,26 @@ function renderCoverageCheck() {
 // ═══════════════════════════════════════════════════════════════
 let _tripPreselect = null;   // {sno, mNo, activity} when arriving from a cell
 let _tripFullYear  = [];     // full-year QOP rows (all 12 months) for trip planning
-const TRIP_ACTIVITIES = ['Annually','6 Monthly','Quarterly','Quarterly ACU','EPP','EPP#','Nova & EPP'];
+// Trip Activity options are derived from the Activity Rules settings so the
+// two stay linked. Each rule's `match` string becomes a selectable label
+// (title-cased, with acronyms preserved).
+function tripActivityOptions() {
+  const rules = (STATE.lookups && STATE.lookups.actRules) || [];
+  const labels = rules.map(r => titleCaseActivity(r.match));
+  // De-dupe, keep order, fall back to a sensible default set if empty
+  const seen = new Set(); const out = [];
+  labels.forEach(l => { if (l && !seen.has(l)) { seen.add(l); out.push(l); } });
+  return out.length ? out : ['Annually','6 Monthly','Quarterly','Quarterly ACU','EPP','EPP#','Nova & EPP'];
+}
+function titleCaseActivity(s) {
+  return String(s||'').split(' ').map(w => {
+    const u = w.toUpperCase();
+    if (['EPP','EPP#','ACU','PM','FM'].includes(u)) return u;   // keep acronyms
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  }).join(' ');
+}
+// Back-compat alias (used by existing Trip Planner dropdown code)
+Object.defineProperty(window, 'TRIP_ACTIVITIES', { get: tripActivityOptions });
 
 // Build (or rebuild) the full-year dataset from the imported source.
 // Independent of the quarter selected on QOP Export.
@@ -4713,6 +4732,18 @@ function renderQOPPreview(rows) {
                      color:${inpFg};font-weight:${inpW};color-scheme:dark;
                      font-size:11px;padding:2px 4px;width:165px;border-radius:3px"
               title="${(cc ? '[FLAG] ' : '') + val.replace(/"/g,"'")}">
+          </td>`;
+        }
+
+        // Trip Activity → dropdown linked to Activity Rules
+        if (c === 'Trip Activity') {
+          const opts = tripActivityOptions();
+          return `<td style="${tdStyle}">
+            <select data-qrow="${origIdx}" data-qcol="Trip Activity" onchange="qopCellEdit(this)"
+              style="background:${val?'var(--surf2)':'transparent'};border:1px solid ${val?'var(--accent)':'var(--border)'};color:var(--text);font-size:11px;padding:2px 4px;border-radius:3px;min-width:110px">
+              <option value=""${!val?' selected':''}>—</option>
+              ${opts.map(o => `<option${val===o?' selected':''}>${o}</option>`).join('')}
+            </select>
           </td>`;
         }
 
