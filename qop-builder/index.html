@@ -301,6 +301,17 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 /* ── QOP export ── */
 #qop-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .qop-preview { flex: 1; overflow: auto; }
+
+/* ── Chunky, always-visible scrollbars so the horizontal bar is easy to
+   grab on any monitor size ── */
+.scroll-lg { scrollbar-width: auto; scrollbar-color: var(--accent) var(--surf2); }
+.scroll-lg::-webkit-scrollbar { width: 16px; height: 16px; }
+.scroll-lg::-webkit-scrollbar-track { background: var(--surf2); border-radius: 8px; }
+.scroll-lg::-webkit-scrollbar-thumb {
+  background: var(--accent); border-radius: 8px; border: 3px solid var(--surf2);
+}
+.scroll-lg::-webkit-scrollbar-thumb:hover { background: var(--accent2, #5aa0ff); }
+.scroll-lg::-webkit-scrollbar-corner { background: var(--surf2); }
 .qop-meta { display: flex; gap: 16px; padding: 12px; background: var(--surf); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
 .qop-meta label { color: var(--muted); font-size: 11px; }
 .qop-meta select { background: var(--surf2); border: 1px solid var(--border2); color: var(--text); border-radius: var(--radius); padding: 5px 8px; font-size: 12px; }
@@ -780,7 +791,7 @@ select option:checked, select option:hover {
           <option value="">All Modulations</option>
         </select>
       </div>
-      <div style="overflow:auto;flex:1">
+      <div class="scroll-lg" style="overflow:auto;flex:1">
         <table class="lk-table" style="width:100%">
           <thead><tr>
             <th style="width:70px;cursor:pointer" onclick="svcGridSort('sno')">Site No</th>
@@ -835,7 +846,7 @@ select option:checked, select option:hover {
         <button class="btn btn-ghost" onclick="invalidateTripCache();renderTripPlanner();toast('Refreshed from QOP','info')" style="font-size:11px" title="Rebuild from the latest QOP Export data">↻ Refresh</button>
         <button class="btn btn-warn" id="trip-coverage-btn" onclick="toggleCoverageView()" style="font-size:11px" title="Cross-check planned Site Grid activities against actual QOP outages">📋 Coverage Check</button>
       </div>
-      <div id="trip-content" style="overflow:auto;flex:1;padding:0 0 40px 0"></div>
+      <div id="trip-content" class="scroll-lg" style="overflow:auto;flex:1;padding:0 0 40px 0"></div>
     </div>
 
     <!-- ══════════ QOP EXPORT ══════════ -->
@@ -1732,7 +1743,7 @@ select option:checked, select option:hover {
               Columns: Site No, 7-net, WIN, Site Name, Class, EPP, Y1, Y2, then Jan–Dec activities.
               Edit inline — changes save automatically; click <strong>Apply Changes</strong> to refresh the schedule views.
             </div>
-            <div style="overflow:auto;max-height:calc(100vh - 230px)">
+            <div class="scroll-lg" style="overflow:auto;max-height:calc(100vh - 230px)">
               <table class="lk-table" style="width:100%;font-size:11px">
                 <thead><tr id="sites-head"></tr></thead>
                 <tbody id="sites-body"></tbody>
@@ -1761,7 +1772,7 @@ select option:checked, select option:hover {
               of truth for service names, site classes, modulations, and <strong>Commenced_Date</strong>
               (which populates the QOP Commencement Date column). Read-only reference.
             </div>
-            <div style="overflow:auto;max-height:calc(100vh - 230px)">
+            <div class="scroll-lg" style="overflow:auto;max-height:calc(100vh - 230px)">
               <table class="lk-table" style="width:100%;font-size:11px">
                 <thead><tr id="thss-head"></tr></thead>
                 <tbody id="thss-body"></tbody>
@@ -1791,7 +1802,7 @@ select option:checked, select option:hover {
               The raw previous-year QOP rows imported from <strong>Automated_QOP_Builder.xlsm</strong> (Sheet1) —
               the source the QOP Export builds from (dates shifted +1 year). Read-only reference.
             </div>
-            <div style="overflow:auto;max-height:calc(100vh - 230px)">
+            <div class="scroll-lg" style="overflow:auto;max-height:calc(100vh - 230px)">
               <table class="lk-table" style="width:100%;font-size:11px">
                 <thead><tr id="prevqop-head"></tr></thead>
                 <tbody id="prevqop-body"></tbody>
@@ -4416,11 +4427,10 @@ const district = STATE.settings.district;
       timingRsn = timingReason(timing);
     }
 
-    // Service: THSS service map preferred, fallback to source service name
-    const svc = (STATE.lookups.serviceMap[src.sno]
-      && !STATE.lookups.serviceMap[src.sno].includes('Add to'))
-        ? STATE.lookups.serviceMap[src.sno]
-        : (src.service || src.thssService || '');
+    // Service: keep the SOURCE row's own service name. The full THSS site
+    // service list is NOT written here — it lives in Remedy Source of Truth
+    // (below) and is only used to FLAG mismatches during validation.
+    const svc = (src.service || src.thssService || '').trim();
 
     // Start / End with time preserved from original (normalised HH:MM)
     const startTime = extractTime(src.startDate, '08:00');
@@ -4907,7 +4917,7 @@ function renderQOPPreview(rows) {
       <button class="btn btn-danger" style="font-size:11px" onclick="qopDeleteSelected()" ${_qopSelected.size?'':'disabled'}>🗑 Delete Selected</button>
       <button class="btn btn-danger" style="font-size:11px" onclick="qopClearAll()">🗑 Clear All</button>
     </div>
-    <div style="overflow:auto;max-height:calc(100vh - 200px)">
+    <div class="scroll-lg" style="overflow:auto;height:calc(100vh - 210px);border:1px solid var(--border);border-radius:6px">
       <table style="width:100%;border-collapse:collapse">
         <thead>${thead}</thead>
         <tbody id="qop-tbody">${tbodyRows}</tbody>
@@ -4921,22 +4931,48 @@ function qopSortBy(col) {
   else { _qopSort.col = col; _qopSort.dir = 1; }
 
   const dir = _qopSort.dir;
+  const isDateCol = QOP_DATE_COLS.includes(col) || col === 'Week Commencing';
   qopBuiltRows.sort((a, b) => {
     const av = (a[col] || '').toString();
     const bv = (b[col] || '').toString();
+
+    // Date/time columns → compare as full datetimes (date AND time)
+    if (isDateCol) {
+      const at = qopDateSortKey(av), bt = qopDateSortKey(bv);
+      if (at !== null && bt !== null) return (at - bt) * dir;
+      if (at === null && bt !== null) return 1;      // blanks last
+      if (at !== null && bt === null) return -1;
+      return 0;
+    }
+
     // Numeric compare when both look numeric
     const an = parseFloat(av), bn = parseFloat(bv);
     if (!isNaN(an) && !isNaN(bn) && /^\s*-?[\d.]+\s*$/.test(av) && /^\s*-?[\d.]+\s*$/.test(bv)) {
       return (an - bn) * dir;
     }
-    // Date compare when both parse as dates with / or -
+    // Generic date compare (any other col that holds dates)
     if (/\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/.test(av) && /\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/.test(bv)) {
-      const ad = parseDate(av), bd = parseDate(bv);
-      if (ad && bd) return (ad - bd) * dir;
+      const ad = qopDateSortKey(av), bd = qopDateSortKey(bv);
+      if (ad !== null && bd !== null) return (ad - bd) * dir;
     }
     return av.localeCompare(bv, undefined, { numeric: true }) * dir;
   });
   renderQOPPreview(qopBuiltRows);
+}
+
+// Full datetime sort key (ms since epoch) from a "DD/MM/YYYY HH:MM AM/PM"
+// string — includes the time so same-day rows sort by time correctly.
+function qopDateSortKey(s) {
+  s = String(s || '').trim();
+  if (!s) return null;
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
+  if (!m) { const d = parseDate(s); return d ? d.getTime() : null; }
+  let hr = m[4] ? parseInt(m[4]) : 0;
+  const min = m[5] ? parseInt(m[5]) : 0;
+  const ap = (m[6] || '').toUpperCase();
+  if (ap === 'PM' && hr < 12) hr += 12;
+  if (ap === 'AM' && hr === 12) hr = 0;
+  return new Date(+m[3], +m[2]-1, +m[1], hr, min).getTime();
 }
 
 function qopFilterCol(col, value) {
