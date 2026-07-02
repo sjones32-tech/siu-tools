@@ -2390,6 +2390,7 @@ function loadPersisted() {
       reorderAllQOPRows();          // migrate legacy column order
       _pendingQOPRestore = true;   // render once the QOP tab/preview is ready
     }
+    if (data.qopQuarter) _savedQOPQuarter = data.qopQuarter;   // restore view filter
     if (data.connections) {
       if (data.connections.sp)     Object.assign(STATE.connections.sp,     data.connections.sp);
       if (data.connections.sn)     Object.assign(STATE.connections.sn,     data.connections.sn);
@@ -2428,6 +2429,10 @@ function showTab(name) {
   if (name === "servicegrid") renderServiceGrid();
   if (name === "qop" && qopBuiltRows.length) {
     reorderAllQOPRows();
+    // Restore the saved View quarter into the dropdown + state before render
+    const qSelEl = document.getElementById('qop-quarter');
+    if (qSelEl && _savedQOPQuarter) { qSelEl.value = _savedQOPQuarter; _savedQOPQuarter = ''; }
+    if (qSelEl) _qopQuarterView = qSelEl.value || 'ALL';
     renderQOPPreview(qopBuiltRows);
     const eb = document.getElementById('qop-export-btn'); if (eb) eb.disabled = false;
     const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = false;
@@ -3650,6 +3655,7 @@ function buildQOP() {
 // View-only quarter filter — applied as a column filter, no rebuild.
 // Uses the existing per-column filter mechanism on the Start Date month.
 let _qopQuarterView = 'ALL';
+let _savedQOPQuarter = '';
 function applyQuarterView() {
   _qopQuarterView = (document.getElementById('qop-quarter') || {}).value || 'ALL';
   renderQOPPreview(qopBuiltRows);
