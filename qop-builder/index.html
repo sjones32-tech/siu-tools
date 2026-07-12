@@ -1799,8 +1799,7 @@ select option:checked, select option:hover {
               <button class="btn btn-ghost" style="font-size:11px" onclick="prevQOPExportCSV()">⬇ Export CSV</button>
             </div>
             <div style="padding:6px 14px;font-size:11px;color:var(--muted)">
-              The raw previous-year QOP rows imported from <strong>Automated_QOP_Builder.xlsm</strong> (Sheet1) —
-              the source the QOP Export builds from (dates shifted +1 year). Read-only reference.
+              The raw previous-year QOP rows imported from <strong>Automated_QOP_Builder.xlsm</strong> (Sheet1) — the source the QOP Export builds from (dates shifted +1 year). Read-only reference. <em>Note: the source Sheet1 has no Timing data, so Timing / Timing Reason here are shown in italics as derived from the start time (Primary 00:00–05:00, Secondary 13:00–16:00, else Outside).</em>
             </div>
             <div class="scroll-lg" style="overflow:auto;max-height:calc(100vh - 230px)">
               <table class="lk-table" style="width:100%;font-size:11px">
@@ -2023,6 +2022,32 @@ function plannedActivityFor(sno, mNo) {
   const row = SITES.find(s => (s[0] || '').toString().trim() === sno.toString().trim());
   if (!row) return '';
   return (row[8 + (mNo - 1)] || '').trim();
+}
+
+// Timing from the START TIME using the approved outage windows:
+//   Primary   window: 00:00–05:00  (midnight to 5am)
+//   Secondary window: 13:00–16:00  (1pm to 4pm)
+//   anything else     → Outside
+// Pass a time string ("HH:MM", or a full date string) or minutes-since-midnight.
+function timingFromWindow(timeOrDate) {
+  let mins = null;
+  if (typeof timeOrDate === 'number') mins = timeOrDate;
+  else {
+    const p = (typeof qopDateParts === 'function') ? qopDateParts(timeOrDate) : null;
+    if (p) mins = p.hr * 60 + p.min;
+    else {
+      const m = String(timeOrDate || '').match(/(\d{1,2}):(\d{2})/);
+      if (m) mins = parseInt(m[1]) * 60 + parseInt(m[2]);
+    }
+  }
+  if (mins === null) return { timing: '', reason: '' };
+  // Primary: 00:00 (0) up to and including 05:00 (300)
+  if (mins >= 0 && mins <= 300)
+    return { timing: 'Primary',   reason: 'Within approved primary window (00:00–05:00)' };
+  // Secondary: 13:00 (780) up to and including 16:00 (960)
+  if (mins >= 780 && mins <= 960)
+    return { timing: 'Secondary', reason: 'Within approved secondary window (13:00–16:00)' };
+  return { timing: 'Outside', reason: 'Outside approved windows — exception approval required' };
 }
 
 function timingCategory(act, cls) {
@@ -4446,20 +4471,15 @@ const district = STATE.settings.district;
     // [10] Timing: previous QOP value takes precedence (it was approved).
     // Calculation only fills blanks — impact-aware (AI/SS) so non-intrusive
     // daytime works stay Primary.
-    let timing, timingRsn;
-    if (src.timing) {
-      // Source provided timing — honour it
-      timing    = src.timing;
-      timingRsn = src.timingReason || timingReason(src.timing);
-    } else {
-      // Source blank — derive timing from the SITE-GRID planned activity for
-      // this site+month (the authoritative activity type). This avoids matching
-      // stray keywords in the free-text description (which reversed Primary /
-      // Secondary). Falls back to the description, then the class default.
-      const plannedAct = plannedActivityFor(src.sno, mNo);
-      timing    = timingCategory(plannedAct || src.descr || '', src.svcClass);
-      timingRsn = timingReason(timing);
-    }
+// [10] Timing derives from the START TIME using the approved windows
+    //   Primary 00:00–05:00 · Secondary 13:00–16:00 · else Outside.
+    const _startTimeStr = extractTime(src.startDate, '08:00');
+    const _tw = timingFromWindow(_startTimeStr);
+    let timing    = _tw.timing;
+    let timingRsn = _tw.reason;
+    // Flag when the derived timing DIFFERS from the previous QOP's timing.
+    const _prevTiming = (src.timing || '').trim();
+    const _timingChanged = _prevTiming && _prevTiming.toUpperCase() !== timing.toUpperCase();
 
     // Service: keep the SOURCE row's own service name. The full THSS site
     // service list is NOT written here — it lives in Remedy Source of Truth
@@ -4495,6 +4515,7 @@ const district = STATE.settings.district;
       'Start Date':           startDt,
       'End Date':             endDt,
       Timing:                 timing,
+      'Timing Changed':       _timingChanged ? `was ${_prevTiming}` : '',
       'Timing Reason':        timingRsn,
       'Description of Work':  src.descr,
       'Maintenance Activity Number': src.code,
@@ -4876,12 +4897,15 @@ function renderQOPPreview(rows) {
         if (c === 'Timing') {
           const topts = ['Primary','Secondary','Outside'];
           const isOut = val === 'Outside';
-          return `<td style="${tdStyle}">
+          const changed = (row['Timing Changed'] || '').trim();   // e.g. "was Secondary"
+          const bg = changed ? '#FFE0C0' : (cc ? 'transparent' : 'var(--surf2)');
+          const fg = changed ? '#7a4510' : (isOut ? 'var(--danger)' : 'var(--text)');
+          return `<td style="${tdStyle}" title="${changed ? 'Timing changed from previous QOP: ' + esc(changed) : ''}">
             <select data-qrow="${origIdx}" data-qcol="Timing" onchange="qopCellEdit(this)"
-              style="background:${cc?'transparent':'var(--surf2)'};border:1px solid ${cc?'transparent':'var(--border)'};color:${isOut?'var(--danger)':'var(--text)'};font-weight:${isOut?'600':inpW};font-size:11px;padding:2px 4px;border-radius:3px;min-width:95px">
+              style="background:${bg};border:1px solid ${changed?'var(--warn)':(cc?'transparent':'var(--border)')};color:${fg};font-weight:${isOut||changed?'600':inpW};font-size:11px;padding:2px 4px;border-radius:3px;min-width:95px">
               <option value=""${!val?' selected':''}>—</option>
               ${topts.map(o => `<option${val===o?' selected':''}>${o}</option>`).join('')}
-            </select>
+            </select>${changed ? `<div style="font-size:9px;color:var(--warn);margin-top:1px">△ ${esc(changed)}</div>` : ''}
           </td>`;
         }
 
@@ -5220,15 +5244,20 @@ function qopDateEdit(input) {
   const row = qopBuiltRows[i];
   row[col] = newVal;
   if (col === 'Start Date') {
-    row['Commencement Date'] = newVal;
-    row['Week Commencing']   = weekCommencing(newVal);
-    // Mirror into the sibling Commencement / Week cells WITHOUT a full re-render
+    row['Week Commencing'] = weekCommencing(newVal);
+    // Recalculate Timing from the new start time (window-based rule)
+    const tw = timingFromWindow(extractTime(newVal, '08:00'));
+    row['Timing'] = tw.timing;
+    row['Timing Reason'] = tw.reason;
+    // Update the sibling cells in place (no full re-render)
     const tr = input.closest('tr');
     if (tr) {
-      const cInp = tr.querySelector('input[data-qcol="Commencement Date"]');
-      if (cInp) cInp.value = qopToDTLocal(newVal);
       const wInp = tr.querySelector('input[data-qcol="Week Commencing"]');
       if (wInp) wInp.value = row['Week Commencing'];
+      const tSel = tr.querySelector('select[data-qcol="Timing"]');
+      if (tSel) tSel.value = row['Timing'];
+      const trInp = tr.querySelector('input[data-qcol="Timing Reason"]');
+      if (trInp) trInp.value = row['Timing Reason'];
     }
   }
   _qopSelectedRow = i;
@@ -5549,7 +5578,17 @@ function renderPrevQOP() {
   });
   cnt.textContent = `${rows.length}${(term||month)?` of ${data.length}`:''} rows`;
   body.innerHTML = rows.map((r,i) => `<tr class="${i%2?'':'alt'}">${
-    PREVQOP_COLS.map(([k]) => `<td style="padding:3px 8px;white-space:nowrap;${k==='descr'?'white-space:normal;min-width:200px':''}">${esc(r[k]||'')}</td>`).join('')
+    PREVQOP_COLS.map(([k]) => {
+      let v = r[k] || '';
+      // Timing / Timing Reason are blank in the source — show the DERIVED value
+      // (from the start-time window rule) in muted italics so the column isn't empty.
+      if ((k === 'timing' || k === 'timingReason') && !v) {
+        const tw = timingFromWindow(extractTime(r.startDate, ''));
+        const dv = k === 'timing' ? tw.timing : tw.reason;
+        if (dv) return `<td style="padding:3px 8px;white-space:nowrap;color:var(--muted);font-style:italic" title="Derived from start time — not in source">${esc(dv)}</td>`;
+      }
+      return `<td style="padding:3px 8px;white-space:nowrap;${k==='descr'?'white-space:normal;min-width:200px':''}">${esc(v)}</td>`;
+    }).join('')
   }</tr>`).join('');
 }
 function prevQOPExportCSV() {
