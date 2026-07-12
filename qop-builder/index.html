@@ -2016,6 +2016,15 @@ function endHour(act) {
   return r ? parseInt(r.endHr) : 13;
 }
 
+// Planned activity for a site+month from the Site Grid (SITES).
+// SITES cols: [sno,seven,win,sname,cls,epp,y1,y2, Jan..Dec (indices 8..19)]
+function plannedActivityFor(sno, mNo) {
+  if (!sno || !mNo) return '';
+  const row = SITES.find(s => (s[0] || '').toString().trim() === sno.toString().trim());
+  if (!row) return '';
+  return (row[8 + (mNo - 1)] || '').trim();
+}
+
 function timingCategory(act, cls) {
   const r = matchActRule(act);
   if (r && r.timing) return r.timing;
@@ -4442,10 +4451,12 @@ const district = STATE.settings.district;
       timing    = src.timing;
       timingRsn = src.timingReason || timingReason(src.timing);
     } else {
-      // Source blank — derive from the Activity Rules via the description
-      // (the activity type, e.g. "Quarterly ACU" → Secondary, "EPP" → Outside).
-      const ruleTiming = timingCategory(src.descr || '', src.svcClass);
-      timing    = ruleTiming;
+      // Source blank — derive timing from the SITE-GRID planned activity for
+      // this site+month (the authoritative activity type). This avoids matching
+      // stray keywords in the free-text description (which reversed Primary /
+      // Secondary). Falls back to the description, then the class default.
+      const plannedAct = plannedActivityFor(src.sno, mNo);
+      timing    = timingCategory(plannedAct || src.descr || '', src.svcClass);
       timingRsn = timingReason(timing);
     }
 
