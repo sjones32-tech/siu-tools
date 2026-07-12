@@ -5027,6 +5027,22 @@ function revalidateQOP() {
 
   let counts = { pb:0, recomm:0, hol:0, ant:0, ow:0, sv:0 };
 
+  // ── Integrity check: ensure every row has a UNIQUE _uid. Duplicate or
+  //    missing UIDs break Trip Planner / Coverage tracking (a row edited
+  //    from a duplicate can otherwise resurface under the old identity). ──
+  let uidFixed = 0;
+  const seenUids = new Set();
+  for (const row of qopBuiltRows) {
+    if (!row._uid || seenUids.has(row._uid)) {
+      row._uid = newQOPUid();
+      uidFixed++;
+    }
+    seenUids.add(row._uid);
+  }
+  if (uidFixed) {
+    invalidateTripCache();   // rebuild trip/coverage with corrected identities
+  }
+
   for (const row of qopBuiltRows) {
     const sno     = (row['Site Number'] || '').toString().trim();
     const sname   = (row['Site Name']   || '').toString().trim();
@@ -5083,7 +5099,9 @@ function revalidateQOP() {
   document.getElementById('qop-status').textContent =
     `Validations re-run on ${qopBuiltRows.length} rows — ` +
     `PB: ${counts.pb} | Recomm: ${counts.recomm} | Holiday: ${counts.hol} | ` +
-    `Antenna: ${counts.ant} | Window: ${counts.ow} | SvcName: ${counts.sv}`;
+    `Antenna: ${counts.ant} | Window: ${counts.ow} | SvcName: ${counts.sv}` +
+    (uidFixed ? ` | fixed ${uidFixed} duplicate ID${uidFixed>1?'s':''}` : '');
+  if (uidFixed) toast(`Fixed ${uidFixed} duplicate row ID${uidFixed>1?'s':''}`, 'info');
   toast(`Validations complete: ${total} total flags across ${qopBuiltRows.length} rows`, total ? 'warn' : 'success');
 }
 
@@ -5285,12 +5303,22 @@ function qopDeleteSelected() {
   renderQOPPreview(qopBuiltRows);
   toast(`${idxs.length} row(s) deleted`, 'info');
 }
+// Generate a fresh unique QOP row UID (not colliding with existing rows)
+function newQOPUid() {
+  const existing = new Set(qopBuiltRows.map(r => r._uid));
+  let uid;
+  do { uid = 'q' + Math.random().toString(36).slice(2, 8); } while (existing.has(uid));
+  return uid;
+}
+
 function qopDuplicateSelected() {
   if (!_qopSelected.size) return;
   const idxs = [..._qopSelected].sort((a,b) => a - b);
   // Insert each duplicate right after its original (process descending to keep indices)
   [...idxs].reverse().forEach(i => {
-    qopBuiltRows.splice(i + 1, 0, Object.assign({}, qopBuiltRows[i]));
+    const copy = Object.assign({}, qopBuiltRows[i]);
+    copy._uid = newQOPUid();        // fresh UID so trip/coverage track it separately
+    qopBuiltRows.splice(i + 1, 0, copy);
   });
   _qopSelected.clear();
   invalidateTripCache();
@@ -5773,7 +5801,7 @@ function qopAddRow() {
   template['District'] = STATE.settings.district;
   template['Name']     = STATE.settings.tech;
   template['RPW']      = '0';
-  template['_uid']     = 'q' + Math.random().toString(36).slice(2,8);
+  template['_uid']     = newQOPUid();
   qopBuiltRows.push(template);
   invalidateTripCache();
   persist();
