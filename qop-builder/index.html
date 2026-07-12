@@ -5914,10 +5914,36 @@ const SUBMISSION_MAP = {
 };
 
 // Parse "DD/MM/YYYY HH:MM" → JS Date (for real Excel date cells)
-function qopToJSDate(s) {
-  const m = String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2})?:?(\d{2})?/);
+// Parse "DD/MM/YYYY HH:MM AM/PM" → {y,mo,d,hr,min} (wall-clock, no timezone)
+function qopDateParts(s) {
+  const m = String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T]+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
   if (!m) return null;
-  return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0));
+  let hr = m[4] ? parseInt(m[4]) : 0;
+  const min = m[5] ? parseInt(m[5]) : 0;
+  const ap = (m[6] || '').toUpperCase();
+  if (ap === 'PM' && hr < 12) hr += 12;
+  if (ap === 'AM' && hr === 12) hr = 0;
+  return { y:+m[3], mo:+m[2], d:+m[1], hr, min };
+}
+function qopToJSDate(s) {
+  const p = qopDateParts(s);
+  return p ? new Date(p.y, p.mo-1, p.d, p.hr, p.min) : null;
+}
+// Excel serial date number from wall-clock parts (no timezone involved).
+// Excel epoch = 1899-12-30; fractional day = time. This makes the cell display
+// exactly the entered wall-clock time regardless of the machine's timezone.
+// JS Date → Excel serial (date only), using local wall-clock parts
+function qopDateToSerial(dt) {
+  if (!(dt instanceof Date) || isNaN(dt)) return dt;
+  const days = Math.floor((Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()) - Date.UTC(1899,11,30)) / 86400000);
+  return days;
+}
+function qopExcelSerial(s) {
+  const p = qopDateParts(s);
+  if (!p) return null;
+  const days = Math.floor((Date.UTC(p.y, p.mo-1, p.d) - Date.UTC(1899,11,30)) / 86400000);
+  const frac = (p.hr * 3600 + p.min * 60) / 86400;
+  return days + frac;
 }
 
 function quarterDateRange() {
@@ -5963,9 +5989,9 @@ async function exportQOPSubmission() {
   ws.getCell('B3').value = 'DISTRICT:'; ws.getCell('B3').font = { bold:true };
   ws.getCell('D3').value = district;
   ws.getCell('H3').value = 'Start Date'; ws.getCell('H3').font = { bold:true };
-  ws.getCell('I3').value = qStart; ws.getCell('I3').numFmt = 'dd/mm/yyyy';
+  ws.getCell('I3').value = qopDateToSerial(qStart); ws.getCell('I3').numFmt = 'dd/mm/yyyy';
   ws.getCell('K3').value = 'End Date'; ws.getCell('K3').font = { bold:true };
-  ws.getCell('L3').value = qEnd;   ws.getCell('L3').numFmt = 'dd/mm/yyyy';
+  ws.getCell('L3').value = qopDateToSerial(qEnd);   ws.getCell('L3').numFmt = 'dd/mm/yyyy';
   ws.mergeCells('Q3:R4');   // comment box merge (as template)
 
   // Row 5 — header
@@ -5987,8 +6013,8 @@ async function exportQOPSubmission() {
       let v = r[key];
       const cell = excelRow.getCell(ci + 1);
       if (h === 'Start Date' || h === 'End Date') {
-        const d = qopToJSDate(v);
-        if (d) { cell.value = d; cell.numFmt = 'dd/mm/yyyy hh:mm'; }
+        const serial = qopExcelSerial(v);
+        if (serial !== null) { cell.value = serial; cell.numFmt = 'dd/mm/yyyy hh:mm'; }
         else cell.value = v || '';
       } else if (h === 'RPW') {
         const n = parseFloat(v); cell.value = isNaN(n) ? (v||'') : n;
