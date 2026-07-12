@@ -3261,13 +3261,17 @@ function renderCoverageCheck() {
       if (!haveOutages.has(m)) {
         // No outage at all this month
         missed.push({ sno, sname, month: m, activity: act, why: 'no outage' });
-      } else if (actSet.size && !actSet.has(plannedNorm)) {
-        // Outage(s) exist but none carry the planned Trip Activity → mismatch
+      } else if (!actSet.size) {
+        // Outage(s) exist this month but NONE have a Trip Activity tagged →
+        // can't confirm the planned activity is covered → flag as untagged.
+        missed.push({ sno, sname, month: m, activity: act,
+                      why: 'outage exists but Trip Activity not set' });
+      } else if (!actSet.has(plannedNorm)) {
+        // Outage(s) tagged, but none match the planned activity → mismatch
         missed.push({ sno, sname, month: m, activity: act,
                       why: `activity mismatch (QOP: ${[...actSet].join(', ')})` });
       } else {
-        // Covered: either a matching Trip Activity, or outages present with no
-        // activity tags yet (can't disprove — treat as covered by month).
+        // Covered — an outage this month carries the matching Trip Activity
         ok.push({ sno, sname, month: m, activity: act });
       }
     });
