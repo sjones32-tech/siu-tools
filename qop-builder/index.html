@@ -3204,48 +3204,65 @@ function toggleCoverageView() {
   renderTripPlanner();
 }
 
+// Normalise an activity label for coverage comparison (Site Grid planned
+// activity vs QOP Trip Activity). Case/space-insensitive; unifies EPP variants.
+function normCovActivity(s) {
+  return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
 function renderCoverageCheck() {
   const content = document.getElementById('trip-content');
   buildTripFullYear();          // always fresh — reflects latest QOP edits
   const rows = _tripFullYear;
 
-  // Outage months per site: sno → Set(monthNo)
-  const outageMonths = {};
+  // Per site+month: the SET of Trip Activities tagged on QOP outages, plus a
+  // flag for whether ANY outage exists that month (tagged or not).
+  const outageMonths = {};          // sno → Set(monthNo)  (any outage)
+  const outageActs   = {};          // "sno|month" → Set(normalised trip activity)
   rows.forEach(r => {
     const sno = (r['Site Number'] || '').toString().trim();
     const m = tripRowMonth(r);
     if (!sno || !m) return;
     (outageMonths[sno] = outageMonths[sno] || new Set()).add(m);
+    const key = `${sno}|${m}`;
+    const act = normCovActivity(r['Trip Activity']);
+    if (act) (outageActs[key] = outageActs[key] || new Set()).add(act);
   });
 
-  // Build per-site coverage from the planning grid (SITES)
-  // SITES cols: [sno,seven,win,sname,cls,epp,y1,y2, Jan..Dec(8..19)]
   let missed = [], wrongMonth = [], ok = [];
-  // multi-select month filter via _tripMonths / monthSelected()
   const term = (document.getElementById('trip-search').value || '').toLowerCase();
 
   SITES.forEach(s => {
     const sno = s[0], sname = s[3];
-    const plannedMonths = {};         // monthNo → activity label
+    const plannedMonths = {};
     for (let mi = 0; mi < 12; mi++) {
       const act = (s[8 + mi] || '').trim();
       if (act) plannedMonths[mi + 1] = act;
     }
     const haveOutages = outageMonths[sno] || new Set();
 
-    // Planned but missing outages
     Object.entries(plannedMonths).forEach(([mNo, act]) => {
       const m = parseInt(mNo);
       if (!monthSelected(m)) return;
       if (term && !(`${sno} ${sname} ${act}`.toLowerCase().includes(term))) return;
+
+      const plannedNorm = normCovActivity(act);
+      const actSet = outageActs[`${sno}|${m}`] || new Set();
+
       if (!haveOutages.has(m)) {
-        missed.push({ sno, sname, month: m, activity: act });
+        // No outage at all this month
+        missed.push({ sno, sname, month: m, activity: act, why: 'no outage' });
+      } else if (actSet.size && !actSet.has(plannedNorm)) {
+        // Outage(s) exist but none carry the planned Trip Activity → mismatch
+        missed.push({ sno, sname, month: m, activity: act,
+                      why: `activity mismatch (QOP: ${[...actSet].join(', ')})` });
       } else {
+        // Covered: either a matching Trip Activity, or outages present with no
+        // activity tags yet (can't disprove — treat as covered by month).
         ok.push({ sno, sname, month: m, activity: act });
       }
     });
 
-    // Outages in a month NOT planned in the grid (possible wrong month)
     haveOutages.forEach(m => {
       if (!monthSelected(m)) return;
       if (!plannedMonths[m]) {
@@ -3269,17 +3286,16 @@ function renderCoverageCheck() {
         <tbody>${items.map((it,i)=>`<tr style="border-top:1px solid var(--border);${i%2?'':'background:rgba(255,255,255,.02)'};cursor:pointer" onclick="tripFromSiteCell('${it.sno}', ${it.month}, '${(it.activity||'').replace(/'/g,"")}')">
           <td style="padding:4px 12px"><span class="mono">${esc(it.sno)}</span> ${esc(it.sname)}</td>
           <td style="padding:4px 12px;font-weight:600">${MONTH_ABBR[it.month]}</td>
-          ${it.activity!==undefined ? `<td style="padding:4px 12px">${esc(it.activity)}</td>` : ''}
+          ${it.activity!==undefined ? `<td style="padding:4px 12px">${esc(it.activity)}${it.why && it.why!=='no outage' ? ` <span style="color:var(--warn);font-size:10px">— ${esc(it.why)}</span>` : ''}</td>` : ''}
         </tr>`).join('')}</tbody>
       </table>` : `<div style="padding:14px;color:var(--muted);font-size:12px">${emptyMsg}</div>`}
     </div>`;
 
   content.innerHTML = `
     <div style="padding:10px 14px;font-size:12px;color:var(--muted)">
-      Cross-checking the <strong>Site Grid plan</strong> against actual <strong>QOP outages</strong> (full year).
-      Click any row to jump to that site/month. ${_tripMonths.size?`<span style="color:var(--warn)">Filtered to ${[..._tripMonths].sort((a,b)=>a-b).map(m=>MONTH_ABBR[m]).join(', ')}.</span>`:''}
+      Cross-checking the <strong>Site Grid planned activity</strong> against the <strong>QOP outages</strong> and their <strong>Trip Activity</strong> (full year). A month counts as covered only when an outage carries the matching activity. Click any row to jump to that site/month. ${_tripMonths.size?`<span style="color:var(--warn)">Filtered to ${[..._tripMonths].sort((a,b)=>a-b).map(m=>MONTH_ABBR[m]).join(', ')}.</span>`:''}
     </div>
-    ${card('⚠ MISSED — planned in Site Grid but NO outages in QOP', missed, 'var(--danger)',
+    ${card('⚠ MISSED / MISMATCH — planned activity has no matching QOP outage', missed, 'var(--danger)',
         'Nothing missed — every planned month has outages. 🎉', ['Site','Month','Planned Activity'])}
     ${card('🔀 UNPLANNED MONTH — outages exist but Site Grid has no activity that month', wrongMonth, 'var(--warn)',
         'No stray outages — all QOP outages fall in a planned month.', ['Site','Month'])}
