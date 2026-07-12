@@ -3228,6 +3228,7 @@ function renderCoverageCheck() {
   // flag for whether ANY outage exists that month (tagged or not).
   const outageMonths = {};          // sno → Set(monthNo)  (any outage)
   const outageActs   = {};          // "sno|month" → Set(normalised trip activity)
+  const outageUids   = {};          // "sno|month" → [uids of outages that month]
   rows.forEach(r => {
     const sno = (r['Site Number'] || '').toString().trim();
     const m = tripRowMonth(r);
@@ -3236,6 +3237,7 @@ function renderCoverageCheck() {
     const key = `${sno}|${m}`;
     const act = normCovActivity(r['Trip Activity']);
     if (act) (outageActs[key] = outageActs[key] || new Set()).add(act);
+    if (r._uid) (outageUids[key] = outageUids[key] || []).push(r._uid);
   });
 
   let missed = [], wrongMonth = [], ok = [];
@@ -3258,21 +3260,17 @@ function renderCoverageCheck() {
       const plannedNorm = normCovActivity(act);
       const actSet = outageActs[`${sno}|${m}`] || new Set();
 
+      const uids = outageUids[`${sno}|${m}`] || [];
       if (!haveOutages.has(m)) {
-        // No outage at all this month
-        missed.push({ sno, sname, month: m, activity: act, why: 'no outage' });
+        missed.push({ sno, sname, month: m, activity: act, why: 'no outage', uids });
       } else if (!actSet.size) {
-        // Outage(s) exist this month but NONE have a Trip Activity tagged →
-        // can't confirm the planned activity is covered → flag as untagged.
         missed.push({ sno, sname, month: m, activity: act,
-                      why: 'outage exists but Trip Activity not set' });
+                      why: 'outage exists but Trip Activity not set', uids });
       } else if (!actSet.has(plannedNorm)) {
-        // Outage(s) tagged, but none match the planned activity → mismatch
         missed.push({ sno, sname, month: m, activity: act,
-                      why: `activity mismatch (QOP: ${[...actSet].join(', ')})` });
+                      why: `activity mismatch (QOP: ${[...actSet].join(', ')})`, uids });
       } else {
-        // Covered — an outage this month carries the matching Trip Activity
-        ok.push({ sno, sname, month: m, activity: act });
+        ok.push({ sno, sname, month: m, activity: act, uids });
       }
     });
 
@@ -3280,7 +3278,7 @@ function renderCoverageCheck() {
       if (!monthSelected(m)) return;
       if (!plannedMonths[m]) {
         if (term && !(`${sno} ${sname}`.toLowerCase().includes(term))) return;
-        wrongMonth.push({ sno, sname, month: m });
+        wrongMonth.push({ sno, sname, month: m, uids: (outageUids[`${sno}|${m}`] || []) });
       }
     });
   });
@@ -3300,6 +3298,7 @@ function renderCoverageCheck() {
           <td style="padding:4px 12px"><span class="mono">${esc(it.sno)}</span> ${esc(it.sname)}</td>
           <td style="padding:4px 12px;font-weight:600">${MONTH_ABBR[it.month]}</td>
           ${it.activity!==undefined ? `<td style="padding:4px 12px">${esc(it.activity)}${it.why && it.why!=='no outage' ? ` <span style="color:var(--warn);font-size:10px">— ${esc(it.why)}</span>` : ''}</td>` : ''}
+          <td style="padding:4px 12px"><span class="mono" style="color:var(--muted);font-size:10px">${(it.uids && it.uids.length) ? it.uids.map(esc).join(', ') : '—'}</span></td>
         </tr>`).join('')}</tbody>
       </table>` : `<div style="padding:14px;color:var(--muted);font-size:12px">${emptyMsg}</div>`}
     </div>`;
@@ -3309,11 +3308,11 @@ function renderCoverageCheck() {
       Cross-checking the <strong>Site Grid planned activity</strong> against the <strong>QOP outages</strong> and their <strong>Trip Activity</strong> (full year). A month counts as covered only when an outage carries the matching activity. Click any row to jump to that site/month. ${_tripMonths.size?`<span style="color:var(--warn)">Filtered to ${[..._tripMonths].sort((a,b)=>a-b).map(m=>MONTH_ABBR[m]).join(', ')}.</span>`:''}
     </div>
     ${card('⚠ MISSED / MISMATCH — planned activity has no matching QOP outage', missed, 'var(--danger)',
-        'Nothing missed — every planned month has outages. 🎉', ['Site','Month','Planned Activity'])}
+        'Nothing missed — every planned month has outages. 🎉', ['Site','Month','Planned Activity','QOP IDs'])}
     ${card('🔀 UNPLANNED MONTH — outages exist but Site Grid has no activity that month', wrongMonth, 'var(--warn)',
-        'No stray outages — all QOP outages fall in a planned month.', ['Site','Month'])}
+        'No stray outages — all QOP outages fall in a planned month.', ['Site','Month','QOP IDs'])}
     ${card('✓ COVERED — planned month has matching outages', ok, 'var(--success)',
-        'No covered items in range.', ['Site','Month','Planned Activity'])}`;
+        'No covered items in range.', ['Site','Month','Planned Activity','QOP IDs'])}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3345,19 +3344,17 @@ Object.defineProperty(window, 'TRIP_ACTIVITIES', { get: tripActivityOptions });
 // Build (or rebuild) the full-year dataset from the imported source.
 // Independent of the quarter selected on QOP Export.
 function buildTripFullYear() {
-  if (STATE.qopSource && STATE.qopSource.length) {
+  // The built QOP grid (qopBuiltRows) is the source of truth — it reflects
+  // deletions, additions and edits. Use it directly so Trip Planner / Coverage
+  // stay in sync. Only build from qopSource when the grid hasn't been built.
+  if (qopBuiltRows && qopBuiltRows.length) {
+    _tripFullYear = qopBuiltRows.map(r => Object.assign({}, r));
+    applyTripTags(_tripFullYear);
+  } else if (STATE.qopSource && STATE.qopSource.length) {
     _tripFullYear = buildQOPRowsForMonths(null);   // null = all months
-    // Merge in any rows that exist only on the current QOP grid (manually
-    // added on QOP Export, not present in the imported source) so newly
-    // added outages show up in the Trip Planner / Coverage Check.
-    const seen = new Set(_tripFullYear.map(r => tripTagKey(r)));
-    qopBuiltRows.forEach(r => {
-      const k = tripTagKey(r);
-      if (!seen.has(k)) { _tripFullYear.push(Object.assign({}, r)); seen.add(k); }
-    });
     applyTripTags(_tripFullYear);
   } else {
-    _tripFullYear = qopBuiltRows.slice();
+    _tripFullYear = [];
   }
   _tripFullYear.forEach((r, i) => { r._ti = i; });
   return _tripFullYear;
