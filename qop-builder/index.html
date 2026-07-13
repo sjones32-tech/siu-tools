@@ -2024,6 +2024,168 @@ function plannedActivityFor(sno, mNo) {
   return (row[8 + (mNo - 1)] || '').trim();
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+//  STAGE 9 — Outage Window Validation + Timing (faithful port of the
+//  Excel Automated_QOP_Builder VBA). Reads the imported Outage_Windows
+//  rows and determines Timing (Primary / Secondary / Outside) per QOP row
+//  by matching each service against the approved windows.
+// ═══════════════════════════════════════════════════════════════
+
+function s9_timeToMins(v) {
+  if (v === null || v === undefined) return 0;
+  const s = String(v).trim();
+  const m = s.match(/(\d{1,2}):(\d{2})/);
+  if (m) return parseInt(m[1]) * 60 + parseInt(m[2]);
+  const num = parseFloat(s);
+  if (!isNaN(num) && num >= 0 && num < 1.0001) return Math.round(num * 1440);
+  return 0;
+}
+
+// Overlap with midnight-wrap (mirrors Stage9_TimesOverlap)
+function s9_timesOverlap(start1, end1, start2, end2) {
+  let s1 = s9_timeToMins(start1), e1 = s9_timeToMins(end1);
+  let s2 = s9_timeToMins(start2), e2 = s9_timeToMins(end2);
+  if (e1 < s1) e1 += 24 * 60;
+  if (e2 < s2) e2 += 24 * 60;
+  return (s1 <= e2) && (e1 >= s2);
+}
+
+// Extract the customer (network) from a service name — mirrors Stage9_ExtractCustomer
+function s9_extractCustomer(serviceName) {
+  const u = String(serviceName || '').toUpperCase();
+  if (u.includes('ABC')) return 'ABC';
+  if (u.includes('SBS')) return 'SBS';
+  if (u.includes('SEVEN')) return 'Seven';
+  if (u.includes('SEV') && !u.includes('SEVEN')) return 'Seven';
+  if (u.includes('PRIME')) return 'Seven';
+  if (u.includes('WIN')) return 'WIN';
+  if (u.includes('10 PGM')) return 'Ten';
+  if (u.includes('TEN')) return 'Ten';
+  if (u.includes('SCA') || u.includes('HIT') || u.includes('TRIPLE M') || u.includes('NOVA')) return 'SCA';
+  return '';
+}
+
+// Extract the service type — mirrors Stage9_ExtractServiceType
+function s9_extractServiceType(serviceName) {
+  const u = String(serviceName || '').toUpperCase();
+  if (u.includes('LOCAL RADIO')) return 'Local Radio';
+  if (u.includes('RADIO NATIONAL')) return 'Radio National';
+  if (u.includes('NEWS ON RADIO')) return 'NEWS on radio';
+  if (u.includes('CLASSIC FM')) return 'Classic FM';
+  if (u.includes('TRIPLE J')) return 'Triple J';
+  if (u.includes('DIGITAL TELEVISION') || u.includes(' DTV')) return 'Digital Television';
+  if (u.includes('DAB+') || u.includes('DAB PLUS')) return 'DAB+';
+  return 'All';
+}
+
+// Check which window type a single service falls into — mirrors Stage9_CheckWindowType
+function s9_checkWindowType(customerName, serviceType, population, dayType,
+                            serviceClass, startTime, endTime, audienceImpact,
+                            serviceState, outageMins) {
+  const windows = STATE.lookups.outageWindows || [];
+  const normPop = String(population || '').replace(/,/g, '');
+  let hasPrimary = false, hasSecondary = false;
+
+  for (const w of windows) {
+    if (w.customer.toUpperCase() !== customerName.toUpperCase()) continue;
+    if (w.serviceType.toUpperCase() !== 'ALL' &&
+        w.serviceType.toUpperCase() !== serviceType.toUpperCase()) continue;
+    if (w.population.toUpperCase() !== 'ALL' &&
+        w.population.toUpperCase() !== normPop.toUpperCase()) continue;
+    if (w.dayType.toUpperCase() !== 'ANY' &&
+        w.dayType.toUpperCase() !== dayType.toUpperCase()) continue;
+    if (w.classFilter.toUpperCase() !== 'ALL') {
+      if (!serviceClass || w.classFilter.toUpperCase().indexOf(serviceClass.toUpperCase()) === -1) continue;
+    }
+
+    if (s9_timesOverlap(startTime, endTime, w.startTime, w.endTime)) {
+      const wt = w.windowType.toUpperCase();
+      const portion = w.portion.toUpperCase();
+      if (wt === 'PRIMARY') hasPrimary = true;
+      else if (wt === 'SECONDARY') hasSecondary = true;
+
+      // WIN / Seven special handling (Allowed / Limited portions)
+      if (customerName.toUpperCase() === 'WIN' || customerName.toUpperCase() === 'SEVEN') {
+        if (portion === 'ALLOWED') {
+          hasPrimary = true;
+        } else if (portion === 'LIMITED') {
+          const isOff = (String(audienceImpact).toUpperCase() === 'OFF') ||
+                        (String(serviceState).toUpperCase() === 'OFF');
+          if (isOff) { if (outageMins <= 5) hasSecondary = true; }
+          else hasSecondary = true;
+        }
+      }
+    }
+  }
+
+  if (hasPrimary) return 'Primary';
+  if (hasSecondary) return 'Secondary';
+  return 'Outside';
+}
+
+// Main Stage 9 for a single QOP row. Returns {timing, reason, note}.
+// audienceImpact/serviceState/population/serviceClass are the row's fields;
+// serviceName is the comma/semicolon-separated service list; start/end are
+// QOP date strings ("DD/MM/YYYY HH:MM AM/PM").
+function stage9Timing(audienceImpact, serviceState, population, serviceName,
+                      serviceClass, startStr, endStr) {
+  const ai = String(audienceImpact || '').toUpperCase().trim();
+  const ss = String(serviceState || '').toUpperCase().trim();
+
+  // Not service-impacting → blank timing (NIL audience AND NOP state)
+  const isServiceImpacting = (ai !== 'NIL') || (ss !== 'NOP');
+  if (!isServiceImpacting) return { timing: '', reason: '', note: '' };
+
+  const sp = qopDateParts(startStr), ep = qopDateParts(endStr);
+  if (!sp || !ep) return { timing: '', reason: '', note: '' };
+
+  const startDate = new Date(sp.y, sp.mo-1, sp.d, sp.hr, sp.min);
+  const endDate   = new Date(ep.y, ep.mo-1, ep.d, ep.hr, ep.min);
+  let outageMins = (endDate - startDate) / 60000;
+  if (outageMins < 0) outageMins += 24 * 60;
+
+  const startTime = String(sp.hr).padStart(2,'0') + ':' + String(sp.min).padStart(2,'0');
+  const endTime   = String(ep.hr).padStart(2,'0') + ':' + String(ep.min).padStart(2,'0');
+  const wd = startDate.getDay(); // 0=Sun,6=Sat
+  const dayType = (wd === 0 || wd === 6) ? 'Weekend' : 'Weekday';
+
+  // Split service list on comma AND semicolon
+  const services = String(serviceName || '').split(/[;,]/).map(s => s.trim()).filter(Boolean);
+
+  let overlapsPrimary = false, overlapsSecondary = false, anyOutside = false;
+  const outsideServices = [];
+  for (const svc of services) {
+    const cust = s9_extractCustomer(svc);
+    const type = s9_extractServiceType(svc);
+    if (!cust) continue;
+    const wt = s9_checkWindowType(cust, type, population, dayType, serviceClass,
+                                  startTime, endTime, ai, ss, outageMins);
+    if (wt === 'Primary') overlapsPrimary = true;
+    else if (wt === 'Secondary') overlapsSecondary = true;
+    else { anyOutside = true; outsideServices.push(cust + ' ' + type); }
+  }
+
+  const popU = String(population || '').toUpperCase().trim();
+  const isBig = popU === '>15,000' || popU.includes('>15') || popU.includes('15000');
+
+  if (anyOutside) {
+    return { timing: 'Outside', reason: 'Exception approval required',
+             note: 'OUTSIDE WINDOWS - APPROVAL NEEDED:\n' + outsideServices.join(', ') };
+  } else if (overlapsPrimary) {
+    return { timing: 'Primary', reason: '', note: '' };
+  } else if (overlapsSecondary) {
+    if (isBig) {
+      return { timing: 'Secondary', reason: 'Secondary preferred (by exception - approval req.)',
+               note: 'SECONDARY (>15K) - APPROVAL REQUIRED' };
+    }
+    return { timing: 'Secondary', reason: 'Secondary preferred window', note: '' };
+  }
+  // No window matched at all → blank (mirrors VBA final else)
+  return { timing: '', reason: '', note: '' };
+}
+
+
 // Timing from the START TIME using the approved outage windows:
 //   Primary   window: 00:00–05:00  (midnight to 5am)
 //   Secondary window: 13:00–16:00  (1pm to 4pm)
@@ -2272,6 +2434,8 @@ const DEFAULT_ACT_RULES = [
   { match:"quarterly",  code:"20", ai:"OFF",   ss:"OFF", startHr:9,  endHr:13, timing:"Secondary", rac:"POMN", descr:"Quarterly Preventive Maintenance - Service affecting works." },
 ];
 
+const DEFAULT_OUTAGE_WINDOWS = [{"customer":"ABC","serviceType":"Local Radio","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":">15000","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":">15000","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"08:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"between","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"08:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":"between","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"<1500","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"08:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":"<1500","dayType":"Weekday","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Local Radio","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Radio National","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"NEWS on radio","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Classic FM","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triple J","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"Digital Television","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"12:00","classFilter":"All"},{"customer":"ABC","serviceType":"DAB+","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"13:10","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Extended","startTime":"00:00","endTime":"01:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"<1500","dayType":"Weekend","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"ABC","serviceType":"EPP","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"10:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Preferred","startTime":"08:00","endTime":"15:00","classFilter":"All"},{"customer":"ABC","serviceType":"Triennial","population":"<1500","dayType":"Weekend","windowType":"Secondary","portion":"Extended","startTime":"12:00","endTime":"15:00","classFilter":"All"},{"customer":"SBS","serviceType":"Radio","population":"All","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"00:00","endTime":"06:00","classFilter":"All"},{"customer":"SBS","serviceType":"Radio","population":"All","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"15:00","endTime":"16:00","classFilter":"C/D"},{"customer":"SBS","serviceType":"Digital Television","population":"All","dayType":"Weekday","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"SBS","serviceType":"Digital Television","population":"All","dayType":"Weekday","windowType":"Secondary","portion":"Preferred","startTime":"13:00","endTime":"14:00","classFilter":"C/D"},{"customer":"SCA","serviceType":"EPP Testing","population":"All","dayType":"Any","windowType":"Primary","portion":"Preferred","startTime":"09:05","endTime":"14:55","classFilter":"All"},{"customer":"SCA","serviceType":"Standby TX","population":"All","dayType":"Any","windowType":"Primary","portion":"Preferred","startTime":"09:05","endTime":"14:55","classFilter":"All"},{"customer":"SCA","serviceType":"Other","population":"All","dayType":"Any","windowType":"Primary","portion":"Preferred","startTime":"01:00","endTime":"05:00","classFilter":"All"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class A","portion":"Limited","startTime":"23:00","endTime":"00:00","classFilter":"A"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class A","portion":"Allowed","startTime":"00:00","endTime":"05:30","classFilter":"A"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Limited","startTime":"23:00","endTime":"00:00","classFilter":"B"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Allowed","startTime":"00:00","endTime":"05:30","classFilter":"B"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Limited","startTime":"09:00","endTime":"12:00","classFilter":"B"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Limited","startTime":"14:00","endTime":"17:00","classFilter":"B"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Limited","startTime":"23:00","endTime":"00:00","classFilter":"C/D"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Allowed","startTime":"00:00","endTime":"05:30","classFilter":"C/D"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Limited","startTime":"09:30","endTime":"12:30","classFilter":"C/D"},{"customer":"WIN","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Limited","startTime":"14:30","endTime":"17:30","classFilter":"C/D"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class A","portion":"Limited","startTime":"23:00","endTime":"00:00","classFilter":"A"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class A","portion":"Allowed","startTime":"00:00","endTime":"05:30","classFilter":"A"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Limited","startTime":"23:00","endTime":"00:00","classFilter":"B"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Allowed","startTime":"00:00","endTime":"05:30","classFilter":"B"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Limited","startTime":"09:00","endTime":"12:00","classFilter":"B"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class B","portion":"Limited","startTime":"14:00","endTime":"17:00","classFilter":"B"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Limited","startTime":"23:00","endTime":"00:00","classFilter":"C/D"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Allowed","startTime":"00:00","endTime":"05:30","classFilter":"C/D"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Limited","startTime":"09:30","endTime":"12:30","classFilter":"C/D"},{"customer":"Seven","serviceType":"All","population":"All","dayType":"Any","windowType":"Class C/D","portion":"Limited","startTime":"14:30","endTime":"17:30","classFilter":"C/D"}];
+
 const DEFAULT_OW_RULES = [
   { match:"nova & epp", dayType:"Any",     startHr:0,  endHr:24, outsideMsg:"" },
   { match:"epp#",       dayType:"Any",     startHr:0,  endHr:24, outsideMsg:"" },
@@ -2297,6 +2461,7 @@ const STATE = {
     phMap:         Object.assign({}, DEFAULT_PH_MAP),
     actRules:      DEFAULT_ACT_RULES.map(r => Object.assign({}, r)),
     owRules:       DEFAULT_OW_RULES.map(r => Object.assign({}, r)),
+    outageWindows: DEFAULT_OUTAGE_WINDOWS.map(r => Object.assign({}, r)),
     pbEntries:     [],   // [3] Programming Bulletins
     recommEntries: [],   // [5] Recommissioning schedule
     antennaSNP:    [],   // [6] Antenna SNP
@@ -2395,6 +2560,7 @@ function loadPersisted() {
       if (data.lookups.phMap)         STATE.lookups.phMap         = data.lookups.phMap;
       if (data.lookups.actRules)      STATE.lookups.actRules      = data.lookups.actRules;
       if (data.lookups.owRules)       STATE.lookups.owRules       = data.lookups.owRules;
+      if (data.lookups.outageWindows) STATE.lookups.outageWindows = data.lookups.outageWindows;
       if (data.lookups._sitesOverride) {
         STATE.lookups._sitesOverride = data.lookups._sitesOverride;
         applySitesArray(data.lookups._sitesOverride);   // restore custom SITES
@@ -4468,19 +4634,6 @@ const district = STATE.settings.district;
 
     const ph = STATE.lookups.phMap[useDate] || '';
 
-    // [10] Timing: previous QOP value takes precedence (it was approved).
-    // Calculation only fills blanks — impact-aware (AI/SS) so non-intrusive
-    // daytime works stay Primary.
-// [10] Timing derives from the START TIME using the approved windows
-    //   Primary 00:00–05:00 · Secondary 13:00–16:00 · else Outside.
-    const _startTimeStr = extractTime(src.startDate, '08:00');
-    const _tw = timingFromWindow(_startTimeStr);
-    let timing    = _tw.timing;
-    let timingRsn = _tw.reason;
-    // Flag when the derived timing DIFFERS from the previous QOP's timing.
-    const _prevTiming = (src.timing || '').trim();
-    const _timingChanged = _prevTiming && _prevTiming.toUpperCase() !== timing.toUpperCase();
-
     // Service: keep the SOURCE row's own service name. The full THSS site
     // service list is NOT written here — it lives in Remedy Source of Truth
     // (below) and is only used to FLAG mismatches during validation.
@@ -4491,6 +4644,18 @@ const district = STATE.settings.district;
     const endTime   = extractTime(src.endDate, '17:00');
     const startDt   = fmtQOPDateTime(useDate, startTime);
     const endDt     = fmtQOPDateTime(shiftDateOneYear(src.endDate || src.startDate), endTime);
+
+    // [10] Timing — faithful Stage 9 port: matches each service against the
+    // approved Outage_Windows (per customer / service type / population /
+    // day type / class / time overlap). Not just a fixed time band.
+    const _pop9  = categorisePopulation(src.popCat, src.svcClass);
+    const _s9 = stage9Timing(src.ai, src.ss, _pop9, svc, src.svcClass, startDt, endDt);
+    let timing    = _s9.timing;
+    let timingRsn = _s9.reason;
+    const _owNote = _s9.note;
+    // Flag when the derived timing DIFFERS from the previous QOP's timing.
+    const _prevTiming = (src.timing || '').trim();
+    const _timingChanged = _prevTiming && timing && _prevTiming.toUpperCase() !== timing.toUpperCase();
 
     const rowId = schedKey;
     const rowFlags = STATE.rows[rowId] || {};
@@ -4537,7 +4702,7 @@ const district = STATE.settings.district;
       'Original Audience Impact':  src.ai,
       'Original Service State':    src.ss,
       'Original Description':      src.descr,
-      'Outage Window':        outageWindow(src.descr || '', useDate),
+      'Outage Window':        _owNote || outageWindow(src.descr || '', useDate),
       'Service Name Validation': svcValid,
       'SPM Completion Notes': '',
       'Remedy Source of Truth': src.thssService || '',
@@ -5245,10 +5410,13 @@ function qopDateEdit(input) {
   row[col] = newVal;
   if (col === 'Start Date') {
     row['Week Commencing'] = weekCommencing(newVal);
-    // Recalculate Timing from the new start time (window-based rule)
-    const tw = timingFromWindow(extractTime(newVal, '08:00'));
-    row['Timing'] = tw.timing;
-    row['Timing Reason'] = tw.reason;
+    // Recalculate Timing via Stage 9 (window match) from the new start time
+    const s9 = stage9Timing(row['Audience Impact'], row['Service State'],
+                            row['Population'], row['Service'], row['Service Class'],
+                            newVal, row['End Date']);
+    row['Timing'] = s9.timing;
+    row['Timing Reason'] = s9.reason;
+    if (s9.note) row['Outage Window'] = s9.note;
     // Update the sibling cells in place (no full re-render)
     const tr = input.closest('tr');
     if (tr) {
@@ -7964,6 +8132,47 @@ function safeISO(d) { try { if (!d) return ""; if (typeof d === "string") { cons
 // ═══════════════════════════════════════════════════════════════
 
 // Sheet → handler mapping (sheet name in xlsm → process function)
+// Structured outage-window rows imported from the Outage_Windows sheet.
+// Each: {customer, serviceType, population, dayType, windowType, portion,
+//        startTime:'HH:MM', endTime:'HH:MM', classFilter}
+async function xlProcessOutageWindows(wb, sheetName) {
+  const ws = wb.Sheets[sheetName];
+  if (!ws) return 0;
+  const rows = xlSheetToRows(wb, sheetName);
+  const parsed = [];
+  const toHHMM = (v) => {
+    if (v === null || v === undefined || v === '') return '';
+    // Excel time serial (fraction of a day) or a string like "13:00"
+    const s = String(v).trim();
+    const m = s.match(/(\d{1,2}):(\d{2})/);
+    if (m) return m[1].padStart(2,'0') + ':' + m[2];
+    const num = parseFloat(s);
+    if (!isNaN(num) && num >= 0 && num < 1.0001) {
+      const mins = Math.round(num * 1440);
+      return String(Math.floor(mins/60)).padStart(2,'0') + ':' + String(mins%60).padStart(2,'0');
+    }
+    return s;
+  };
+  rows.forEach(r => {
+    const cust = (r['Customer'] || '').toString().trim();
+    if (!cust) return;
+    parsed.push({
+      customer:    cust,
+      serviceType: (r['Service_Type'] || '').toString().trim(),
+      population:  (r['Population_Category'] || '').toString().trim(),
+      dayType:     (r['Day_Type'] || '').toString().trim(),
+      windowType:  (r['Window_Type'] || '').toString().trim(),
+      portion:     (r['Window_Portion'] || '').toString().trim(),
+      startTime:   toHHMM(r['Start_Time']),
+      endTime:     toHHMM(r['End_Time']),
+      classFilter: (r['Service_Class_Filter'] || '').toString().trim()
+    });
+  });
+  STATE.lookups.outageWindows = parsed;
+  schedSave();
+  return parsed.length;
+}
+
 const XL_SHEET_MAP = [
   { id:'qop',    sheet:'Sheet1',              fn: xlProcessQOP,     pill:'xpill-qop',    step:1 },
   { id:'pb',     sheet:'P_Bulletin',          fn: xlProcessPB,      pill:'xpill-pb',     step:3 },
@@ -7972,6 +8181,7 @@ const XL_SHEET_MAP = [
   { id:'thss',   sheet:'THSS_Live',           fn: xlProcessTHSS,    pill:'xpill-thss',   step:7 },
   { id:'ph',     sheet:'Public_Holidays',     fn: xlProcessPH,      pill:'xpill-ph',     step:4 },
   { id:'spmreq', sheet:'SPM_Test_Requirements',fn: xlProcessSPMReq,  pill:'xpill-spmreq', step:0 },
+  { id:'owin',   sheet:'Outage_Windows',       fn: xlProcessOutageWindows, pill:'', step:0 },
 ];
 
 let _xlWorkbook = null;
