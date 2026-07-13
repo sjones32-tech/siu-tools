@@ -2086,6 +2086,7 @@ function s9_extractCustomer(serviceName) {
 // Extract the service type — mirrors Stage9_ExtractServiceType
 function s9_extractServiceType(serviceName) {
   const u = String(serviceName || '').toUpperCase();
+  // Specific radio subtypes first (most specific wins)
   if (u.includes('LOCAL RADIO')) return 'Local Radio';
   if (u.includes('RADIO NATIONAL')) return 'Radio National';
   if (u.includes('NEWS ON RADIO')) return 'NEWS on radio';
@@ -2093,6 +2094,9 @@ function s9_extractServiceType(serviceName) {
   if (u.includes('TRIPLE J')) return 'Triple J';
   if (u.includes('DIGITAL TELEVISION') || u.includes(' DTV')) return 'Digital Television';
   if (u.includes('DAB+') || u.includes('DAB PLUS')) return 'DAB+';
+  // Generic radio / FM services (e.g. "SBS Radio", "ABC Radio", plain "…FM")
+  // map to the "Radio" window type so they match customer Radio windows.
+  if (u.includes('RADIO') || u.includes('FM')) return 'Radio';
   return 'All';
 }
 
