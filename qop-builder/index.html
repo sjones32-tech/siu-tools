@@ -5778,7 +5778,7 @@ function renderPrevQOP() {
       // Timing / Timing Reason are blank in the source — show the DERIVED value
       // (from Stage 9 window matching) in muted italics so the column isn't empty.
       if ((k === 'timing' || k === 'timingReason') && !v) {
-        const s9 = stage9Timing(r.ai, r.ss, popFromClass(r.svcClass || ''), r.service,
+        const s9 = stage9Timing(r.ai, r.ss, categorisePopulation(r.popCat, r.svcClass), r.service,
                                 r.svcClass, r.startDate, r.endDate);
         const dv = k === 'timing' ? s9.timing : s9.reason;
         if (dv) return `<td style="padding:3px 8px;white-space:nowrap;color:var(--muted);font-style:italic" title="Derived via Stage 9 window matching — not in source">${esc(dv)}</td>`;
@@ -6151,14 +6151,27 @@ const SUBMISSION_MAP = {
 // Parse "DD/MM/YYYY HH:MM" → JS Date (for real Excel date cells)
 // Parse "DD/MM/YYYY HH:MM AM/PM" → {y,mo,d,hr,min} (wall-clock, no timezone)
 function qopDateParts(s) {
-  const m = String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T]+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
-  if (!m) return null;
-  let hr = m[4] ? parseInt(m[4]) : 0;
-  const min = m[5] ? parseInt(m[5]) : 0;
-  const ap = (m[6] || '').toUpperCase();
-  if (ap === 'PM' && hr < 12) hr += 12;
-  if (ap === 'AM' && hr === 12) hr = 0;
-  return { y:+m[3], mo:+m[2], d:+m[1], hr, min };
+  s = String(s || '').trim();
+  if (!s) return null;
+  // Format A: DD/MM/YYYY [HH:MM [AM/PM]]
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T]+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
+  if (m) {
+    let hr = m[4] ? parseInt(m[4]) : 0;
+    const min = m[5] ? parseInt(m[5]) : 0;
+    const ap = (m[6] || '').toUpperCase();
+    if (ap === 'PM' && hr < 12) hr += 12;
+    if (ap === 'AM' && hr === 12) hr = 0;
+    return { y:+m[3], mo:+m[2], d:+m[1], hr, min };
+  }
+  // Format B: YYYY-MM-DD [HH:MM[:SS]] (ISO-ish, as produced by the xlsm import)
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
+  if (m) {
+    return { y:+m[1], mo:+m[2], d:+m[3], hr: m[4]?parseInt(m[4]):0, min: m[5]?parseInt(m[5]):0 };
+  }
+  // Fallback: let the Date parser try, then read wall-clock components
+  const d = new Date(s);
+  if (!isNaN(d)) return { y:d.getFullYear(), mo:d.getMonth()+1, d:d.getDate(), hr:d.getHours(), min:d.getMinutes() };
+  return null;
 }
 function qopToJSDate(s) {
   const p = qopDateParts(s);
