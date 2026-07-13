@@ -1498,7 +1498,8 @@ select option:checked, select option:hover {
             </div>
             <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">
               Rules are matched top-to-bottom against the activity name (case-insensitive contains). First match wins.
-              These values populate the QOP import columns automatically.
+              These values populate the QOP import columns (Activity Code, Audience Impact, Service State, RAC, Work Description) automatically.
+              <strong>Note:</strong> the <em>Timing</em> / Start Hr / End Hr columns here are legacy — the QOP <em>Timing</em> column is now determined by the <strong>Outage Windows</strong> table (per-service window matching), not these fields.
             </div>
             <div class="lk-table-wrap">
               <table class="lk-table">
@@ -1530,20 +1531,25 @@ select option:checked, select option:hover {
               <h3>Outage Windows</h3>
               <span class="lk-count" id="ow-count"></span>
               <span class="lk-unsaved" id="ow-dirty">● Unsaved changes</span>
-              <button class="btn btn-ghost" style="font-size:11px" onclick="addOWRow()">+ Add Row</button>
+              <input id="ow-search" class="lk-inp med" placeholder="Filter…" oninput="renderOWRules()" style="margin-left:auto">
+              <button class="btn btn-ghost" style="font-size:11px" onclick="addOWRow()">+ Add Window</button>
               <button class="btn btn-primary" style="font-size:11px" onclick="saveOWRules()">Save</button>
             </div>
             <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">
-              Window rules used to set the Outage Window column in QOP export. Match text checked against activity name (contains). Day type: Weekday / Weekend / Any.
+              The approved outage windows (from the <strong>Outage_Windows</strong> sheet) that drive the Timing column. For each service on a QOP row, the customer + service type + population + day type + service class + time overlap are matched here to decide Primary / Secondary / Outside. Re-imported automatically from the xlsm.
             </div>
-            <div class="lk-table-wrap">
+            <div class="lk-table-wrap scroll-lg" style="max-height:calc(100vh - 320px)">
               <table class="lk-table">
                 <thead><tr>
-                  <th style="min-width:100px">Match Text</th>
+                  <th style="min-width:70px">Customer</th>
+                  <th style="min-width:110px">Service Type</th>
+                  <th style="width:90px">Population</th>
                   <th style="width:80px">Day Type</th>
-                  <th style="width:70px">Window Start Hr</th>
-                  <th style="width:70px">Window End Hr</th>
-                  <th style="min-width:200px">Outside Window Message</th>
+                  <th style="width:90px">Window Type</th>
+                  <th style="width:90px">Portion</th>
+                  <th style="width:70px">Start</th>
+                  <th style="width:70px">End</th>
+                  <th style="width:70px">Class</th>
                   <th style="width:52px"></th>
                 </tr></thead>
                 <tbody id="ow-body"></tbody>
@@ -1551,6 +1557,7 @@ select option:checked, select option:hover {
             </div>
             <div class="lk-footer">
               <button class="btn btn-ghost" style="font-size:11px" onclick="resetOWRules()">↺ Reset to Defaults</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="exportOWCSV()">⬇ Export CSV</button>
             </div>
           </div>
         </div>
@@ -4779,10 +4786,15 @@ function buildQOPRow(r, rd) {
   const rac  = prev.rac   || racCode(r.act);
   const descr= prev.descr || workDescription(r.act);
   const code = prev.code  || actCode(r.act);
-  const timing = timingCategory(r.act, r.cls) || prev.timing || '';
   const svc  = (STATE.lookups.serviceMap[r.sno]
     && !STATE.lookups.serviceMap[r.sno].includes('Add to'))
       ? STATE.lookups.serviceMap[r.sno] : (prev.service || '');
+  const _startB = fmtDateTime(cd, startHour(r.act));
+  const _endB   = fmtDateTime(cd, endHour(r.act));
+  const _popB   = prev.popCat || popFromClass(r.cls);
+  const _s9B    = stage9Timing(ai, ss, _popB, svc, prev.svcClass || r.cls, _startB, _endB);
+  const timing  = _s9B.timing;
+  const _s9Bnote = _s9B.note;
   return {
     District: STATE.settings.district,
     Population: prev.popCat || popFromClass(r.cls),
@@ -4792,10 +4804,10 @@ function buildQOPRow(r, rd) {
     'Service State': ss,
     RPW: prev.rpw || '0',
     RAC: rac,
-    'Start Date': fmtDateTime(cd, startHour(r.act)),
-    'End Date':   fmtDateTime(cd, endHour(r.act)),
+    'Start Date': _startB,
+    'End Date':   _endB,
     Timing: timing,
-    'Timing Reason': timingReason(timing) || prev.timingReason || '',
+    'Timing Reason': _s9B.reason,
     'Description of Work': descr,
     'Maintenance Activity Number': code,
     Service: svc,
@@ -4816,7 +4828,7 @@ function buildQOPRow(r, rd) {
     'Original Audience Impact': prev.ai || ai,
     'Original Service State': prev.ss || ss,
     'Original Description': prev.descr || descr,
-    'Outage Window': outageWindow(r.act, cd),
+    'Outage Window': _s9Bnote || outageWindow(r.act, cd),
     'Service Name Validation': svcNameValidationForRow(svc, r.sno),
     'SPM Completion Notes': '',
     'Remedy Source of Truth': prev.thssService || '',
@@ -8071,55 +8083,88 @@ function resetActRules() {
 const DAY_OPTS = ["Weekday","Weekend","Any"];
 
 function renderOWRules() {
-  const rules = STATE.lookups.owRules;
-  document.getElementById("ow-count").textContent = rules.length + " rules";
-  const rows = rules.map((r, i) => `<tr>
-    <td><input class="lk-inp med" value="${esc(r.match)}" onchange="owChange()" data-f="match" data-i="${i}"></td>
-    <td>${selCellOW(DAY_OPTS, r.dayType, "dayType", i)}</td>
-    <td><input class="lk-inp xsml" type="number" value="${r.startHr}" min="0" max="23" onchange="owChange()" data-f="startHr" data-i="${i}"></td>
-    <td><input class="lk-inp xsml" type="number" value="${r.endHr}"   min="0" max="23" onchange="owChange()" data-f="endHr"   data-i="${i}"></td>
-    <td><input class="lk-inp wide" value="${esc(r.outsideMsg)}" onchange="owChange()" data-f="outsideMsg" data-i="${i}"></td>
-    <td><button class="del-btn" onclick="delOWRow(this)">✕</button></td>
-  </tr>`).join("");
-  document.getElementById("ow-body").innerHTML = rows;
+  const all = STATE.lookups.outageWindows || [];
+  const term = (document.getElementById("ow-search")?.value || "").toLowerCase();
+  const windows = term
+    ? all.filter(w => [w.customer,w.serviceType,w.population,w.dayType,w.windowType,w.portion,w.classFilter].join(" ").toLowerCase().includes(term))
+    : all;
+  document.getElementById("ow-count").textContent =
+    `${windows.length}${term?` of ${all.length}`:""} windows`;
+
+  // Map each filtered row back to its index in the full array for editing
+  const rows = windows.map((w) => {
+    const i = all.indexOf(w);
+    return `<tr>
+      <td><input class="lk-inp sml" value="${esc(w.customer)}" onchange="owChange()" data-f="customer" data-i="${i}"></td>
+      <td><input class="lk-inp med" value="${esc(w.serviceType)}" onchange="owChange()" data-f="serviceType" data-i="${i}"></td>
+      <td><input class="lk-inp sml" value="${esc(w.population)}" onchange="owChange()" data-f="population" data-i="${i}"></td>
+      <td>${selCellOW(["Weekday","Weekend","Any"], w.dayType, "dayType", i)}</td>
+      <td>${selCellOW(["Primary","Secondary","Class A","Class B","Class C/D"], w.windowType, "windowType", i)}</td>
+      <td><input class="lk-inp sml" value="${esc(w.portion)}" onchange="owChange()" data-f="portion" data-i="${i}"></td>
+      <td><input class="lk-inp xsml" value="${esc(w.startTime)}" onchange="owChange()" data-f="startTime" data-i="${i}" placeholder="HH:MM"></td>
+      <td><input class="lk-inp xsml" value="${esc(w.endTime)}" onchange="owChange()" data-f="endTime" data-i="${i}" placeholder="HH:MM"></td>
+      <td><input class="lk-inp xsml" value="${esc(w.classFilter)}" onchange="owChange()" data-f="classFilter" data-i="${i}"></td>
+      <td><button class="del-btn" onclick="delOWRow(${i})">✕</button></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("ow-body").innerHTML = rows ||
+    `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No windows${term?" match the filter":" — import the xlsm or Reset to Defaults"}</td></tr>`;
 }
 
 function selCellOW(opts, val, f, i) {
-  const options = opts.map(o => `<option${o===val?" selected":""}>${o}</option>`).join("");
+  const has = opts.some(o => o === val);
+  const options = (has ? opts : [val, ...opts]).map(o => `<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
   return `<select class="lk-sel" onchange="owChange()" data-f="${f}" data-i="${i}">${options}</select>`;
 }
 
-function owChange() { document.getElementById("ow-dirty").classList.add("show"); }
+function owChange() {
+  // Live-capture edits into the array (so filter/sort don't lose them)
+  document.querySelectorAll("#ow-body [data-f]").forEach(el => {
+    const i = parseInt(el.dataset.i), f = el.dataset.f;
+    if (STATE.lookups.outageWindows[i]) STATE.lookups.outageWindows[i][f] = el.value.trim();
+  });
+  document.getElementById("ow-dirty").classList.add("show");
+}
 
 function addOWRow() {
-  STATE.lookups.owRules.push({ match:"", dayType:"Weekday", startHr:1, endHr:5, outsideMsg:"OUTSIDE APPROVED WINDOW - EXCEPTION APPROVAL REQUIRED" });
+  STATE.lookups.outageWindows = STATE.lookups.outageWindows || [];
+  STATE.lookups.outageWindows.push({
+    customer:"ABC", serviceType:"All", population:"All", dayType:"Weekday",
+    windowType:"Primary", portion:"Preferred", startTime:"01:00", endTime:"05:00", classFilter:"All"
+  });
   renderOWRules(); owChange();
 }
 
-function delOWRow(btn) { btn.closest("tr").remove(); owChange(); }
+function delOWRow(i) {
+  STATE.lookups.outageWindows.splice(i, 1);
+  renderOWRules(); owChange();
+}
 
 function saveOWRules() {
-  const rows = document.querySelectorAll("#ow-body tr");
-  const newRules = [];
-  rows.forEach(tr => {
-    const get = f => { const el = tr.querySelector(`[data-f="${f}"]`); return el ? el.value.trim() : ""; };
-    newRules.push({
-      match: get("match"), dayType: get("dayType"),
-      startHr: parseInt(get("startHr"))||1, endHr: parseInt(get("endHr"))||5,
-      outsideMsg: get("outsideMsg")
-    });
-  });
-  STATE.lookups.owRules = newRules;
+  owChange();   // flush current edits into the array
   persist();
   document.getElementById("ow-dirty").classList.remove("show");
-  toast(`Outage Windows saved — ${newRules.length} rules`, "success");
+  toast(`Outage Windows saved — ${STATE.lookups.outageWindows.length} windows`, "success");
 }
 
 function resetOWRules() {
-  if (!confirm("Reset Outage Windows to defaults?")) return;
-  STATE.lookups.owRules = DEFAULT_OW_RULES.map(r => Object.assign({}, r));
+  if (!confirm("Reset Outage Windows to the built-in defaults (151 windows)?")) return;
+  STATE.lookups.outageWindows = DEFAULT_OUTAGE_WINDOWS.map(r => Object.assign({}, r));
   persist(); renderOWRules();
-  toast("Outage Windows reset", "info");
+  toast("Outage Windows reset to defaults", "info");
+}
+
+function exportOWCSV() {
+  const cols = ["customer","serviceType","population","dayType","windowType","portion","startTime","endTime","classFilter"];
+  const hdr = ["Customer","Service_Type","Population_Category","Day_Type","Window_Type","Window_Portion","Start_Time","End_Time","Service_Class_Filter"];
+  const lines = [hdr.join(",")].concat(
+    (STATE.lookups.outageWindows||[]).map(w => cols.map(c => `"${String(w[c]||"").replace(/"/g,'""')}"`).join(","))
+  );
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "Outage_Windows.csv";
+  a.click();
 }
 
 // ── Shared util ─────────────────────────────────────────────────
