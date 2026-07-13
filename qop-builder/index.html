@@ -1699,13 +1699,23 @@ select option:checked, select option:hover {
                 </div>
 
                 <div style="background:var(--surf2);border-radius:var(--radius);padding:14px;border-left:4px solid #FFF2CC">
-                  <div style="font-weight:700;margin-bottom:6px">🟡 [17] Outage Window → Col AD <span style="float:right;background:#FFF2CC;color:#6e5a10;border-radius:8px;padding:0 8px;font-size:10px">mild yellow</span></div>
-                  <div style="color:var(--muted)">Start time checked against the permitted window rules (Settings → Outage Windows). Outside the approved window → "EXCEPTION APPROVAL REQUIRED" message.</div>
+                  <div style="font-weight:700;margin-bottom:6px">🟡 [17] Timing + Outage Window (Stage 9) → Cols K/L/AD <span style="float:right;background:#FFF2CC;color:#6e5a10;border-radius:8px;padding:0 8px;font-size:10px">mild yellow</span></div>
+                  <div style="color:var(--muted)">Faithful port of the Excel <strong>Stage9_OutageWindowValidation</strong>. For each service on the row: extract customer (ABC/SBS/SCA/WIN/Seven/Ten) + service type, then match against the approved <strong>Outage Windows</strong> table by customer × service type × population × day type (weekday/weekend) × service class × time overlap (midnight-aware).<br>
+                  • Any service Outside a window → <strong>Timing = Outside</strong>, "Exception approval required" + AD note<br>
+                  • Else any Primary overlap → <strong>Primary</strong><br>
+                  • Else Secondary → <strong>Secondary</strong> (>15k population adds "by exception – approval req.")<br>
+                  • WIN/Seven "Allowed" portions count as Primary; "Limited" only if OFF and outage ≤5 min<br>
+                  • Not service-impacting (AI = NIL <em>and</em> SS = NOP) → Timing left blank<br>
+                  Editing a row's Start Date re-runs Stage 9. Timing changes from the previous QOP are highlighted amber.</div>
                 </div>
 
                 <div style="background:var(--surf2);border-radius:var(--radius);padding:14px;border-left:4px solid #BDD7EE">
-                  <div style="font-weight:700;margin-bottom:6px">🔵 [18] Service Name Validation → Col AE <span style="float:right;background:#BDD7EE;color:#11406b;border-radius:8px;padding:0 8px;font-size:10px">distinct blue</span></div>
-                  <div style="color:var(--muted)">Each ;-separated service on the row cross-referenced against the THSS service list for that site (Service Map). Services not found → "NOT IN THSS for site N". Missing site in THSS → "verify manually".</div>
+                  <div style="font-weight:700;margin-bottom:6px">🔵 [18] Service Name Validation → Col AE <span style="float:right;background:#BDD7EE;color:#11406b;border-radius:8px;padding:0 8px;font-size:10px">blue / yellow</span></div>
+                  <div style="color:var(--muted)">Each service on the row (split on ; and ,) is compared <strong>both ways</strong> against the THSS service list for that site (Remedy Source of Truth):<br>
+                  • Service on the row but <strong>not</strong> in THSS → hard flag "NOT IN THSS for site N" (<span style="color:#11406b;background:#BDD7EE;padding:0 4px;border-radius:3px">blue</span>)<br>
+                  • Service in THSS but <strong>missing</strong> from the row → minor warning "MISSING (warn)" (<span style="color:#6e5a10;background:#FFF2CC;padding:0 4px;border-radius:3px">yellow</span>)<br>
+                  • Site not in the THSS map → "verify manually"<br>
+                  The Service column keeps the row's own service; the full THSS list stays in Remedy Source of Truth for comparison only.</div>
                 </div>
 
                 <div style="background:var(--surf2);border-radius:var(--radius);padding:14px;border-left:4px solid #FFCC99">
@@ -1806,7 +1816,7 @@ select option:checked, select option:hover {
               <button class="btn btn-ghost" style="font-size:11px" onclick="prevQOPExportCSV()">⬇ Export CSV</button>
             </div>
             <div style="padding:6px 14px;font-size:11px;color:var(--muted)">
-              The raw previous-year QOP rows imported from <strong>Automated_QOP_Builder.xlsm</strong> (Sheet1) — the source the QOP Export builds from (dates shifted +1 year). Read-only reference. <em>Note: the source Sheet1 has no Timing data, so Timing / Timing Reason here are shown in italics as derived from the start time (Primary 00:00–05:00, Secondary 13:00–16:00, else Outside).</em>
+              The raw previous-year QOP rows imported from <strong>Automated_QOP_Builder.xlsm</strong> (Sheet1) — the source the QOP Export builds from (dates shifted +1 year). Read-only reference. <em>Note: the source Sheet1 has no Timing data, so Timing / Timing Reason here are shown in italics as derived via Stage 9 (matching each service against the approved Outage Windows).</em>
             </div>
             <div class="scroll-lg" style="overflow:auto;max-height:calc(100vh - 230px)">
               <table class="lk-table" style="width:100%;font-size:11px">
@@ -5305,8 +5315,13 @@ function revalidateQOP() {
     }
     if (row['Antenna Testing']) counts.ant++;
 
-    // [17] Outage Window → AD
-    row['Outage Window'] = startISO ? outageWindow(descr, startISO) : row['Outage Window'] || '';
+    // [17] Timing + Outage Window (Stage 9) → K / L / AD
+    const _s9r = stage9Timing(row['Audience Impact'], row['Service State'],
+                             row['Population'], svc, row['Service Class'],
+                             row['Start Date'], row['End Date']);
+    row['Timing'] = _s9r.timing;
+    row['Timing Reason'] = _s9r.reason;
+    row['Outage Window'] = _s9r.note || '';
     if (row['Outage Window']) counts.ow++;
 
     // [18] Service Name Validation → AE
@@ -5761,11 +5776,12 @@ function renderPrevQOP() {
     PREVQOP_COLS.map(([k]) => {
       let v = r[k] || '';
       // Timing / Timing Reason are blank in the source — show the DERIVED value
-      // (from the start-time window rule) in muted italics so the column isn't empty.
+      // (from Stage 9 window matching) in muted italics so the column isn't empty.
       if ((k === 'timing' || k === 'timingReason') && !v) {
-        const tw = timingFromWindow(extractTime(r.startDate, ''));
-        const dv = k === 'timing' ? tw.timing : tw.reason;
-        if (dv) return `<td style="padding:3px 8px;white-space:nowrap;color:var(--muted);font-style:italic" title="Derived from start time — not in source">${esc(dv)}</td>`;
+        const s9 = stage9Timing(r.ai, r.ss, popFromClass(r.svcClass || ''), r.service,
+                                r.svcClass, r.startDate, r.endDate);
+        const dv = k === 'timing' ? s9.timing : s9.reason;
+        if (dv) return `<td style="padding:3px 8px;white-space:nowrap;color:var(--muted);font-style:italic" title="Derived via Stage 9 window matching — not in source">${esc(dv)}</td>`;
       }
       return `<td style="padding:3px 8px;white-space:nowrap;${k==='descr'?'white-space:normal;min-width:200px':''}">${esc(v)}</td>`;
     }).join('')
