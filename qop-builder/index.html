@@ -4505,7 +4505,8 @@ function stage8_SPMSplit(rows) {
 
     // Scope gates (VBA): skip 45 (Annual PM), 41 (antenna loop), 57 (MPL)
     if (code === '45' || code === '41' || code === '57') { out.push(row); continue; }
-    const isSPM = upper.includes('SPM') || upper.includes('AFSR') || upper.includes('ASFR') || code === '40';
+    const isSPM = upper.includes('SPM') || upper.includes('AFSR') || upper.includes('ASFR') ||
+                  upper.includes('SPURIOUS') || upper.includes('AUDIO & AM NOISE');
     if (!isSPM) { out.push(row); continue; }
     // Already in the fully-enhanced canonical form → leave as-is.
     // (Partial/legacy descriptions lacking the "(Harmonics …)" suffix are
