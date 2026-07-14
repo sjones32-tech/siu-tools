@@ -4495,8 +4495,10 @@ function stage8_SPMSplit(rows) {
     if (code === '45' || code === '41' || code === '57') { out.push(row); continue; }
     const isSPM = upper.includes('SPM') || upper.includes('AFSR') || upper.includes('ASFR') || code === '40';
     if (!isSPM) { out.push(row); continue; }
-    // Already processed by a previous pass
-    if (upper.includes('AUDIO & AM NOISE') || upper.includes('SPURIOUS EMISSIONS')) { out.push(row); continue; }
+    // Already in the fully-enhanced canonical form → leave as-is.
+    // (Partial/legacy descriptions lacking the "(Harmonics …)" suffix are
+    //  reprocessed below so they get the full text.)
+    if (upper.includes('(HARMONICS')) { out.push(row); continue; }
     // Exclusion list — current AND original description
     if (isExcludedSPM(descr, row['Original Description'])) { out.push(row); skipped++; continue; }
 
@@ -4514,7 +4516,7 @@ function stage8_SPMSplit(rows) {
     const sno    = (row['Site Number'] || '').toString().trim();
     const svcStr = row['Service'] || '';
     const modUp  = (row['Modulation'] || '').toUpperCase();
-    const parts  = svcStr.split(';').map(s => s.trim()).filter(Boolean);
+    const parts  = svcStr.split(/[;,]/).map(s => s.trim()).filter(Boolean);
 
     let amSvcs, dtvSvcs, fmSvcs;
     if (modUp) {
