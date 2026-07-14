@@ -4430,6 +4430,18 @@ function getAntennaDueItemsForYear(siteNo, year) {
   return items;
 }
 
+// Return only the spurious-emissions portion of an SPM Full_Description,
+// dropping "Transmit Antenna Return Loss" / "System Return Loss" / "RF Signal…"
+// items (these are represented separately on antenna-visit rows).
+function spmSpuriousOnly(serviceType, services, svcClass) {
+  const full = spmFullDescription(serviceType, services, svcClass) || '';
+  if (!full) return '';
+  const kept = full.split(',')
+    .map(s => s.trim())
+    .filter(s => s && !/RETURN LOSS/i.test(s) && !/RF SIGNAL/i.test(s));
+  return kept.join(', ');
+}
+
 function stage6_AntennaRows(rows) {
   const year = STATE.settings.year;
   if (!STATE.lookups.antennaSNP.length) return { rows, added: 0, removed: 0, updated: 0, notDue: 0 };
@@ -4565,12 +4577,12 @@ function stage8_SPMSplit(rows) {
         const it = dueItems.find(it => (it.testType||'').toUpperCase().includes('DTV') || (it.testType||'').toUpperCase().includes('UHF'));
         const lines = [`${it.period} Yearly Antenna Test UHF DTV`];
         if (systemRLRequired('DTV', r['Service'], row['Service Class'])) lines.push('System Return Loss');
-        lines.push(spmFullDescription('DTV', r['Service'], row['Service Class']) || 'SPM - Spurious Emissions (Harmonics & Channel Power)');
+        lines.push('SPM - ' + (spmSpuriousOnly('DTV', r['Service'], row['Service Class']) || 'Spurious Emissions (Harmonics & Channel Power)'));
         r['Description of Work'] = lines.join('\n');
         r['Maintenance Activity Number'] = '40, 41';
         r['Audience Impact'] = 'OFF'; r['Service State'] = 'OFF';
       } else {
-        r['Description of Work'] = spmFullDescription('DTV', r['Service'], row['Service Class']) || 'SPM - Spurious Emissions (Harmonics & Channel Power)';
+        r['Description of Work'] = 'SPM - ' + (spmSpuriousOnly('DTV', r['Service'], row['Service Class']) || 'Spurious Emissions (Harmonics & Channel Power)');
         r['Audience Impact'] = 'NIL'; r['Service State'] = 'NOP';   // non-invasive annual
       }
       newRows.push(r);
@@ -4584,7 +4596,7 @@ function stage8_SPMSplit(rows) {
         const it = dueItems.find(it => (it.testType||'').toUpperCase().includes('FM'));
         const lines = [`${it.period} Yearly Antenna Test FM`];
         if (systemRLRequired('FM', r['Service'], row['Service Class'])) lines.push('System Return Loss');
-        lines.push(spmFullDescription('FM', r['Service'], row['Service Class']) || 'SPM - Spurious Emissions (Harmonics & FM Mask)');
+        lines.push('SPM - ' + (spmSpuriousOnly('FM', r['Service'], row['Service Class']) || 'Spurious Emissions (Harmonics & FM Mask)'));
         lines.push('SPM - Audio & AM Noise Measurement');   // FM audio merged into antenna visit
         r['Description of Work'] = lines.join('\n');
         r['Maintenance Activity Number'] = '40, 41';
@@ -4594,7 +4606,7 @@ function stage8_SPMSplit(rows) {
         r['Description of Work'] = 'SPM - Audio & AM Noise Measurement';
         r['Audience Impact'] = 'OFF'; r['Service State'] = 'OFF';
       } else {
-        r['Description of Work'] = spmFullDescription('FM', r['Service'], row['Service Class']) || 'SPM - Spurious Emissions (Harmonics & FM Mask)';
+        r['Description of Work'] = 'SPM - ' + (spmSpuriousOnly('FM', r['Service'], row['Service Class']) || 'Spurious Emissions (Harmonics & FM Mask)');
         r['Audience Impact'] = 'NIL'; r['Service State'] = 'NOP';
       }
       newRows.push(r);
@@ -4610,11 +4622,9 @@ function stage8_SPMSplit(rows) {
       if (/DIGITAL TELEVISION|\bDTV\b/i.test(svcAll)) stype = 'DTV';
       else if (/LOCAL RADIO/i.test(svcAll))            stype = 'AM';
       else if (/RADIO|\bFM\b|DAB|HIT|TRIPLE M|NOVA|\d\.?\d*FM|I98/i.test(svcAll)) stype = 'FM';
-      let full = stype ? spmFullDescription(stype, svcAll, row['Service Class']) : '';
+      let full = stype ? spmSpuriousOnly(stype, svcAll, row['Service Class']) : '';
       if (full) {
         row['Description of Work'] = 'SPM - ' + full;
-        // Non-invasive annual spurious → NIL/NOP (Transmit Antenna RL not needed here)
-        if (!systemRLRequired(stype, svcAll, row['Service Class'])) { /* leave impact as-is if unknown */ }
         standardised++;
       } else if (stype) {
         // Known type but no matrix row → use the canonical default text
