@@ -3459,7 +3459,38 @@ function toggleCoverageView() {
 // Normalise an activity label for coverage comparison (Site Grid planned
 // activity vs QOP Trip Activity). Case/space-insensitive; unifies EPP variants.
 function normCovActivity(s) {
-  return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  return String(s || '').toUpperCase()
+    .replace(/#/g, ' ')            // "EPP#" → "EPP"
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// The set of "base activity" tokens in a value, e.g.
+//   "Quarterly ACU"  → {QUARTERLY}
+//   "EPP#"           → {EPP}
+//   "Nova & EPP"     → {NOVA, EPP}
+// Descriptor words that aren't activities (ACU, PM, GROUNDS…) are dropped so
+// "Quarterly ACU" still matches a planned "Quarterly".
+const COV_ACTIVITY_STOPWORDS = new Set(['ACU','PM','GROUNDS','GROUND','CLEANING','TEST','RUN','ONLINE','OFFLINE','NON','INTRUSIVE','WORKS','AND','THE','A','OF','TO','SW','SWITCH','BACK','MAIN','SITE','DURATION','REMOTE','PERFORM','NOC']);
+function covActivityTokens(s) {
+  const norm = normCovActivity(s);
+  if (!norm) return new Set();
+  const toks = norm.split(/[\s&,\/]+/)
+    .map(t => t.trim())
+    .filter(t => t && !COV_ACTIVITY_STOPWORDS.has(t));
+  return new Set(toks.length ? toks : [norm]);   // fall back to whole string
+}
+
+// True when a QOP Trip Activity covers a Site-Grid planned activity.
+function covActivityMatch(plannedRaw, tripRaw) {
+  const p = normCovActivity(plannedRaw), t = normCovActivity(tripRaw);
+  if (!p || !t) return false;
+  if (p === t) return true;                       // exact
+  if (t.includes(p) || p.includes(t)) return true;// containment ("Quarterly" ⊂ "Quarterly ACU")
+  // Share a base activity token ("EPP" in both "EPP" and "Nova & EPP")
+  const pt = covActivityTokens(plannedRaw), tt = covActivityTokens(tripRaw);
+  for (const x of pt) if (tt.has(x)) return true;
+  return false;
 }
 
 function renderCoverageCheck() {
@@ -3509,7 +3540,7 @@ function renderCoverageCheck() {
       } else if (!actSet.size) {
         missed.push({ sno, sname, month: m, activity: act,
                       why: 'outage exists but Trip Activity not set', uids });
-      } else if (!actSet.has(plannedNorm)) {
+      } else if (![...actSet].some(a => covActivityMatch(act, a))) {
         missed.push({ sno, sname, month: m, activity: act,
                       why: `activity mismatch (QOP: ${[...actSet].join(', ')})`, uids });
       } else {
