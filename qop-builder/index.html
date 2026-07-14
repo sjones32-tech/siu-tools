@@ -4984,6 +4984,84 @@ const QOP_MANDATORY = ['Start Date','End Date','Description of Work',
                        'Maintenance Activity Number','Service','Site Number'];
 
 // Resolve cell colour for a given column + row (returns {bg,fg} or null)
+
+// Human-readable explanation of WHY a cell is flagged (for the hover tooltip).
+// Mirrors the qopCellColor logic and returns a descriptive string, or ''.
+function qopFlagReason(col, row) {
+  const val = (row[col] || '').toString().trim();
+  const pb  = (row['Programming Bulletin Conflicts'] || '').trim();
+  const rb  = (row['Recommissioning Business Rules'] || '').trim();
+  const ra  = (row['Recommissioning Action Required'] || '').trim();
+  const ph  = (row['Public Holiday'] || '').trim();
+  const ant = (row['Antenna Testing'] || '').trim();
+  const ow  = (row['Outage Window'] || '').trim();
+  const sv  = (row['Service Name Validation'] || '').trim();
+
+  // The flag/validation columns themselves — show their content as the reason
+  if (col === 'Programming Bulletin Conflicts' && val) return 'Programming Bulletin conflict: ' + val;
+  if (col === 'Recommissioning Business Rules'  && val) return 'Recommissioning rule: ' + val;
+  if (col === 'Recommissioning Action Required' && val) return 'Recommissioning action: ' + val;
+  if (col === 'Public Holiday' && val)            return 'Falls on a public holiday: ' + val;
+  if (col === 'Antenna Testing' && val)           return 'Antenna: ' + val;
+  if (col === 'Outage Window' && val)             return 'Outage window: ' + val;
+  if (col === 'Service Name Validation' && val) {
+    return /^MISSING \(warn\)/.test(val)
+      ? 'Minor warning — ' + val
+      : 'Service name issue — ' + val;
+  }
+
+  // Service cell cross-highlight
+  if (col === 'Service' && sv) {
+    return /^MISSING \(warn\)/.test(sv)
+      ? 'Service list may be incomplete — ' + sv
+      : 'A listed service is not in THSS — ' + sv;
+  }
+
+  // Start Date attention (PB / holiday / outside-window)
+  if (col === 'Start Date') {
+    const parts = [];
+    if (pb) parts.push('inside a Programming Bulletin embargo (' + pb + ')');
+    if (ph) parts.push('on a public holiday (' + ph + ')');
+    if (/OUTSIDE|EXCEPTION/i.test(ow)) parts.push('outside the approved outage window — ' + ow);
+    if (parts.length) return 'Start date/time needs review: ' + parts.join('; ');
+    if (dateOrderInvalid(row)) return 'End Date is not after Start Date — check the dates';
+  }
+  if (col === 'End Date' && dateOrderInvalid(row))
+    return 'End Date is not after Start Date — check the dates';
+
+  // AI / SS antenna OFF requirement
+  if ((col === 'Audience Impact' || col === 'Service State') &&
+      /VERIFY: Antenna tests must be/i.test(ant) &&
+      (val || '').toUpperCase() !== 'OFF')
+    return 'Antenna test requires services OFF — set this to OFF (' + ant + ')';
+
+  // Activity code 40→41
+  if (col === 'Maintenance Activity Number' &&
+      /Activity 40 is .*should be Activity 41/i.test(ant))
+    return 'Activity code should be 41 for this antenna test (' + ant + ')';
+
+  // Missing mandatory field
+  if (QOP_MANDATORY.includes(col) && !val)
+    return 'Required field is empty — this must be filled before submission';
+
+  // Auto-changed fields (current ≠ original)
+  if (col === 'Description of Work' && row['Original Description'] && val !== row['Original Description'])
+    return 'Auto-updated by the build. Original: "' + row['Original Description'] + '"';
+  if (col === 'Maintenance Activity Number' && row['Original Activity Code'] && val !== row['Original Activity Code'])
+    return 'Auto-updated by the build. Original activity code: ' + row['Original Activity Code'];
+  if (col === 'Audience Impact' && row['Original Audience Impact'] && val !== row['Original Audience Impact'])
+    return 'Auto-updated by the build. Original: ' + row['Original Audience Impact'];
+  if (col === 'Service State' && row['Original Service State'] && val !== row['Original Service State'])
+    return 'Auto-updated by the build. Original: ' + row['Original Service State'];
+
+  // NEW SITE
+  if (row['SPM Completion Notes'] && row['SPM Completion Notes'].includes('NEW SITE') &&
+      ['District','Site Number','Site Name','Service'].includes(col))
+    return 'NEW SITE — not present in the previous QOP; verify these details';
+
+  return '';
+}
+
 function qopCellColor(col, row) {
   const val = (row[col] || '').toString().trim();
 
@@ -5160,7 +5238,7 @@ function renderQOPPreview(rows) {
               style="background:${cc ? 'transparent' : 'var(--surf2)'};border:1px solid ${cc ? 'transparent' : 'var(--border)'};
                      color:${inpFg};font-weight:${inpW};color-scheme:dark;
                      font-size:11px;padding:2px 4px;width:130px;border-radius:3px"
-              title="${(cc ? '[FLAG] ' : '') + val.replace(/"/g,"'")}">
+              title="${cc ? (qopFlagReason(c, row) || ('[FLAG] ' + val)).replace(/"/g,"'") : val.replace(/"/g,"'")}">
           </td>`;
         }
         if (QOP_DATE_COLS.includes(c)) {
@@ -5171,7 +5249,7 @@ function renderQOPPreview(rows) {
               style="background:${cc ? 'transparent' : 'var(--surf2)'};border:1px solid ${cc ? 'transparent' : 'var(--border)'};
                      color:${inpFg};font-weight:${inpW};color-scheme:dark;
                      font-size:11px;padding:2px 4px;width:165px;border-radius:3px"
-              title="${(cc ? '[FLAG] ' : '') + val.replace(/"/g,"'")}">
+              title="${cc ? (qopFlagReason(c, row) || ('[FLAG] ' + val)).replace(/"/g,"'") : val.replace(/"/g,"'")}">
           </td>`;
         }
 
@@ -5211,7 +5289,7 @@ function renderQOPPreview(rows) {
                    font-size:11px;padding:2px 4px;min-width:80px;width:${Math.min(Math.max(val.length*7+20,80),260)}px;border-radius:3px"
             onfocus="this.style.borderColor='var(--accent)'"
             onblur="this.style.borderColor='transparent'"
-            title="${(cc ? '[FLAG] ' : '') + val.replace(/"/g,"'")}">
+            title="${cc ? (qopFlagReason(c, row) || ('[FLAG] ' + val)).replace(/"/g,"'") : val.replace(/"/g,"'")}">
         </td>`;
       }).join("") + "</tr>";
   }).join("");
