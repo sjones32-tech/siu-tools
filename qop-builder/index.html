@@ -4814,6 +4814,25 @@ const district = STATE.settings.district;
   const s8 = stage8_SPMSplit(out);
   out = s8.rows;
 
+  // ── SYSTEM-UPDATED audit note (mirrors VBA): after all transforms, record
+  //    which fields the automation changed vs the original imported values ──
+  out.forEach(row => {
+    const changed = [];
+    const oAI = row['Original Audience Impact'] || '', cAI = row['Audience Impact'] || '';
+    const oSS = row['Original Service State']   || '', cSS = row['Service State']   || '';
+    const oD  = row['Original Description']      || '', cD  = row['Description of Work'] || '';
+    if (oAI && oAI.toUpperCase() !== cAI.toUpperCase()) changed.push('Audience Impact');
+    if (oSS && oSS.toUpperCase() !== cSS.toUpperCase()) changed.push('Service State');
+    if (oD  && oD.trim() !== cD.trim())                 changed.push('Description');
+    if (changed.length) {
+      const note = 'SYSTEM-UPDATED: ' + changed.join(', ');
+      const ex = row['SPM Completion Notes'] || '';
+      // Avoid duplicating if a prior run already added it
+      if (!ex.includes('SYSTEM-UPDATED'))
+        row['SPM Completion Notes'] = ex ? ex + ' | ' + note : note;
+    }
+  });
+
   // ── NEW_SITE detection ──────────────────────────────────────────────
   const newSites = detectNewSites(out);
 
