@@ -4529,9 +4529,15 @@ function stage8_SPMSplit(rows) {
       if (!hasAM && !hasDTV && !hasFM) { amSvcs = dtvSvcs = null; }   // unknown modulation → keyword fallback
     }
     if (!modUp || amSvcs === null) {
-      amSvcs  = parts.filter(s => s.toUpperCase().includes('LOCAL RADIO'));
-      dtvSvcs = parts.filter(s => s.toUpperCase().includes('DIGITAL'));
-      fmSvcs  = parts.filter(s => !s.toUpperCase().includes('LOCAL RADIO') && !s.toUpperCase().includes('DIGITAL'));
+      amSvcs  = parts.filter(s => /LOCAL RADIO/i.test(s));
+      dtvSvcs = parts.filter(s => /DIGITAL TELEVISION|\bDTV\b|DIGITAL/i.test(s));
+      // FM / radio: any remaining radio-ish service (Radio, FM, DAB, or a named
+      // commercial station like HIT FM / C91.3FM / Triple M / Nova).
+      fmSvcs  = parts.filter(s => {
+        if (/LOCAL RADIO/i.test(s)) return false;
+        if (/DIGITAL TELEVISION|\bDTV\b|DIGITAL/i.test(s)) return false;
+        return /RADIO|\bFM\b|DAB|HIT|TRIPLE M|NOVA|\d\.?\d*FM|I98/i.test(s);
+      });
     }
 
     // Antenna due this year? (drives merged vs standalone descriptions)
@@ -4592,7 +4598,30 @@ function stage8_SPMSplit(rows) {
       newRows.push(r);
     }
 
-    if (newRows.length === 0) { out.push(row); continue; }     // no recognised services — leave as-is
+    if (newRows.length === 0) {
+      // Catch-all (matches Excel Stage 8): even when service classification
+      // failed, rewrite the SPM description from the SPM_Test_Requirements
+      // matrix for the row's service type, so it still gets the proper
+      // "SPM - Spurious Emissions (Harmonics & …)" text rather than staying raw.
+      const svcAll = row['Service'] || '';
+      let stype = '';
+      if (/DIGITAL TELEVISION|\bDTV\b/i.test(svcAll)) stype = 'DTV';
+      else if (/LOCAL RADIO/i.test(svcAll))            stype = 'AM';
+      else if (/RADIO|\bFM\b|DAB|HIT|TRIPLE M|NOVA|\d\.?\d*FM|I98/i.test(svcAll)) stype = 'FM';
+      let full = stype ? spmFullDescription(stype, svcAll, row['Service Class']) : '';
+      if (full) {
+        row['Description of Work'] = 'SPM - ' + full;
+        // Non-invasive annual spurious → NIL/NOP (Transmit Antenna RL not needed here)
+        if (!systemRLRequired(stype, svcAll, row['Service Class'])) { /* leave impact as-is if unknown */ }
+        standardised++;
+      } else if (stype) {
+        // Known type but no matrix row → use the canonical default text
+        row['Description of Work'] = 'SPM - Spurious Emissions (Harmonics & ' +
+          (stype === 'DTV' ? 'Channel Power' : stype === 'AM' ? 'AM Mask' : 'FM Mask') + ')';
+        standardised++;
+      }
+      out.push(row); continue;
+    }
     if (newRows.length === 1) {
       // Single service type — update in place keeping the row identity
       Object.assign(row, newRows[0]);
@@ -8755,9 +8784,13 @@ function customerFromService(serviceName) {
   const u = (serviceName || '').toUpperCase();
   if (u.includes('ABC'))   return 'ABC';
   if (u.includes('SBS'))   return 'SBS';
-  if (u.includes('SEVEN') || u.includes('SEV') || u.includes('PRIME')) return 'SEV';
-  if (u.includes('TEN'))   return 'TEN';
+  if (u.includes('SEVEN') || u.includes('PRIME')) return 'Seven';
   if (u.includes('WIN'))   return 'WIN';
+  if (u.includes('10 PGM') || u.includes('TEN')) return 'Ten';
+  // SCA commercial radio brands (HIT, Triple M, Nova, and named FM stations)
+  if (u.includes('SCA') || u.includes('HIT') || u.includes('TRIPLE M') ||
+      u.includes('NOVA') || /\bC?\d+\.?\d*\s?FM\b/.test(u) || u.includes('I98'))
+    return 'SCA';
   return '';
 }
 
@@ -8765,11 +8798,20 @@ function customerFromService(serviceName) {
 function spmFullDescription(serviceType, services, svcClass) {
   const reqs = STATE.lookups.spmTestReqs;
   if (!reqs.length) return '';
-  for (const s of (services || '').split(';')) {
+  const st = (serviceType || '').toUpperCase();
+  const cl = (svcClass || '').toUpperCase();
+  for (const s of (services || '').split(/[;,]/)) {
     const cust = customerFromService(s);
     if (!cust) continue;
-    const hit = reqs.find(r => r.serviceType === serviceType && r.customer === cust &&
-                               (!svcClass || r.svcClass === svcClass));
+    // Prefer exact class match; fall back to an 'All'/'ALL' class row or any class
+    let hit = reqs.find(r => r.serviceType.toUpperCase() === st &&
+                             r.customer.toUpperCase() === cust.toUpperCase() &&
+                             r.svcClass.toUpperCase() === cl);
+    if (!hit) hit = reqs.find(r => r.serviceType.toUpperCase() === st &&
+                             r.customer.toUpperCase() === cust.toUpperCase() &&
+                             (r.svcClass.toUpperCase() === 'ALL' || r.svcClass === ''));
+    if (!hit) hit = reqs.find(r => r.serviceType.toUpperCase() === st &&
+                             r.customer.toUpperCase() === cust.toUpperCase());
     if (hit && hit.fullDesc) return hit.fullDesc;
   }
   return '';
