@@ -716,7 +716,7 @@ select option:checked, select option:hover {
               <th style="min-width:130px;cursor:pointer" data-sort="tech" onclick="schedSortBy('tech')" title="Sort">Technician</th>
               <th style="min-width:90px;cursor:pointer" data-sort="ph" onclick="schedSortBy('ph')" title="Sort">PH / Conflict</th>
               <th style="min-width:110px;cursor:pointer" data-sort="status" onclick="schedSortBy('status')" title="Sort">Status</th>
-              <th style="width:80px;cursor:pointer" data-sort="snow" onclick="schedSortBy('snow')" title="Sort">SNOW WO#</th>
+              <th style="width:80px;cursor:pointer" data-sort="snow" onclick="schedSortBy('snow')" title="Sort">EAM WO#</th>
               <th style="min-width:120px;cursor:pointer" data-sort="notes" onclick="schedSortBy('notes')" title="Sort">Notes</th>
               <th style="width:52px;cursor:pointer" data-sort="qop" onclick="schedSortBy('qop')" title="Reconciliation vs actual QOP outages: ✓ covered · ≠ outages exist but different month · ✗ no outage (missed)">QOP ⇄</th>
               <th style="min-width:120px;background:#1a0f00;color:#ff6b35">PB Conflict</th>
@@ -860,6 +860,22 @@ select option:checked, select option:hover {
           <option value="Q2">Q2 (Apr–Jun)</option>
           <option value="Q3">Q3 (Jul–Sep)</option>
           <option value="Q4">Q4 (Oct–Dec)</option>
+        </select>
+        <label style="margin-left:6px">Month</label>
+        <select id="qop-month" onchange="applyQuarterView()" title="Filter the displayed rows by month — no rebuild">
+          <option value="ALL" selected>All Months</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
         </select>
         <button class="btn btn-warn" onclick="revalidateQOP()" title="Re-run all validation checks on the current rows (keeps your edits)">↻ Re-run Validations</button>
         <button class="btn btn-danger" onclick="openRebuildDialog()" title="Rebuild every row from source and re-apply ALL rules — overwrites edits">⟳ Rebuild Rows…</button>
@@ -2584,6 +2600,7 @@ function persist() {
       connections: connSave, qopSource: STATE.qopSource,
       qopBuiltRows: qopBuiltRows,
       qopQuarter: (document.getElementById('qop-quarter')||{}).value || '',
+      qopMonth:   (document.getElementById('qop-month')||{}).value || '',
       ts: Date.now()
     }));
     document.getElementById("save-status").textContent = "Saved ✓";
@@ -2643,6 +2660,7 @@ function loadPersisted() {
       _pendingQOPRestore = true;   // render once the QOP tab/preview is ready
     }
     if (data.qopQuarter) _savedQOPQuarter = data.qopQuarter;   // restore view filter
+    if (data.qopMonth)   _savedQOPMonth   = data.qopMonth;
     if (data.connections) {
       if (data.connections.sp)     Object.assign(STATE.connections.sp,     data.connections.sp);
       if (data.connections.sn)     Object.assign(STATE.connections.sn,     data.connections.sn);
@@ -2685,6 +2703,9 @@ function showTab(name) {
     const qSelEl = document.getElementById('qop-quarter');
     if (qSelEl && _savedQOPQuarter) { qSelEl.value = _savedQOPQuarter; _savedQOPQuarter = ''; }
     if (qSelEl) _qopQuarterView = qSelEl.value || 'ALL';
+    const mSelEl = document.getElementById('qop-month');
+    if (mSelEl && _savedQOPMonth) mSelEl.value = _savedQOPMonth;
+    if (mSelEl) _qopMonthView = mSelEl.value || 'ALL';
     renderQOPPreview(qopBuiltRows);
     const eb = document.getElementById('qop-export-btn'); if (eb) eb.disabled = false;
     const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = false;
@@ -3955,9 +3976,21 @@ function buildQOP() {
 // View-only quarter filter — applied as a column filter, no rebuild.
 // Uses the existing per-column filter mechanism on the Start Date month.
 let _qopQuarterView = 'ALL';
+let _qopMonthView   = 'ALL';
 let _savedQOPQuarter = '';
+let _savedQOPMonth   = '';
 function applyQuarterView() {
   _qopQuarterView = (document.getElementById('qop-quarter') || {}).value || 'ALL';
+  _qopMonthView   = (document.getElementById('qop-month')   || {}).value || 'ALL';
+  // Keep the two selectors coherent: picking a month inside a different quarter
+  // widens the quarter to Full Year so the month rows are actually shown.
+  if (_qopMonthView !== 'ALL' && _qopQuarterView !== 'ALL') {
+    const mq = monthQuarter(parseInt(_qopMonthView));
+    if (mq !== _qopQuarterView) {
+      _qopQuarterView = 'ALL';
+      const qEl = document.getElementById('qop-quarter'); if (qEl) qEl.value = 'ALL';
+    }
+  }
   renderQOPPreview(qopBuiltRows);
 }
 
@@ -3970,9 +4003,13 @@ function monthQuarter(m) {
   return '';
 }
 function rowInQuarterView(row) {
-  if (_qopQuarterView === 'ALL') return true;
+  if (_qopQuarterView === 'ALL' && _qopMonthView === 'ALL') return true;
   const d = parseDate(row['Start Date']);
-  return d ? monthQuarter(d.getMonth() + 1) === _qopQuarterView : true;
+  if (!d) return true;   // undated rows always shown
+  const m = d.getMonth() + 1;
+  if (_qopQuarterView !== 'ALL' && monthQuarter(m) !== _qopQuarterView) return false;
+  if (_qopMonthView   !== 'ALL' && m !== parseInt(_qopMonthView))       return false;
+  return true;
 }
 
 
@@ -5329,8 +5366,10 @@ function renderQOPPreview(rows) {
 
   document.getElementById("qop-preview").innerHTML = `
     <div style="padding:8px 12px;background:var(--surf);border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-      <span style="color:var(--success);font-weight:600">${visibleIdx.length}${(filterActive || _qopQuarterView !== 'ALL') ? ` of ${rows.length}` : ''} rows</span>
-      ${_qopQuarterView !== 'ALL' ? `<span style="background:var(--accent);color:#04243f;border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Viewing ${_qopQuarterView}</span>` : '<span style="background:var(--surf3);color:var(--muted);border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Full Year</span>'}
+      <span style="color:var(--success);font-weight:600">${visibleIdx.length}${(filterActive || _qopQuarterView !== 'ALL' || _qopMonthView !== 'ALL') ? ` of ${rows.length}` : ''} rows</span>
+      ${(_qopQuarterView !== 'ALL' || _qopMonthView !== 'ALL')
+        ? `<span style="background:var(--accent);color:#04243f;border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Viewing ${[_qopQuarterView !== 'ALL' ? _qopQuarterView : '', _qopMonthView !== 'ALL' ? ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(_qopMonthView)] : ''].filter(Boolean).join(' · ')}</span>`
+        : '<span style="background:var(--surf3);color:var(--muted);border-radius:9px;padding:1px 9px;font-size:10px;font-weight:700">Full Year</span>'}
       ${(() => {
         let pb=0, rc=0, hol=0, ant=0, ow=0, sv=0, svw=0, miss=0, dord=0;
         rows.forEach(r => {
@@ -6399,6 +6438,15 @@ function qopExcelSerial(s) {
   return days + frac;
 }
 
+// Combined quarter+month label for export filenames / toasts
+function qopViewLabel() {
+  const MN = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts = [];
+  if (_qopQuarterView !== 'ALL') parts.push(_qopQuarterView);
+  if (_qopMonthView   !== 'ALL') parts.push(MN[parseInt(_qopMonthView)]);
+  return parts.length ? parts.join('_') : 'FullYear';
+}
+
 function quarterDateRange() {
   const y = STATE.settings.year;
   const map = { Q1:[0,1,2,31], Q2:[3,4,5,30], Q3:[6,7,8,30], Q4:[9,10,11,31] };
@@ -6489,10 +6537,10 @@ async function exportQOPSubmission() {
   const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  const qLabel = _qopQuarterView === 'ALL' ? 'FullYear' : _qopQuarterView;
+  const qLabel = qopViewLabel();
   a.download = `${qLabel}_${STATE.settings.year}_${district}_-_Submission.xlsx`;
   a.click();
-  toast(`Submission exported — ${rows.length} rows (${_qopQuarterView === 'ALL' ? 'full year' : _qopQuarterView})`, 'success');
+  toast(`Submission exported — ${rows.length} rows (${qopViewLabel().replace(/_/g,' ')})`, 'success');
 }
 
 function exportQOPCSV() {
@@ -6510,10 +6558,10 @@ function exportQOPCSV() {
   const blob = new Blob([lines.join("\r\n")], {type:"text/csv"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  const q = _qopQuarterView === 'ALL' ? 'FullYear' : _qopQuarterView;
+  const q = qopViewLabel();
   a.download = `BAI_QOP_Import_${q}_${STATE.settings.year}.csv`;
   a.click();
-  toast(`CSV exported — ${exportRows.length} rows (${_qopQuarterView === 'ALL' ? 'full year' : _qopQuarterView})`, "success");
+  toast(`CSV exported — ${exportRows.length} rows (${qopViewLabel().replace(/_/g," ")})`, "success");
 }
 
 function copyQOPClipboard() {
@@ -6638,8 +6686,9 @@ function clearAllData() {
     "  • The built QOP grid and all your QOP edits\n" +
     "  • Imported previous-QOP source & date overrides\n" +
     "  • Import pipeline status\n\n" +
-    "This KEEPS: settings, service map, activity rules, holidays,\n" +
-    "custom SITES, and THSS data.\n\n" +
+    "  \u2022 THSS data, Antenna SNP, Recomm. Schedule & Prog. Bulletins\n\n" +
+    "This KEEPS: connection settings, activity rules, holidays,\n" +
+    "custom SITES data, and outage windows.\n\n" +
     "This cannot be undone."
   )) return;
 
@@ -6655,6 +6704,13 @@ function clearAllData() {
   if (STATE.lookups) {
     STATE.lookups.dateOverrides = {};
     STATE.lookups.tripTags = {};
+    // Imported reference datasets (Steps 3, 5, 6, 7)
+    STATE.lookups.pbEntries     = [];   // Prog. Bulletins
+    STATE.lookups.recommEntries = [];   // Recomm. Schedule
+    STATE.lookups.antennaSNP    = [];   // Antenna SNP
+    STATE.lookups.thssDetail    = [];   // THSS data
+    STATE.lookups.thssCommenced = {};
+    STATE.lookups.serviceMap    = {};   // Service Map (built from THSS)
   }
 
   // Clear the persisted QOP grid too
@@ -6664,6 +6720,7 @@ function clearAllData() {
       const d = JSON.parse(raw);
       delete d.qopBuiltRows;
       delete d.qopQuarter;
+      delete d.qopMonth;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
     }
   } catch(e) {}
@@ -6674,6 +6731,12 @@ function clearAllData() {
   // Refresh every view
   renderSchedule();
   if (typeof renderImportTab === 'function') renderImportTab();
+  // Refresh cleared reference-data settings views
+  if (typeof renderTHSSData    === 'function') renderTHSSData();
+  if (typeof renderAntennaView === 'function') renderAntennaView();
+  if (typeof renderRecommView  === 'function') renderRecommView();
+  if (typeof renderPBView      === 'function') renderPBView();
+  if (typeof renderSvcMap      === 'function') renderSvcMap();
   const qp = document.getElementById('qop-preview'); if (qp) qp.innerHTML = '';
   const qs = document.getElementById('qop-status'); if (qs) qs.textContent = 'No QOP built';
   const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = true;
