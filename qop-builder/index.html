@@ -877,8 +877,9 @@ select option:checked, select option:hover {
           <option value="11">November</option>
           <option value="12">December</option>
         </select>
-        <button class="btn btn-warn" onclick="revalidateQOP()" title="Re-run all validation checks on the current rows (keeps your edits)">↻ Re-run Validations</button>
-        <button class="btn btn-danger" onclick="openRebuildDialog()" title="Rebuild every row from source and re-apply ALL rules — overwrites edits">⟳ Rebuild Rows…</button>
+        <button class="btn btn-warn" onclick="revalidateQOP()" title="Refresh ONLY the flag/colour columns (Programming Bulletin, Recommissioning, Public Holiday, Antenna, Service Name) — does not change Timing, dates, descriptions or codes">↻ Re-run Validations</button>
+        <button class="btn btn-warn" onclick="recalcQOPFields()" title="Recalculate derived DATA fields — Timing (Stage 9), Week Commencing & Commencement Date — without rebuilding descriptions from source. Keeps your edits.">∑ Recalculate Fields</button>
+        <button class="btn btn-danger" onclick="openRebuildDialog()" title="Rebuild every row from source and re-apply ALL rules (descriptions, activity codes, antenna/SPM splits) — overwrites edits">⟳ Rebuild Rows…</button>
         <button class="btn btn-success" onclick="exportQOPSubmission()" id="qop-submit-btn" disabled>⬇ Export Submission (XLSX)</button>
         <button class="btn btn-ghost" onclick="exportQOPCSV()" id="qop-export-btn" disabled>⬇ Export CSV</button>
         <button class="btn btn-ghost" onclick="copyQOPClipboard()" id="qop-copy-btn" disabled>⎘ Copy to Clipboard</button>
@@ -4912,6 +4913,12 @@ const district = STATE.settings.district;
     }
   });
 
+  // ── Re-run flag checks on FINAL values (post stage 6/7/8) ───────────
+  //    Antenna Testing, PB, Recomm & Service-name flags depend on the
+  //    activity code / description that the stages may have changed, so we
+  //    recompute them here. Build is now self-contained (Re-run not needed).
+  out.forEach(runRowFlags);
+
   // ── NEW_SITE detection ──────────────────────────────────────────────
   const newSites = detectNewSites(out);
 
@@ -5496,101 +5503,134 @@ function qopClearFilters() {
 //  Recomputes: PB Conflicts (U), Recomm (V/W), Public Holiday (X),
 //  Antenna (Y), Outage Window (AD), Service Name Validation (AE)
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  SHARED VALIDATION / RECALC HELPERS
+//  runRowFlags   → ONLY the flag/colour columns (PB, recomm, holiday,
+//                  antenna, service-name). Never touches Timing, dates,
+//                  description, activity code, or impact/state.
+//  recalcRowFields → the DATA-changing recompute (Stage 9 Timing, Week
+//                  Commencing, Commencement Date). Used by Build & the
+//                  explicit "Recalculate Fields" action — NOT by Re-run
+//                  Validations.
+// ═══════════════════════════════════════════════════════════════
+function _rowISO(s) { const d = parseDate(s); return d ? toISO(d) : ''; }
+
+// Flag/colour columns only. Returns which flags fired (for counts).
+function runRowFlags(row) {
+  const sno     = (row['Site Number'] || '').toString().trim();
+  const sname   = (row['Site Name']   || '').toString().trim();
+  const svc     = (row['Service']     || '').toString().trim();
+  const dist    = (row['District']    || STATE.settings.district).toString().trim();
+  const startISO= _rowISO(row['Start Date']);
+  const endISO  = _rowISO(row['End Date']) || startISO;
+
+  const fired = { pb:false, recomm:false, hol:false, ant:false, sv:false };
+
+  // [13] Programming Bulletin Conflicts → U
+  row['Programming Bulletin Conflicts'] =
+    STATE.lookups.pbEntries.length ? pbConflictsForRow(svc, dist, startISO, endISO)
+                                   : (row['Programming Bulletin Conflicts'] || '');
+  if (row['Programming Bulletin Conflicts']) fired.pb = true;
+
+  // [14] Recommissioning → V / W
+  if (STATE.lookups.recommEntries.length) {
+    const rec = recommFlagsForRow(sno, sname, svc, startISO);
+    row['Recommissioning Business Rules']  = rec.rules;
+    row['Recommissioning Action Required'] = rec.action;
+  }
+  if (row['Recommissioning Business Rules'] || row['Recommissioning Action Required']) fired.recomm = true;
+
+  // [15] Public Holiday → X
+  const ph = startISO ? (STATE.lookups.phMap[startISO] || '') : '';
+  row['Public Holiday'] = ph ? `PUBLIC HOLIDAY - ${ph}` : '';
+  if (ph) fired.hol = true;
+
+  // [16] Antenna Testing → Y  (depends on the CURRENT activity code)
+  if (STATE.lookups.antennaSNP.length) {
+    row['Antenna Testing'] = antennaNoteForRow(sno, row['Maintenance Activity Number'] || '');
+  }
+  if (row['Antenna Testing']) fired.ant = true;
+
+  // [18] Service Name Validation → AE
+  row['Service Name Validation'] = svcNameValidationForRow(svc, sno, row['Remedy Source of Truth']);
+  if (row['Service Name Validation']) fired.sv = true;
+
+  return fired;
+}
+
+// Data recompute: Stage 9 Timing + Outage Window, Week Commencing,
+// Commencement Date. Changes DATA fields (so only run on explicit request).
+function recalcRowFields(row) {
+  const svc = (row['Service'] || '').toString().trim();
+  const _s9 = stage9Timing(row['Audience Impact'], row['Service State'],
+                           row['Population'], svc, row['Service Class'],
+                           row['Start Date'], row['End Date']);
+  row['Timing']        = _s9.timing;
+  row['Timing Reason'] = _s9.reason;
+  row['Outage Window'] = _s9.note || '';
+  row['Week Commencing'] = weekCommencing(row['Start Date']);
+  if (!row['Commencement Date'])
+    row['Commencement Date'] = commencedDateForRow(row['Site Number'], svc) || row['Start Date'];
+  return !!row['Outage Window'];
+}
+
 function revalidateQOP() {
   if (!qopBuiltRows.length) {
     toast('Nothing to validate — build the QOP first', 'error');
     return;
   }
 
-  // Parse "DD/MM/YYYY HH:MM" (or any supported format) → ISO date
-  function rowDateISO(s) {
-    const d = parseDate(s);
-    return d ? toISO(d) : '';
-  }
-
-  let counts = { pb:0, recomm:0, hol:0, ant:0, ow:0, sv:0 };
+  let counts = { pb:0, recomm:0, hol:0, ant:0, sv:0 };
 
   // ── Integrity check: ensure every row has a UNIQUE _uid. Duplicate or
-  //    missing UIDs break Trip Planner / Coverage tracking (a row edited
-  //    from a duplicate can otherwise resurface under the old identity). ──
+  //    missing UIDs break Trip Planner / Coverage tracking. ──
   let uidFixed = 0;
   const seenUids = new Set();
   for (const row of qopBuiltRows) {
-    if (!row._uid || seenUids.has(row._uid)) {
-      row._uid = newQOPUid();
-      uidFixed++;
-    }
+    if (!row._uid || seenUids.has(row._uid)) { row._uid = newQOPUid(); uidFixed++; }
     seenUids.add(row._uid);
   }
-  if (uidFixed) {
-    invalidateTripCache();   // rebuild trip/coverage with corrected identities
-  }
+  if (uidFixed) invalidateTripCache();
 
+  // FLAGS / COLOURS ONLY. This deliberately does NOT touch Timing, dates,
+  // Week Commencing, Commencement Date, Description, Activity Code, or
+  // Audience/Service State — use "Recalculate Fields" (Rebuild menu) for that.
   for (const row of qopBuiltRows) {
-    const sno     = (row['Site Number'] || '').toString().trim();
-    const sname   = (row['Site Name']   || '').toString().trim();
-    const svc     = (row['Service']     || '').toString().trim();
-    const dist    = (row['District']    || STATE.settings.district).toString().trim();
-    const startISO= rowDateISO(row['Start Date']);
-    const endISO  = rowDateISO(row['End Date']) || startISO;
-    const descr   = (row['Description of Work'] || '').toString();
-
-    // [13] Programming Bulletin Conflicts → U
-    row['Programming Bulletin Conflicts'] =
-      STATE.lookups.pbEntries.length ? pbConflictsForRow(svc, dist, startISO, endISO) : row['Programming Bulletin Conflicts'] || '';
-    if (row['Programming Bulletin Conflicts']) counts.pb++;
-
-    // [14] Recommissioning → V / W
-    if (STATE.lookups.recommEntries.length) {
-      const rec = recommFlagsForRow(sno, sname, svc, startISO);
-      row['Recommissioning Business Rules']  = rec.rules;
-      row['Recommissioning Action Required'] = rec.action;
-    }
-    if (row['Recommissioning Business Rules'] || row['Recommissioning Action Required']) counts.recomm++;
-
-    // [15] Public Holiday → X
-    const ph = startISO ? (STATE.lookups.phMap[startISO] || '') : '';
-    row['Public Holiday'] = ph ? `PUBLIC HOLIDAY - ${ph}` : '';
-    if (ph) counts.hol++;
-
-    // [16] Antenna Testing → Y
-    if (STATE.lookups.antennaSNP.length) {
-      row['Antenna Testing'] = antennaNoteForRow(sno, row['Maintenance Activity Number'] || '');
-    }
-    if (row['Antenna Testing']) counts.ant++;
-
-    // [17] Timing + Outage Window (Stage 9) → K / L / AD
-    const _s9r = stage9Timing(row['Audience Impact'], row['Service State'],
-                             row['Population'], svc, row['Service Class'],
-                             row['Start Date'], row['End Date']);
-    row['Timing'] = _s9r.timing;
-    row['Timing Reason'] = _s9r.reason;
-    row['Outage Window'] = _s9r.note || '';
-    if (row['Outage Window']) counts.ow++;
-
-    // [18] Service Name Validation → AE
-    row['Service Name Validation'] = svcNameValidationForRow(svc, sno, row['Remedy Source of Truth']);
-    if (row['Service Name Validation']) counts.sv++;
-
-    // Week Commencing mirrors Start Date; Commencement Date comes from THSS
-    // (do NOT overwrite it with Start Date).
-    row['Week Commencing']   = weekCommencing(row['Start Date']);
-    if (!row['Commencement Date'])
-      row['Commencement Date'] = commencedDateForRow(row['Site Number'], row['Service']) || row['Start Date'];
-
-    // Stage 7 cleanup re-applied (idempotent)
-    stage7_CleanupRow(row);
+    const f = runRowFlags(row);
+    if (f.pb)     counts.pb++;
+    if (f.recomm) counts.recomm++;
+    if (f.hol)    counts.hol++;
+    if (f.ant)    counts.ant++;
+    if (f.sv)     counts.sv++;
   }
 
   renderQOPPreview(qopBuiltRows);
-  const total = counts.pb + counts.recomm + counts.hol + counts.ant + counts.ow + counts.sv;
+  persist();
+  const total = counts.pb + counts.recomm + counts.hol + counts.ant + counts.sv;
   document.getElementById('qop-status').textContent =
     `Validations re-run on ${qopBuiltRows.length} rows — ` +
     `PB: ${counts.pb} | Recomm: ${counts.recomm} | Holiday: ${counts.hol} | ` +
-    `Antenna: ${counts.ant} | Window: ${counts.ow} | SvcName: ${counts.sv}` +
+    `Antenna: ${counts.ant} | SvcName: ${counts.sv}` +
     (uidFixed ? ` | fixed ${uidFixed} duplicate ID${uidFixed>1?'s':''}` : '');
   if (uidFixed) toast(`Fixed ${uidFixed} duplicate row ID${uidFixed>1?'s':''}`, 'info');
-  toast(`Validations complete: ${total} total flags across ${qopBuiltRows.length} rows`, total ? 'warn' : 'success');
+  toast(`Flags refreshed: ${total} total flags across ${qopBuiltRows.length} rows`, total ? 'warn' : 'success');
+}
+
+// Explicit data recompute — Timing (Stage 9), Week Commencing, Commencement
+// Date — WITHOUT rebuilding descriptions from source. Also refreshes flags.
+function recalcQOPFields() {
+  if (!qopBuiltRows.length) { toast('Nothing to recalculate — build the QOP first', 'error'); return; }
+  let ow = 0;
+  for (const row of qopBuiltRows) {
+    if (recalcRowFields(row)) ow++;
+    runRowFlags(row);
+  }
+  invalidateTripCache();
+  renderQOPPreview(qopBuiltRows);
+  persist();
+  document.getElementById('qop-status').textContent =
+    `Fields recalculated on ${qopBuiltRows.length} rows — Timing, Week Commencing & Commencement Date refreshed (Window flags: ${ow})`;
+  toast(`Recalculated Timing & derived fields on ${qopBuiltRows.length} rows`, 'success');
 }
 
 
