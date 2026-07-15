@@ -604,7 +604,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.32</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.33</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -2542,6 +2542,7 @@ const STATE = {
     thssCommenced: {},   // "sno|SERVICE" → Commenced_Date from THSS
     tripTags:      {},   // outage signature → {tripActivity, tripTeam, comments}
     dateOverrides: {},   // _uid → {Start Date, End Date, Commencement Date}
+    fieldOverrides: {},  // _uid → {Audience Impact, Service State, RPW, RAC, Timing, Timing Reason, Description of Work, Maintenance Activity Number, Service} — manual QOP edits that survive a rebuild
   },
   importStatus: {}, // stepNum → {ts, count, note}
   qopSource: [],    // Full previous-year QOP rows (district-filtered from Sheet1)
@@ -2655,6 +2656,7 @@ function loadPersisted() {
       if (data.lookups.thssCommenced) STATE.lookups.thssCommenced = data.lookups.thssCommenced;
       if (data.lookups.tripTags)      STATE.lookups.tripTags      = data.lookups.tripTags;
       if (data.lookups.dateOverrides) STATE.lookups.dateOverrides = data.lookups.dateOverrides;
+      if (data.lookups.fieldOverrides) STATE.lookups.fieldOverrides = data.lookups.fieldOverrides;
     }
     if (data.importStatus) Object.assign(STATE.importStatus, data.importStatus);
     if (data.qopSource)    STATE.qopSource = data.qopSource;
@@ -3922,6 +3924,51 @@ function applyDateOverrides(rows) {
   }
 }
 
+// Manual QOP edits that survive a rebuild (parallel to dateOverrides). Split
+// into two groups so a rebuild derives sensibly:
+//   • NON-TIMING (AI, SS, RPW, RAC, Description, Activity No, Service) are
+//     applied BEFORE the Stage 9 recompute, so an edited AI/SS still feeds the
+//     Timing derivation.
+//   • TIMING / TIMING REASON are applied AFTER recompute, so a manually chosen
+//     Timing wins over the re-derived value.
+// Comments is preserved separately via tripTags.
+const QOP_FIELD_OVERRIDE_NONTIMING = ['Audience Impact','Service State','RPW','RAC',
+  'Description of Work','Maintenance Activity Number','Service'];
+const QOP_FIELD_OVERRIDE_TIMING = ['Timing','Timing Reason'];
+const QOP_FIELD_OVERRIDE_COLS = [...QOP_FIELD_OVERRIDE_NONTIMING, ...QOP_FIELD_OVERRIDE_TIMING];
+
+// Re-apply saved field edits by _uid. Pass `cols` to limit which fields are
+// applied (used to split the before/after-recompute passes above); omit for all.
+function applyFieldOverrides(rows, cols) {
+  const ov = STATE.lookups.fieldOverrides || {};
+  if (!Object.keys(ov).length) return;
+  const list = cols || QOP_FIELD_OVERRIDE_COLS;
+  for (const r of rows) {
+    const o = ov[r._uid];
+    if (!o) continue;
+    for (const col of list) {
+      if (o[col] !== undefined) r[col] = o[col];
+    }
+  }
+}
+
+// Drop a saved edit for one field so the SOURCE value takes over again. Used
+// when a rebuilt value is Accepted in the repair step-through — otherwise the
+// next Build would re-apply the override and silently undo the revert.
+function clearQOPOverride(row, field) {
+  const uid = row._uid;
+  if (field === 'Comments') {
+    const t = STATE.lookups.tripTags && STATE.lookups.tripTags[tripTagKey(row)];
+    if (t) delete t['Comments'];
+  } else if (QOP_DATE_COLS.includes(field)) {
+    const o = STATE.lookups.dateOverrides && STATE.lookups.dateOverrides[uid];
+    if (o) delete o[field];
+  } else {
+    const o = STATE.lookups.fieldOverrides && STATE.lookups.fieldOverrides[uid];
+    if (o) delete o[field];
+  }
+}
+
 // Re-apply saved trip tags onto a freshly-built set of QOP rows
 function applyTripTags(rows) {
   const tags = STATE.lookups.tripTags || {};
@@ -5028,6 +5075,9 @@ function finaliseQOP(qSel, isAll, sourceCount, extraCount) {
   // equals: Build → Re-run Validations → Recalculate Fields.
   //   • unique-UID fix     — stage 6/8 clones inherit their parent's _uid,
   //                          and Path-B rows start without one
+  //   • preserve edits     — re-apply saved manual edits (AI, SS, RPW, RAC,
+  //                          Timing, Timing Reason, Description, Activity No,
+  //                          Service) so a rebuild doesn't wipe them
   //   • Recalculate Fields — Stage 9 Timing, Week Commencing, Commencement
   //                          Date, recomputed from the FINAL (post stage 6/8,
   //                          post date-override) row state
@@ -5035,7 +5085,10 @@ function finaliseQOP(qSel, isAll, sourceCount, extraCount) {
   //                          overrides are applied (PB & Holiday flags depend
   //                          on the dates, so this catches moved-date rows)
   const uidFixed = ensureUniqueQOPUids(qopBuiltRows);
-  qopBuiltRows.forEach(row => { recalcRowFields(row); runRowFlags(row); });
+  applyFieldOverrides(qopBuiltRows, QOP_FIELD_OVERRIDE_NONTIMING); // edits feed the derive
+  qopBuiltRows.forEach(recalcRowFields);                          // Stage 9 Timing, Week Commencing, Commencement
+  applyFieldOverrides(qopBuiltRows, QOP_FIELD_OVERRIDE_TIMING);    // manual Timing / Reason edits win
+  qopBuiltRows.forEach(runRowFlags);                              // flags on the FINAL values
   if (uidFixed) invalidateTripCache();
 
   renderQOPPreview(qopBuiltRows);
@@ -5636,10 +5689,9 @@ function revalidateQOP() {
 function recalcQOPFields() {
   if (!qopBuiltRows.length) { toast('Nothing to recalculate — build the QOP first', 'error'); return; }
   let ow = 0;
-  for (const row of qopBuiltRows) {
-    if (recalcRowFields(row)) ow++;
-    runRowFlags(row);
-  }
+  qopBuiltRows.forEach(row => { if (recalcRowFields(row)) ow++; });
+  applyFieldOverrides(qopBuiltRows, QOP_FIELD_OVERRIDE_TIMING);   // keep a manually chosen Timing / Reason
+  qopBuiltRows.forEach(runRowFlags);
   invalidateTripCache();
   renderQOPPreview(qopBuiltRows);
   persist();
@@ -6167,6 +6219,7 @@ function rebuildFreshRows() {
 function rebuildAuto() {
   const fresh = rebuildFreshRows();
   qopBuiltRows = fresh;
+  STATE.lookups.fieldOverrides = {};   // AUTO = overwrite edits: drop saved field edits so they don't re-apply on the next Build (dates & trip tags are kept)
   // Stage 6/8/new-site already run inside buildQOPRowsForMonths; now validations:
   revalidateQOP();            // runs checks [13]-[18] + stage7 cleanup
   closeRebuildDialog();
@@ -6186,7 +6239,7 @@ function rebuildStepStart() {
   const diffs = [];
   const FIELDS = ['Audience Impact','Service State','RPW','RAC','Start Date','End Date',
     'Timing','Timing Reason','Description of Work','Maintenance Activity Number',
-    'Service'];   // Commencement Date mirrors Start Date — not a separate diff
+    'Service','Comments'];   // Commencement Date mirrors Start Date — not a separate diff
   fresh.forEach(fr => {
     const key = fr._uid || tripTagKey(fr);
     const cur = curByKey[key];
@@ -6301,7 +6354,7 @@ function rebuildFinish() {
   st.diffs.forEach((d, i) => {
     if (st.decisions[i] === 'accept') {
       if (d.type === 'new') qopBuiltRows.push(d.fresh);
-      else d.changed.forEach(f => { d.cur[f] = d.fresh[f]; });
+      else d.changed.forEach(f => { d.cur[f] = d.fresh[f]; clearQOPOverride(d.cur, f); });
       accepted++;
     } else { declined++; }
   });
@@ -6359,6 +6412,16 @@ function qopCellEdit(input) {
       // reflect onto the trip cache row if present
       const trow = _tripFullYear.find(r => r._uid === qopBuiltRows[i]._uid);
       if (trow) trow[col] = input.value;
+    }
+    // Durable field edits — these survive a rebuild (like date edits), keyed by
+    // the row's _uid. Comments is handled above via tripTags.
+    if (QOP_FIELD_OVERRIDE_COLS.includes(col)) {
+      const uid = qopBuiltRows[i]._uid;
+      if (uid) {
+        if (!STATE.lookups.fieldOverrides) STATE.lookups.fieldOverrides = {};
+        if (!STATE.lookups.fieldOverrides[uid]) STATE.lookups.fieldOverrides[uid] = {};
+        STATE.lookups.fieldOverrides[uid][col] = input.value;
+      }
     }
     persist();   // commit the edit to localStorage
     document.getElementById('qop-status').textContent =
@@ -6719,6 +6782,7 @@ function importDataJSON(evt) {
         if (L.thssDetail)    T.thssDetail    = L.thssDetail;
         if (L.tripTags)      T.tripTags      = L.tripTags;
         if (L.dateOverrides) T.dateOverrides = L.dateOverrides;
+        if (L.fieldOverrides) T.fieldOverrides = L.fieldOverrides;
         if (L._sitesOverride) { T._sitesOverride = L._sitesOverride; applySitesArray(L._sitesOverride); }
         // Rehydrate Date objects (JSON serialises them to ISO strings)
         const reDate = v => (typeof v === 'string' && v) ? new Date(v) : v;
@@ -6778,6 +6842,7 @@ function clearAllData() {
   // Overrides + tags that belong to the (now-cleared) QOP
   if (STATE.lookups) {
     STATE.lookups.dateOverrides = {};
+    STATE.lookups.fieldOverrides = {};
     STATE.lookups.tripTags = {};
     // Imported reference datasets (Steps 3, 5, 6, 7)
     STATE.lookups.pbEntries     = [];   // Prog. Bulletins
