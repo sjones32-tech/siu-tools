@@ -604,7 +604,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.30</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.31</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -4868,7 +4868,7 @@ const district = STATE.settings.district;
       'Original Audience Impact':  src.ai,
       'Original Service State':    src.ss,
       'Original Description':      src.descr,
-      'Outage Window':        _owNote || outageWindow(src.descr || '', useDate),
+      'Outage Window':        _owNote || '',
       'Service Name Validation': svcValid,
       'SPM Completion Notes': '',
       'Remedy Source of Truth': src.thssService || '',
@@ -5012,7 +5012,7 @@ function buildQOPRow(r, rd) {
     'Original Audience Impact': prev.ai || ai,
     'Original Service State': prev.ss || ss,
     'Original Description': prev.descr || descr,
-    'Outage Window': _s9Bnote || outageWindow(r.act, cd),
+    'Outage Window': _s9Bnote || '',
     'Service Name Validation': svcNameValidationForRow(svc, r.sno),
     'SPM Completion Notes': '',
     'Remedy Source of Truth': prev.thssService || '',
