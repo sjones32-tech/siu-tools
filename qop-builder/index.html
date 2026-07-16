@@ -287,7 +287,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 }
 .site-grid-table .month-cell.empty { background: transparent !important; color: var(--muted); font-weight: 400; }
 .month-cell.dimmed { background: transparent !important; color: #3a4555; font-weight: 400; }
-.qop-rebuild-focus { outline: 3px solid var(--accent) !important; outline-offset:-3px; box-shadow: inset 0 0 0 9999px rgba(59,130,246,.12); }
+.qop-rebuild-focus, .qop-row-selected { outline: 3px solid var(--accent) !important; outline-offset:-3px; box-shadow: inset 0 0 0 9999px rgba(59,130,246,.12); }
 /* Ensure activity background always wins inside the site grid */
 .month-cell.act-annually  { background: var(--act-annually); color:#000; }
 .month-cell.act-6monthly  { background: var(--act-6monthly); color:#000; }
@@ -604,7 +604,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.33</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.34</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -5356,7 +5356,7 @@ function renderQOPPreview(rows) {
     const bg = hasPH ? "background:rgba(239,68,68,.06);" : (displayPos%2===0 ? "background:var(--surf);" : "");
     const checked = _qopSelected.has(origIdx);
     const rowSelBg = checked ? "background:rgba(59,130,246,.12);" : bg;
-    return `<tr data-qrow="${origIdx}" style="${rowSelBg}border-bottom:1px solid var(--border)">` +
+    return `<tr data-qrow="${origIdx}"${checked?' class="qop-row-selected"':''} style="${rowSelBg}border-bottom:1px solid var(--border)">` +
       `<td style="padding:2px 4px;text-align:center">
         <input type="checkbox" ${checked?'checked':''} onclick="qopToggleSelect(${origIdx}, this)">
       </td>` +
