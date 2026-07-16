@@ -607,12 +607,17 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.35</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.36</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
     <div class="spacer"></div>
-    <div class="pill">District: <span id="hdr-district">Sydney</span></div>
+    <div class="pill">District:
+      <select id="global-district" onchange="setDistrictFilter(this.value)" title="Filter all pages by district"
+        style="background:transparent;border:none;color:var(--accent);font-weight:700;font-size:inherit;font-family:inherit;cursor:pointer;outline:none;padding:0 2px">
+        <option value="">All Districts</option>
+      </select>
+    </div>
     <div class="pill">Technician: <span id="hdr-tech">STEVEN JONES</span></div>
     <div class="pill">Quarter: <span id="hdr-quarter">Q2</span></div>
     <div id="save-status">Saved ✓</div>
@@ -740,10 +745,6 @@ select option:checked, select option:hover {
       <div class="toolbar">
         <span class="text-muted text-sm">Planning reference — 41 sites × 12 months. Edit dates in Annual Schedule.</span>
         <div class="spacer" style="flex:1"></div>
-        <label style="font-size:11px;color:var(--muted);margin-right:4px">Dept/District</label>
-        <select id="sg-dept-filter" onchange="renderSiteGrid()" style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:4px 8px;font-size:12px;margin-right:10px">
-          <option value="">All Departments</option>
-        </select>
         <span class="text-muted text-sm" style="margin-right:6px">Filter:</span>
         <span class="act-pill act-annually sg-filter" data-act="annual" onclick="toggleSiteGridFilter(this,'annual')">Annual PM</span>
         <span class="act-pill act-6monthly sg-filter" data-act="6 monthly" onclick="toggleSiteGridFilter(this,'6 monthly')">6 Monthly PM</span>
@@ -2702,6 +2703,40 @@ function toast(msg, type="info") {
 // ═══════════════════════════════════════════════════════════════
 let currentTab = "dashboard";
 
+// ── Global district/department filter (applies to every page) ────────────────
+let _districtFilter = '';   // '' = All districts; else an uppercased department, e.g. 'SYDNEY'
+function siteDeptFor(sno) {
+  const t = (sno||'').toString().trim();
+  const hit = SITES.find(x => (x[0]||'').toString().trim() === t);
+  return hit ? (hit[20]||'').toString().trim().toUpperCase() : '';
+}
+function districtMatch(sno) {
+  if (!_districtFilter) return true;          // All districts
+  const d = siteDeptFor(sno);
+  if (!d) return true;                        // unknown department → don't hide (lenient)
+  return d === _districtFilter;
+}
+function titleCaseDistrict(d) { return d ? d.charAt(0).toUpperCase() + d.slice(1).toLowerCase() : d; }
+function populateDistrictFilter() {
+  const sel = document.getElementById('global-district');
+  if (!sel) return;
+  const depts = [...new Set(SITES.map(r => (r[20]||'').toString().trim().toUpperCase()).filter(Boolean))].sort();
+  if (_districtFilter && !depts.includes(_districtFilter)) _districtFilter = '';
+  sel.innerHTML = '<option value="">All Districts</option>' +
+    depts.map(d => `<option value="${d}"${d===_districtFilter?' selected':''}>${titleCaseDistrict(d)}</option>`).join('');
+  sel.value = _districtFilter;
+}
+function setDistrictFilter(val) {
+  _districtFilter = val || '';
+  updateBadges();
+  showTab(currentTab || 'dashboard');         // re-render the active page with the new filter
+}
+// Focus the filter on a district (called from init / settings save / import auto-detect).
+function setHeaderDistrict(d) {
+  _districtFilter = (d||'').toString().trim().toUpperCase();
+  populateDistrictFilter();
+}
+
 function showTab(name) {
   currentTab = name;
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
@@ -2871,7 +2906,7 @@ function renderCoveragePanel() {
 }
 
 function renderDashboard() {
-  const rows = scheduleRows;
+  const rows = scheduleRows.filter(r => districtMatch(r.sno));
   let total=0, conf=0, ph=0, completed=0;
   const byMonth = Array(13).fill(0).map(() => ({total:0, conf:0}));
 
@@ -2982,6 +3017,7 @@ function applyFilters() {
   const qm = qv ? quarterMonths(qv) : null;
 
   filteredRows = scheduleRows.filter(r => {
+    if (!districtMatch(r.sno)) return false;
     if (qm && !qm.includes(r.mNo)) return false;
     if (cv && r.cls !== cv) return false;
     if (av && actKey(r.act) !== actKey(av)) return false;
@@ -3209,6 +3245,7 @@ function updateRowDisplay(input) {
 function updateBadges() {
   let unconf = 0;
   for (const r of scheduleRows) {
+    if (!districtMatch(r.sno)) continue;
     const rd = getRow(r.id);
     if (!rd.confirmedDate) unconf++;
   }
@@ -3292,22 +3329,9 @@ function renderSiteGrid() {
   const tbody = document.getElementById("grid-body");
 
   // SITES columns: [sno, seven, win, sname, cls, epp, y1, y2, Jan..Dec (8-19), Department (20)]
-  // Populate the Dept/District filter with the departments actually present.
-  const deptSel = document.getElementById('sg-dept-filter');
-  let deptFilter = '';
-  if (deptSel) {
-    const depts = [...new Set(SITES.map(r => (r[20]||'').trim()).filter(Boolean))].sort();
-    const cur = deptSel.value;
-    deptSel.innerHTML = '<option value="">All Departments</option>' +
-      depts.map(d => `<option${d===cur?' selected':''}>${esc(d)}</option>`).join('');
-    if (cur && !depts.includes(cur)) deptSel.value = '';
-    deptFilter = deptSel.value;
-  }
-
-  // Hide rows with no month matching the active filters (non-matching cells in
-  // a kept row are dimmed); also apply the department/district filter.
+  // District filtering is handled by the global header filter (districtMatch).
   let rows = SITES
-    .filter(r => !deptFilter || (r[20]||'').trim() === deptFilter)
+    .filter(r => districtMatch(r[0]))
     .filter(r => !_siteGridActFilters.size || r.slice(8,20).some(m => actMatchesFilters(m)))
     .map((r, idx) => ({ r, idx }));
 
@@ -3412,6 +3436,7 @@ function renderServiceGrid() {
   const mod  = modSel.value;
 
   let rows = data.filter(d => {
+    if (!districtMatch(d.sno)) return false;
     if (cls && d.svcClass !== cls) return false;
     if (mod && d.modulation !== mod) return false;
     if (term) {
@@ -3811,6 +3836,7 @@ function renderTripPlanner() {
 
   // Filter — full year
   let rows = yearRows.filter(r => {
+    if (!districtMatch(r['Site Number'])) return false;
     if (_tripPreselect && _tripPreselect.sno) {
       // exact site when arriving from a cell (but allow month/activity dropdowns to relax)
     }
@@ -5364,6 +5390,7 @@ function renderQOPPreview(rows) {
   // ── Apply filters → list of original indexes to display ──────────
   const visibleIdx = [];
   rows.forEach((row, i) => {
+    if (!districtMatch(row['Site Number'])) return;   // global district filter
     if (!rowInQuarterView(row)) return;     // quarter VIEW filter (no rebuild)
     for (const [fc, fv] of Object.entries(_qopFilters)) {
       if (!fv) continue;
@@ -6125,6 +6152,7 @@ function sitesRebuildSchedule() {
   filteredRows = [...scheduleRows];
   STATE.lookups._sitesOverride = SITES;   // mark customised
   persist();
+  populateDistrictFilter();                // refresh districts (new import may add depts)
   if (typeof renderSchedule === 'function') renderSchedule();
   if (typeof renderSiteGrid === 'function') renderSiteGrid();
   toast('Annual Schedule & Site Grid rebuilt from SITES', 'success');
@@ -6783,7 +6811,7 @@ function saveSettings() {
   STATE.settings.tech     = document.getElementById("s-tech").value.trim() || "STEVEN JONES";
   STATE.settings.quarter  = document.getElementById("s-quarter").value;
 
-  document.getElementById("hdr-district").textContent = STATE.settings.district;
+  setHeaderDistrict(STATE.settings.district);
   document.getElementById("hdr-tech").textContent     = STATE.settings.tech;
   document.getElementById("hdr-quarter").textContent  = STATE.settings.quarter;
 
@@ -6858,6 +6886,7 @@ function importDataJSON(evt) {
       filteredRows = [...scheduleRows];
       persist();
       _tripFullYear = [];   // force trip rebuild from restored data
+      setHeaderDistrict(STATE.settings.district);   // refresh district dropdown + focus
       toast("Full backup restored", "success");
       renderSchedule();
       updateBadges();
@@ -7128,7 +7157,7 @@ function runImport1() {
   if (detectedDistrict !== STATE.settings.district) {
     toast(`Switching district to "${detectedDistrict}" to match data`, 'warn');
     STATE.settings.district = detectedDistrict;
-    document.getElementById('hdr-district').textContent = detectedDistrict;
+    setHeaderDistrict(detectedDistrict);
     const distEl = document.getElementById('s-district');
     if (distEl) distEl.value = detectedDistrict;
   }
@@ -8919,7 +8948,7 @@ async function xlProcessQOP(wb) {
 Switching district to "${detectedDistrict}" to match the imported data.`;
     toast(msg, 'warn');
     STATE.settings.district = detectedDistrict;
-    document.getElementById('hdr-district').textContent = detectedDistrict;
+    setHeaderDistrict(detectedDistrict);
     const distEl = document.getElementById('s-district');
     if (distEl) distEl.value = detectedDistrict;
     persist();
@@ -9281,7 +9310,7 @@ function init() {
   document.getElementById("s-quarter").value  = STATE.settings.quarter;
 
   // Update header
-  document.getElementById("hdr-district").textContent = STATE.settings.district;
+  setHeaderDistrict(STATE.settings.district);
   document.getElementById("hdr-tech").textContent     = STATE.settings.tech;
   document.getElementById("hdr-quarter").textContent  = STATE.settings.quarter;
 
