@@ -33,6 +33,7 @@
   --act-eppx:      #C084FC;
   --act-nova:      #F472B6;
   --act-acu:       #14B8A6;
+  --act-monthly:   #22D3EE;
   --act-other:     #94A3B8;
 
   /* Class colours */
@@ -179,6 +180,7 @@ tbody tr.alt td.sticky-name   { background: var(--surf); }
 .act-epp       { background: var(--act-epp); }
 .act-nova      { background: var(--act-nova); }
 .act-acu       { background: var(--act-acu); }
+.act-monthly   { background: var(--act-monthly); }
 .act-eppx      { background: var(--act-eppx); }
 .act-other     { background: var(--act-other); }
 /* Site-grid filter pills */
@@ -293,6 +295,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 .month-cell.act-6monthly  { background: var(--act-6monthly); color:#000; }
 .month-cell.act-quarterly { background: var(--act-quarterly); color:#000; }
 .month-cell.act-acu       { background: var(--act-acu);       color:#000; }
+.month-cell.act-monthly   { background: var(--act-monthly);   color:#000; }
 .month-cell.act-epp       { background: var(--act-epp);       color:#000; }
 .month-cell.act-eppx      { background: var(--act-eppx);      color:#000; }
 .month-cell.act-nova      { background: var(--act-nova);      color:#000; }
@@ -604,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.34</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.35</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -677,9 +680,9 @@ select option:checked, select option:hover {
         <label>Activity</label>
         <select id="f-act" onchange="applyFilters()">
           <option value="">All</option>
-          <option>Annually</option><option>6 Monthly</option>
-          <option>Quarterly</option><option>Quarterly ACU</option>
-          <option>EPP</option><option>EPP#</option><option>Nova & EPP</option>
+          <option>Annual PM</option><option>6 Monthly PM</option>
+          <option>Quarterly PM</option><option>Quarterly ACU</option><option>Monthly PM</option>
+          <option>EPP</option><option>EPP#</option>
         </select>
         <label>Status</label>
         <select id="f-status" onchange="applyFilters()">
@@ -737,14 +740,18 @@ select option:checked, select option:hover {
       <div class="toolbar">
         <span class="text-muted text-sm">Planning reference — 41 sites × 12 months. Edit dates in Annual Schedule.</span>
         <div class="spacer" style="flex:1"></div>
-<span class="text-muted text-sm" style="margin-right:6px">Filter:</span>
-        <span class="act-pill act-annually sg-filter" data-act="annually" onclick="toggleSiteGridFilter(this,'annually')">Annually</span>
-        <span class="act-pill act-6monthly sg-filter" data-act="6 monthly" onclick="toggleSiteGridFilter(this,'6 monthly')">6 Monthly</span>
-        <span class="act-pill act-quarterly sg-filter" data-act="quarterly-only" onclick="toggleSiteGridFilter(this,'quarterly-only')">Quarterly</span>
+        <label style="font-size:11px;color:var(--muted);margin-right:4px">Dept/District</label>
+        <select id="sg-dept-filter" onchange="renderSiteGrid()" style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:4px 8px;font-size:12px;margin-right:10px">
+          <option value="">All Departments</option>
+        </select>
+        <span class="text-muted text-sm" style="margin-right:6px">Filter:</span>
+        <span class="act-pill act-annually sg-filter" data-act="annual" onclick="toggleSiteGridFilter(this,'annual')">Annual PM</span>
+        <span class="act-pill act-6monthly sg-filter" data-act="6 monthly" onclick="toggleSiteGridFilter(this,'6 monthly')">6 Monthly PM</span>
+        <span class="act-pill act-quarterly sg-filter" data-act="quarterly-only" onclick="toggleSiteGridFilter(this,'quarterly-only')">Quarterly PM</span>
         <span class="act-pill act-acu sg-filter" data-act="acu" onclick="toggleSiteGridFilter(this,'acu')">Quarterly ACU</span>
+        <span class="act-pill act-monthly sg-filter" data-act="monthly-only" onclick="toggleSiteGridFilter(this,'monthly-only')">Monthly PM</span>
         <span class="act-pill act-epp sg-filter" data-act="epp-only" onclick="toggleSiteGridFilter(this,'epp-only')">EPP</span>
         <span class="act-pill act-eppx sg-filter" data-act="epp#" onclick="toggleSiteGridFilter(this,'epp#')">EPP#</span>
-        <span class="act-pill act-nova sg-filter" data-act="nova" onclick="toggleSiteGridFilter(this,'nova')">Nova & EPP</span>
         <span class="sg-clear" id="sg-clear-filter" onclick="clearSiteGridFilters()" style="display:none;margin-left:6px;cursor:pointer;font-size:11px;color:var(--accent)">✕ clear</span>
       </div>
       <div id="site-grid-content">
@@ -752,6 +759,7 @@ select option:checked, select option:hover {
           <thead>
             <tr>
               <th class="sg-sno"   style="cursor:pointer" onclick="siteGridSort('sno')">Site No</th>
+              <th class="sg-dept"  style="cursor:pointer" onclick="siteGridSort('dept')">Dept</th>
               <th class="sg-sname" style="cursor:pointer" onclick="siteGridSort('sname')">Site Name</th>
               <th class="sg-cls"   style="cursor:pointer" onclick="siteGridSort('cls')">Class</th>
               <th class="sg-sm"    style="cursor:pointer" onclick="siteGridSort('epp')">EPP</th>
@@ -834,8 +842,8 @@ select option:checked, select option:hover {
         <select id="trip-activity" onchange="renderTripPlanner()" style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:5px 8px;font-size:12px">
           <option value="">All Activities</option>
           <option value="(untagged)">— Untagged —</option>
-          <option>Annually</option><option>6 Monthly</option><option>Quarterly</option>
-          <option>Quarterly ACU</option><option>EPP</option><option>EPP#</option><option>Nova &amp; EPP</option>
+          <option>Annual PM</option><option>6 Monthly PM</option><option>Quarterly PM</option><option>Monthly PM</option>
+          <option>Quarterly ACU</option><option>EPP</option><option>EPP#</option>
         </select>
         <label style="font-size:11px;color:var(--muted)">Group by</label>
         <select id="trip-groupby" onchange="renderTripPlanner()" style="background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:5px 8px;font-size:12px">
@@ -1424,12 +1432,12 @@ select option:checked, select option:hover {
             <div class="setting-group">
               <h3>Activity Colours</h3>
               <div style="display:flex;flex-direction:column;gap:6px">
-                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-annually">Annually</span><span class="text-muted">Annual PM</span></div>
-                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-6monthly">6 Monthly</span><span class="text-muted">6-Monthly PM</span></div>
-                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-quarterly">Quarterly</span><span class="text-muted">Quarterly PM</span></div>
-                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-acu">Quarterly ACU</span><span class="text-muted">Quarterly PM + ACU</span></div>
-                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-epp">EPP / EPP#</span><span class="text-muted">Emergency power test</span></div>
-                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-nova">Nova &amp; EPP</span><span class="text-muted">Nova PM + EPP test</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-annually">Annual PM</span><span class="text-muted">Annual Preventive Maintenance</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-6monthly">6 Monthly PM</span><span class="text-muted">6-Monthly Preventive Maintenance</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-quarterly">Quarterly PM</span><span class="text-muted">Quarterly Preventive Maintenance</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-acu">Quarterly ACU</span><span class="text-muted">Quarterly PM with ACU test</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-monthly">Monthly PM</span><span class="text-muted">Monthly Preventive Maintenance</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="act-pill act-epp">EPP</span><span class="act-pill act-eppx">EPP#</span><span class="text-muted">Emergency power test</span></div>
               </div>
             </div>
             <div class="setting-group">
@@ -1886,47 +1894,47 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 
 // [siteNo, sevenSite, winSite, siteName, class, epp, y1, y2, ...months(12)]
 const SITES = [
-  ["2136","","",  "Artarmon TXA",                "A+","",  "","",  "","","6 Monthly","","","Quarterly","","","Annually","","","Quarterly"],
-  ["2040","","",  "Gore Hill",                   "A+","Y", "x","x","Nova & EPP","Nova & EPP","6 Monthly","Nova & EPP","Nova & EPP","Quarterly","Nova & EPP","Nova & EPP","Annually","Nova & EPP","Nova & EPP","Quarterly"],
-  ["2060","","",  "Liverpool MF",                "A+","Y", "x","x","EPP","6 Monthly","EPP","EPP","Quarterly","EPP","EPP","Annually","EPP","EPP","Quarterly","EPP"],
-  ["2144","","",  "Bicentennial Park MF",         "A", "Y", "x","",  "EPP#","EPP#","Annually","EPP#","EPP#","Quarterly","EPP#","EPP#","6 Monthly","EPP#","EPP#","Quarterly"],
-  ["2052","","",  "Knights Hill",                 "A", "Y", "","",  "EPP","EPP","Annually","EPP","EPP","Quarterly","EPP","EPP","6 Monthly","EPP","EPP","Quarterly"],
-  ["2609","","2226D","Knights Hill WIN",          "A", "Y-W","","", "","","Annually","","","Quarterly","","","6 Monthly","","","Quarterly"],
-  ["2687","","2571D","Razorback Range",           "A", "Y-W","","", "Quarterly","","","6 Monthly","","","Quarterly","","","Annually","",""],
-  ["2106","","",  "Basin View MF",                "B", "Y", "","",  "","","Annually","","","Quarterly ACU","","","6 Monthly","","","Quarterly ACU"],
-  ["2015","","2015D","Brokers Nose",              "B", "Y", "","",  "","","Annually","","","","","","6 Monthly","","",""],
-  ["2028","","",  "Cumnock MF",                   "B", "Y", "","",  "Quarterly ACU","","","6 Monthly","","","Quarterly ACU","","","Annually","",""],
-  ["2257","","",  "Elan",                         "B", "",  "","",  "6 Monthly","","","","","","Annually","","","","",""],
-  ["2067","","",  "Gaanha bula Mt Canobolas",     "B", "Y", "","",  "EPP","","","Annually","","","EPP","","","6 Monthly","",""],
-  ["2612","","2067D","Gaanha bula Mt Canobolas Seven","B","Y-S","","","","","Annually","","","","","","6 Monthly","","",""],
-  ["2088","","",  "North Head",                   "B", "Y", "x","",  "","6 Monthly","","","","","","Annually","","","",""],
-  ["2116","","",  "Windang Town MF",              "B", "Y", "","",  "Annually","","","Quarterly ACU","","","6 Monthly","","","Quarterly ACU","",""],
-  ["2059","","",  "Lithgow MF",                   "C", "",  "","",  "","","","","","","Annually","","","","",""],
-  ["2110","","2110D","Little Forest Trig",        "C", "Y", "","",  "","","Annually","","","","","","","","",""],
-  ["2058","","2118D","Littleton",                 "C", "",  "","",  "","","","","","","Annually","","","","",""],
-  ["2070","","",  "Mt Gibraltar WIN",             "C", "Y-W","X","", "","","Annually","","","","","","","","",""],
-  ["2078","","",  "Mt Panorama RT",               "C", "",  "","",  "","","","","","","Annually","","","","",""],
-  ["2134","","",  "Prospect MF",                  "C", "Y", "x","",  "Quarterly ACU","","","Quarterly ACU","","","Quarterly ACU","","","Annually","",""],
-  ["2130","","",  "Windang Peninsula MF",         "C", "",  "","",  "Annually","","","Quarterly ACU","","","Quarterly ACU","","","Quarterly ACU","",""],
-  ["2170","","2079D","Bathurst East WIN",         "D", "Y-W","","",  "","","","","","","Annually","","","","",""],
-  ["2159","","2159D","Bellevue Hill WIN",         "D", "",  "","",  "","","","","","Annually","","","","","",""],
-  ["2090","","2090D","Cambewarra Lookout",        "D", "Y", "X","",  "","","Annually","","","","","","","","",""],
-  ["2023","","",  "Condobolin",                   "D", "",  "","",  "","","","","","","","","Annually","","",""],
-  ["2621","","2023D","Condobolin Hospital Hill",  "D", "",  "","",  "","","","","","","","","Annually","","",""],
-  ["2083","","",  "Endicotts Hill",               "D", "Y", "","",  "EPP","","","EPP","","","Annually","","","EPP","",""],
-  ["2601","","2083D","Endicotts Hill WIN",        "D", "Y-W","","",  "","","","","","","Annually","","","","",""],
-  ["2160","2787","",  "Falls Hill",               "D", "",  "","",  "","","","","","","","","","","","Annually"],
-  ["2093","","2093D","Garlands Hill",             "D", "",  "","",  "","","","","","","","","Annually","","",""],
-  ["2049","","2049D","Mt Cumbermelon",            "D", "Y", "","",  "EPP","","","EPP","","","Annually","","","EPP","",""],
-  ["2290","","",  "Shooters Hill WIN",            "D", "",  "","",  "","","Annually","","","","","","","","",""],
-  ["2099","","2052D","Stanwell Park WIN",         "D", "",  "","",  "","","Annually","","","","","","","","",""],
-  ["2255","","",  "Terrey Hills",                 "D", "",  "","",  "Annually","","","","","","","","","","",""],
-  ["2119","","21190","Vale Of Clwydd",            "D", "",  "","",  "","","","","","","","","","Annually","",""],
-  ["2695","","",  "Mt Kembla RBAH",               "E", "",  "","",  "","","Annually","","","","","","","","",""],
-  ["2685","2850","","Mudgee Town RBAH",           "E", "",  "","",  "","","","","","","Annually","","","","",""],
-  ["2472","2869","","Peak Hill RT",               "E", "",  "","",  "","","","","","","","","Annually","","",""],
-  ["2602","","",  "Eugowra RBAH",                 "R", "",  "","",  "","","","","","Annually","","","","","",""],
-  ["2604","","",  "Grenfell RBAH",                "R", "",  "","",  "","","","","","Annually","","","","","",""],
+  ["2136","","",  "Artarmon TXA",                "A+","",  "","",  "","","6 Monthly","","","Quarterly","","","Annually","","","Quarterly","SYDNEY"],
+  ["2040","","",  "Gore Hill",                   "A+","Y", "x","x","Nova & EPP","Nova & EPP","6 Monthly","Nova & EPP","Nova & EPP","Quarterly","Nova & EPP","Nova & EPP","Annually","Nova & EPP","Nova & EPP","Quarterly","SYDNEY"],
+  ["2060","","",  "Liverpool MF",                "A+","Y", "x","x","EPP","6 Monthly","EPP","EPP","Quarterly","EPP","EPP","Annually","EPP","EPP","Quarterly","EPP","SYDNEY"],
+  ["2144","","",  "Bicentennial Park MF",         "A", "Y", "x","",  "EPP#","EPP#","Annually","EPP#","EPP#","Quarterly","EPP#","EPP#","6 Monthly","EPP#","EPP#","Quarterly","SYDNEY"],
+  ["2052","","",  "Knights Hill",                 "A", "Y", "","",  "EPP","EPP","Annually","EPP","EPP","Quarterly","EPP","EPP","6 Monthly","EPP","EPP","Quarterly","SYDNEY"],
+  ["2609","","2226D","Knights Hill WIN",          "A", "Y-W","","", "","","Annually","","","Quarterly","","","6 Monthly","","","Quarterly","SYDNEY"],
+  ["2687","","2571D","Razorback Range",           "A", "Y-W","","", "Quarterly","","","6 Monthly","","","Quarterly","","","Annually","","","SYDNEY"],
+  ["2106","","",  "Basin View MF",                "B", "Y", "","",  "","","Annually","","","Quarterly ACU","","","6 Monthly","","","Quarterly ACU","SYDNEY"],
+  ["2015","","2015D","Brokers Nose",              "B", "Y", "","",  "","","Annually","","","","","","6 Monthly","","","","SYDNEY"],
+  ["2028","","",  "Cumnock MF",                   "B", "Y", "","",  "Quarterly ACU","","","6 Monthly","","","Quarterly ACU","","","Annually","","","SYDNEY"],
+  ["2257","","",  "Elan",                         "B", "",  "","",  "6 Monthly","","","","","","Annually","","","","","","SYDNEY"],
+  ["2067","","",  "Gaanha bula Mt Canobolas",     "B", "Y", "","",  "EPP","","","Annually","","","EPP","","","6 Monthly","","","SYDNEY"],
+  ["2612","","2067D","Gaanha bula Mt Canobolas Seven","B","Y-S","","","","","Annually","","","","","","6 Monthly","","","","SYDNEY"],
+  ["2088","","",  "North Head",                   "B", "Y", "x","",  "","6 Monthly","","","","","","Annually","","","","","SYDNEY"],
+  ["2116","","",  "Windang Town MF",              "B", "Y", "","",  "Annually","","","Quarterly ACU","","","6 Monthly","","","Quarterly ACU","","","SYDNEY"],
+  ["2059","","",  "Lithgow MF",                   "C", "",  "","",  "","","","","","","Annually","","","","","","SYDNEY"],
+  ["2110","","2110D","Little Forest Trig",        "C", "Y", "","",  "","","Annually","","","","","","","","","","SYDNEY"],
+  ["2058","","2118D","Littleton",                 "C", "",  "","",  "","","","","","","Annually","","","","","","SYDNEY"],
+  ["2070","","",  "Mt Gibraltar WIN",             "C", "Y-W","X","", "","","Annually","","","","","","","","","","SYDNEY"],
+  ["2078","","",  "Mt Panorama RT",               "C", "",  "","",  "","","","","","","Annually","","","","","","SYDNEY"],
+  ["2134","","",  "Prospect MF",                  "C", "Y", "x","",  "Quarterly ACU","","","Quarterly ACU","","","Quarterly ACU","","","Annually","","","SYDNEY"],
+  ["2130","","",  "Windang Peninsula MF",         "C", "",  "","",  "Annually","","","Quarterly ACU","","","Quarterly ACU","","","Quarterly ACU","","","SYDNEY"],
+  ["2170","","2079D","Bathurst East WIN",         "D", "Y-W","","",  "","","","","","","Annually","","","","","","SYDNEY"],
+  ["2159","","2159D","Bellevue Hill WIN",         "D", "",  "","",  "","","","","","Annually","","","","","","","SYDNEY"],
+  ["2090","","2090D","Cambewarra Lookout",        "D", "Y", "X","",  "","","Annually","","","","","","","","","","SYDNEY"],
+  ["2023","","",  "Condobolin",                   "D", "",  "","",  "","","","","","","","","Annually","","","","SYDNEY"],
+  ["2621","","2023D","Condobolin Hospital Hill",  "D", "",  "","",  "","","","","","","","","Annually","","","","SYDNEY"],
+  ["2083","","",  "Endicotts Hill",               "D", "Y", "","",  "EPP","","","EPP","","","Annually","","","EPP","","","SYDNEY"],
+  ["2601","","2083D","Endicotts Hill WIN",        "D", "Y-W","","",  "","","","","","","Annually","","","","","","SYDNEY"],
+  ["2160","2787","",  "Falls Hill",               "D", "",  "","",  "","","","","","","","","","","","Annually","SYDNEY"],
+  ["2093","","2093D","Garlands Hill",             "D", "",  "","",  "","","","","","","","","Annually","","","","SYDNEY"],
+  ["2049","","2049D","Mt Cumbermelon",            "D", "Y", "","",  "EPP","","","EPP","","","Annually","","","EPP","","","SYDNEY"],
+  ["2290","","",  "Shooters Hill WIN",            "D", "",  "","",  "","","Annually","","","","","","","","","","SYDNEY"],
+  ["2099","","2052D","Stanwell Park WIN",         "D", "",  "","",  "","","Annually","","","","","","","","","","SYDNEY"],
+  ["2255","","",  "Terrey Hills",                 "D", "",  "","",  "Annually","","","","","","","","","","","","SYDNEY"],
+  ["2119","","21190","Vale Of Clwydd",            "D", "",  "","",  "","","","","","","","","","Annually","","","SYDNEY"],
+  ["2695","","",  "Mt Kembla RBAH",               "E", "",  "","",  "","","Annually","","","","","","","","","","SYDNEY"],
+  ["2685","2850","","Mudgee Town RBAH",           "E", "",  "","",  "","","","","","","Annually","","","","","","SYDNEY"],
+  ["2472","2869","","Peak Hill RT",               "E", "",  "","",  "","","","","","","","","Annually","","","","SYDNEY"],
+  ["2602","","",  "Eugowra RBAH",                 "R", "",  "","",  "","","","","","Annually","","","","","","","SYDNEY"],
+  ["2604","","",  "Grenfell RBAH",                "R", "",  "","",  "","","","","","Annually","","","","","","","SYDNEY"],
 ];
 
 const DEFAULT_SERVICE_MAP = {
@@ -1981,13 +1989,14 @@ const DEFAULT_PH_MAP = {
 function actClass(act) {
   if (!act) return null;
   const a = act.toLowerCase();
-  if (a.includes("nova")) return "act-nova";
-  if (a.includes("epp#")) return "act-eppx";     // EPP# distinct (purple)
+  if (a.includes("nova")) return "act-nova";        // legacy "Nova & EPP"
+  if (a.includes("epp#")) return "act-eppx";        // EPP# distinct (purple)
   if (a.includes("epp"))  return "act-epp";
-  if (a.includes("annually")) return "act-annually";
-  if (a.includes("6 monthly")) return "act-6monthly";
-  if (a.includes("acu"))  return "act-acu";      // Quarterly ACU (teal) — check before quarterly
-  if (a.includes("quarterly")) return "act-quarterly";
+  if (a.includes("acu"))  return "act-acu";         // Quarterly ACU (teal) — before quarterly
+  if (a.includes("annual")) return "act-annually";  // "Annually" or "Annual PM"
+  if (a.includes("6 month") || a.includes("6monthly")) return "act-6monthly"; // before generic monthly
+  if (a.includes("quarter")) return "act-quarterly";
+  if (a.includes("month")) return "act-monthly";    // "Monthly PM" — after 6-monthly & quarterly
   return "act-other";
 }
 
@@ -2491,10 +2500,11 @@ const DEFAULT_ACT_RULES = [
   { match:"nova & epp", code:"11", ai:"NIL",   ss:"LOR", startHr:13, endHr:14, timing:"Secondary", rac:"POMN", descr:"Monthly PM & EPP test run. Non intrusive works." },
   { match:"epp#",       code:"11", ai:"EPP-S", ss:"NOP", startHr:13, endHr:14, timing:"Secondary", rac:"POMN", descr:"Monthly EPP test run - Synchronous changeover, no effect on public." },
   { match:"epp",        code:"11", ai:"EPP-S", ss:"NOP", startHr:13, endHr:14, timing:"Outside",   rac:"POMN", descr:"Monthly EPP test run. Non intrusive works." },
-  { match:"annually",   code:"20", ai:"OFF",   ss:"OFF", startHr:8,  endHr:16, timing:"Primary",   rac:"POMN", descr:"Annual Preventive Maintenance - Service affecting works." },
+  { match:"annual",     code:"20", ai:"OFF",   ss:"OFF", startHr:8,  endHr:16, timing:"Primary",   rac:"POMN", descr:"Annual Preventive Maintenance - Service affecting works." },
   { match:"6 monthly",  code:"20", ai:"OFF",   ss:"OFF", startHr:8,  endHr:16, timing:"Primary",   rac:"POMN", descr:"6-Monthly Preventive Maintenance - Service affecting works." },
   { match:"quarterly acu",code:"20",ai:"OFF",  ss:"OFF", startHr:9,  endHr:13, timing:"Secondary", rac:"POAC", descr:"Quarterly Preventive Maintenance with ACU test - Service affecting." },
   { match:"quarterly",  code:"20", ai:"OFF",   ss:"OFF", startHr:9,  endHr:13, timing:"Secondary", rac:"POMN", descr:"Quarterly Preventive Maintenance - Service affecting works." },
+  { match:"monthly pm", code:"20", ai:"NIL",   ss:"LOR", startHr:9,  endHr:13, timing:"Primary",   rac:"POMN", descr:"Monthly PM" },
 ];
 
 const DEFAULT_TIMING_REASONS = {
@@ -2974,7 +2984,7 @@ function applyFilters() {
   filteredRows = scheduleRows.filter(r => {
     if (qm && !qm.includes(r.mNo)) return false;
     if (cv && r.cls !== cv) return false;
-    if (av && !r.act.toLowerCase().includes(av.toLowerCase())) return false;
+    if (av && actKey(r.act) !== actKey(av)) return false;
     const rd = getRow(r.id);
     if (sv && rd.status !== sv) return false;
     if (qopv && rd.qopReady !== qopv) return false;
@@ -3258,6 +3268,8 @@ function actMatchesFilters(act) {
   const a = act.toLowerCase();
   for (const f of _siteGridActFilters) {
     if (f === 'quarterly-only') { if (a.includes('quarterly') && !a.includes('acu')) return true; }
+    else if (f === 'monthly-only'){ if (a.includes('month') && !a.includes('6 month') && !a.includes('6monthly')) return true; }
+    else if (f === 'annual')     { if (a.includes('annual')) return true; }
     else if (f === 'acu')        { if (a.includes('acu')) return true; }
     else if (f === 'epp-only')   { if (a.includes('epp') && !a.includes('epp#') && !a.includes('nova')) return true; }
     else if (f === 'epp#')       { if (a.includes('epp#')) return true; }
@@ -3279,11 +3291,24 @@ const _CLS_RANK = { 'A+':0, 'A':1, 'B':2, 'C':3, 'D':4, 'E':5, 'R':6 };
 function renderSiteGrid() {
   const tbody = document.getElementById("grid-body");
 
-  // SITES columns: [sno, seven, win, sname, cls, epp, y1, y2, ...12 months]
-  // Hide rows with no month matching the active filters; non-matching cells
-  // within a kept row are dimmed.
+  // SITES columns: [sno, seven, win, sname, cls, epp, y1, y2, Jan..Dec (8-19), Department (20)]
+  // Populate the Dept/District filter with the departments actually present.
+  const deptSel = document.getElementById('sg-dept-filter');
+  let deptFilter = '';
+  if (deptSel) {
+    const depts = [...new Set(SITES.map(r => (r[20]||'').trim()).filter(Boolean))].sort();
+    const cur = deptSel.value;
+    deptSel.innerHTML = '<option value="">All Departments</option>' +
+      depts.map(d => `<option${d===cur?' selected':''}>${esc(d)}</option>`).join('');
+    if (cur && !depts.includes(cur)) deptSel.value = '';
+    deptFilter = deptSel.value;
+  }
+
+  // Hide rows with no month matching the active filters (non-matching cells in
+  // a kept row are dimmed); also apply the department/district filter.
   let rows = SITES
-    .filter(r => !_siteGridActFilters.size || r.slice(8).some(m => actMatchesFilters(m)))
+    .filter(r => !deptFilter || (r[20]||'').trim() === deptFilter)
+    .filter(r => !_siteGridActFilters.size || r.slice(8,20).some(m => actMatchesFilters(m)))
     .map((r, idx) => ({ r, idx }));
 
   const { key, dir } = _siteGridSort;
@@ -3292,6 +3317,7 @@ function renderSiteGrid() {
       const a = A.r, b = B.r;
       let av, bv;
       if (key === 'sno')      { av = parseInt(a[0]) || 0;       bv = parseInt(b[0]) || 0; }
+      else if (key === 'dept') { av = (a[20]||'').trim();        bv = (b[20]||'').trim(); }
       else if (key === 'sname'){ av = a[3] || '';                bv = b[3] || ''; }
       else if (key === 'cls')  { av = _CLS_RANK[(a[4]||'').trim()] ?? 9; bv = _CLS_RANK[(b[4]||'').trim()] ?? 9; }
       else if (key === 'epp')  { av = a[5] || '';                bv = b[5] || ''; }
@@ -3305,7 +3331,9 @@ function renderSiteGrid() {
 
   const frags = [];
   rows.forEach(({ r }, i) => {
-    const [sno, seven, win, sname, cls, epp, y1, y2, ...months] = r;
+    const [sno, seven, win, sname, cls, epp, y1, y2] = r;
+    const dept = (r[20] || '').trim();
+    const months = r.slice(8, 20);
     const alt = i % 2 === 0 ? "alt" : "";
     const monthCells = months.map((act, mi) => {
       if (!act || !act.trim()) return `<td class="month-cell empty">–</td>`;
@@ -3321,6 +3349,7 @@ function renderSiteGrid() {
     frags.push(`
       <tr class="${alt}">
         <td class="mono">${sno}</td>
+        <td style="font-size:11px;color:var(--muted);white-space:nowrap">${dept||'–'}</td>
         <td>${sname}</td>
         <td><span class="cls-badge ${clsClass(cls.trim())}">${cls.trim()}</span></td>
         <td style="text-align:center;font-size:11px;color:${epp?'var(--warn)':'var(--muted)'};">${epp||'–'}</td>
@@ -3624,13 +3653,31 @@ let _tripFullYear  = [];     // full-year QOP rows (all 12 months) for trip plan
 // Trip Activity options are derived from the Activity Rules settings so the
 // two stay linked. Each rule's `match` string becomes a selectable label
 // (title-cased, with acronyms preserved).
+// Standard activity vocabulary — matches the Site Grid / BAI_SITES codes.
+const ACTIVITY_CODES = ['Annual PM','6 Monthly PM','Quarterly PM','Monthly PM','Quarterly ACU','EPP','EPP#'];
+// Collapse any activity label to a stable semantic key, so "Annually" and
+// "Annual PM" (or "6 Monthly" and "6 Monthly PM") count as the same activity.
+function actKey(s) {
+  const a = String(s||'').toLowerCase();
+  if (a.includes('nova')) return 'nova';
+  if (a.includes('epp#')) return 'eppx';
+  if (a.includes('epp'))  return 'epp';
+  if (a.includes('acu'))  return 'acu';
+  if (a.includes('annual')) return 'annual';
+  if (a.includes('6 month') || a.includes('6monthly')) return '6monthly';
+  if (a.includes('quarter')) return 'quarterly';
+  if (a.includes('month')) return 'monthly';
+  return a.trim();
+}
 function tripActivityOptions() {
+  // Standard codes first, then any custom activities from Activity Rules that
+  // aren't already one of them (deduped by semantic key so vocab stays clean).
+  const out = [...ACTIVITY_CODES];
+  const seen = new Set(out.map(actKey));
   const rules = (STATE.lookups && STATE.lookups.actRules) || [];
-  const labels = rules.map(r => titleCaseActivity(r.match));
-  // De-dupe, keep order, fall back to a sensible default set if empty
-  const seen = new Set(); const out = [];
-  labels.forEach(l => { if (l && !seen.has(l)) { seen.add(l); out.push(l); } });
-  return out.length ? out : ['Annually','6 Monthly','Quarterly','Quarterly ACU','EPP','EPP#','Nova & EPP'];
+  rules.forEach(r => { const l = titleCaseActivity(r.match); const k = actKey(l);
+    if (l && !seen.has(k)) { seen.add(k); out.push(l); } });
+  return out;
 }
 function titleCaseActivity(s) {
   return String(s||'').split(' ').map(w => {
@@ -3697,16 +3744,14 @@ function tripFromSiteCell(sno, mNo, activity) {
   updateMonthBtnLabel();
   const aSel = document.getElementById('trip-activity');
   if (aSel) {
-    const a = activity.toLowerCase();
-    let match = '';
-    if (a.includes('nova')) match = 'Nova & EPP';
-    else if (a.includes('epp#')) match = 'EPP#';
-    else if (a.includes('epp')) match = 'EPP';
-    else if (a.includes('acu')) match = 'Quarterly ACU';
-    else if (a.includes('quarterly')) match = 'Quarterly';
-    else if (a.includes('6 monthly')) match = '6 Monthly';
-    else if (a.includes('annually')) match = 'Annually';
-    aSel.value = match;
+    const opts = tripActivityOptions();
+    aSel.innerHTML = '<option value="">All Activities</option><option value="(untagged)">— Untagged —</option>' +
+      opts.map(a => `<option>${a}</option>`).join('');
+    // Map the clicked cell's activity to the standard dropdown code.
+    const codeByKey = { nova:'Nova & EPP', eppx:'EPP#', epp:'EPP', acu:'Quarterly ACU',
+                        annual:'Annual PM', '6monthly':'6 Monthly PM', quarterly:'Quarterly PM', monthly:'Monthly PM' };
+    const want = codeByKey[actKey(activity)] || '';
+    aSel.value = opts.includes(want) ? want : '';
   }
   renderTripPlanner();
 }
@@ -3715,13 +3760,14 @@ function tripFromSiteCell(sno, mNo, activity) {
 function qopActivityLabel(row) {
   const code  = (row['Maintenance Activity Number'] || '').toString();
   const descr = (row['Description of Work'] || '').toUpperCase();
-  if (descr.includes('NOVA')) return 'Nova & EPP';
+  if (descr.includes('NOVA')) return 'Monthly PM';
   if (descr.includes('EPP#')) return 'EPP#';
   if (descr.includes('EPP'))  return 'EPP';
   if (descr.includes('ACU'))  return 'Quarterly ACU';
-  if (descr.includes('QUARTERLY')) return 'Quarterly';
-  if (descr.includes('6 MONTH') || descr.includes('SIX MONTH')) return '6 Monthly';
-  if (descr.includes('ANNUAL')) return 'Annually';
+  if (descr.includes('ANNUAL')) return 'Annual PM';
+  if (descr.includes('6 MONTH') || descr.includes('SIX MONTH')) return '6 Monthly PM';
+  if (descr.includes('QUARTERLY')) return 'Quarterly PM';
+  if (descr.includes('MONTHLY')) return 'Monthly PM';
   return '';
 }
 
@@ -3743,6 +3789,19 @@ function renderTripPlanner() {
       <div style="font-size:14px;font-weight:600;margin-bottom:6px">No QOP data</div>
       <div>Import the QOP source on the <strong>Import</strong> tab, then select a Site Grid cell or use the filters above.<br>The Trip Planner shows the <strong>full year</strong> regardless of the quarter selected on QOP Export.</div></div>`;
     return;
+  }
+
+  // Keep the activity filter dropdown in sync with the standard codes + any
+  // custom Activity Rules (so newly-added activities like "Monthly PM" appear).
+  const _aSel = document.getElementById('trip-activity');
+  if (_aSel) {
+    const cur = _aSel.value;
+    const opts = tripActivityOptions();
+    _aSel.innerHTML =
+      '<option value="">All Activities</option>' +
+      '<option value="(untagged)">— Untagged —</option>' +
+      opts.map(a => `<option>${a}</option>`).join('');
+    _aSel.value = (cur === '' || cur === '(untagged)' || opts.includes(cur)) ? cur : '';
   }
 
   // month filter via _tripMonths / monthSelected()
@@ -6020,7 +6079,7 @@ function sitesResetDefault() {
 }
 
 const SITES_COLS = ['Site No','7Net','WIN','Site Name','Class','EPP','Y1','Y2',
-  'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Department'];
 
 function renderSitesData() {
   const head = document.getElementById('sites-head');
@@ -6058,7 +6117,7 @@ function sitesDelete(i) {
   renderSitesData();
 }
 function sitesAddRow() {
-  SITES.unshift(['', '', '', 'New Site', 'D', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  SITES.unshift(['', '', '', 'New Site', 'D', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
   renderSitesData();
 }
 function sitesRebuildSchedule() {
