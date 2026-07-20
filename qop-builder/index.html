@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.37</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.38</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -969,7 +969,32 @@ select option:checked, select option:hover {
           </div>
         </div>
 
-        <div class="phase-header">Phase 1 — Data Import</div>
+        <div class="phase-header">Databases — GitHub Load / Export</div>
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:8px">
+          <div class="imp-desc" style="margin-bottom:12px">Export a database to CSV, commit it to your GitHub repo, then load it back here (or on another device / after a browser reset). Paths are relative to this app (e.g. <code>data/BAI_SITES.csv</code>) or paste a full raw-GitHub URL.</div>
+          <div style="display:flex;flex-wrap:wrap;gap:18px">
+            <div style="flex:1;min-width:340px">
+              <div style="font-size:12px;font-weight:700;margin-bottom:5px">🗂 Site Grid + Annual Schedule (SITES)</div>
+              <input id="gh-sites-url" placeholder="data/BAI_SITES.csv"
+                style="width:100%;box-sizing:border-box;background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:6px 9px;font-size:12px">
+              <div style="display:flex;gap:6px;margin-top:7px">
+                <button class="btn btn-primary" onclick="loadSitesFromGithub()">⬆ Load from GitHub</button>
+                <button class="btn btn-ghost" onclick="sitesExportCSV()">⬇ Export CSV</button>
+              </div>
+            </div>
+            <div style="flex:1;min-width:340px">
+              <div style="font-size:12px;font-weight:700;margin-bottom:5px">📡 THSS / Service Map</div>
+              <input id="gh-thss-url" placeholder="data/BAI_THSS.csv"
+                style="width:100%;box-sizing:border-box;background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:6px 9px;font-size:12px">
+              <div style="display:flex;gap:6px;margin-top:7px">
+                <button class="btn btn-primary" onclick="loadThssFromGithub()">⬆ Load from GitHub</button>
+                <button class="btn btn-ghost" onclick="thssExportCSV()">⬇ Export CSV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-header" style="margin-top:18px">Phase 1 — Data Import</div>
         <div class="import-grid" id="import-grid-p1">
 
           <!-- [1] Previous QOP -->
@@ -1046,6 +1071,7 @@ select option:checked, select option:hover {
               <button class="btn btn-ghost" onclick="triggerFileUpload(3)">📂 Upload CSV</button>
               <input type="file" accept=".csv,.txt,.tsv" style="display:none" id="imp-file-3" onchange="loadImportFile(3,this)">
               <button class="btn btn-primary" onclick="runImport3()">▶ Import &amp; Check</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="exportPBCSV()" title="Download loaded bulletins as CSV">⬇ Export</button>
               <div class="imp-last" id="imp-last-3"></div>
             </div>
           </div>
@@ -1100,6 +1126,7 @@ select option:checked, select option:hover {
               <button class="btn btn-ghost" onclick="triggerFileUpload(5)">📂 Upload CSV</button>
               <input type="file" accept=".csv,.txt,.tsv" style="display:none" id="imp-file-5" onchange="loadImportFile(5,this)">
               <button class="btn btn-primary" onclick="runImport5()">▶ Import &amp; Flag</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="exportRecommCSV()" title="Download loaded recommissioning entries as CSV">⬇ Export</button>
               <div class="imp-last" id="imp-last-5"></div>
             </div>
           </div>
@@ -1123,6 +1150,7 @@ select option:checked, select option:hover {
               <button class="btn btn-ghost" onclick="triggerFileUpload(6)">📂 Upload CSV</button>
               <input type="file" accept=".csv,.txt,.tsv" style="display:none" id="imp-file-6" onchange="loadImportFile(6,this)">
               <button class="btn btn-primary" onclick="runImport6()">▶ Import &amp; Flag</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="exportAntennaCSV()" title="Download loaded antenna SNP records as CSV">⬇ Export</button>
               <div class="imp-last" id="imp-last-6"></div>
             </div>
           </div>
@@ -1142,6 +1170,7 @@ select option:checked, select option:hover {
             </div>
             <div class="imp-footer">
               <button class="imp-fetch-btn" id="fetch-btn-7" onclick="fetchTHSSData()">⚡ Fetch THSS</button>
+              <button class="btn btn-ghost" style="font-size:11px" onclick="thssExportCSV()" title="Download the THSS / Service Map as CSV">⬇ Export</button>
               <div class="imp-last" id="imp-last-7"></div>
             </div>
           </div>
@@ -2574,7 +2603,8 @@ const STATE = {
       pb:     { event:'Event', network:'Network', dtvRadio:'DTV_Radio', service:'Service_Name', state:'State', area:'Area_Served', start:'NSW_Start_Time', end:'NSW_End_Time' },
       recomm: { site:'Site', service:'Service', due:'Due_Date', sug:'OnSite_Suggested_Date', status:'Status' },
       antenna:{ site:'Site', band:'Operating_Band', bandDesc:'Band_Description', measDate:'Measurement_Date', period:'Measurement_Period', nextDue:'Next_Due', testType:'BALabs_Test_Type' },
-    }
+    },
+    github: { sitesUrl: 'data/BAI_SITES.csv', thssUrl: 'data/BAI_THSS.csv' },
   },
   // Session-only (never persisted)
   _session: { spToken: null, snApiKey: '', msalApp: null }
@@ -2682,6 +2712,7 @@ function loadPersisted() {
       if (data.connections.sp)     Object.assign(STATE.connections.sp,     data.connections.sp);
       if (data.connections.sn)     Object.assign(STATE.connections.sn,     data.connections.sn);
       if (data.connections.colMap) Object.assign(STATE.connections.colMap, data.connections.colMap);
+      if (data.connections.github) Object.assign(STATE.connections.github, data.connections.github);
     }
   } catch(e) {}
 }
@@ -6170,32 +6201,140 @@ function sitesExportCSV() {
   a.click();
   toast('SITES exported', 'success');
 }
+// Shared SITES CSV apply — used by file upload AND GitHub load.
+function applySitesCSVText(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) { toast('No rows parsed', 'error'); return 0; }
+  const norm = h => h.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const newSites = rows.map(r => {
+    const keys = Object.keys(r);
+    return SITES_COLS.map(col => {
+      const want = norm(col);
+      const k = keys.find(kk => norm(kk) === want || norm(kk).includes(want) || want.includes(norm(kk)));
+      return k ? String(r[k]).trim() : '';
+    });
+  }).filter(s => s[0] || s[3]);   // must have site no or name
+  if (!newSites.length) { toast('No valid site rows found', 'error'); return 0; }
+  SITES.length = 0; newSites.forEach(s => SITES.push(s));
+  renderSitesData();
+  sitesRebuildSchedule();          // rebuilds schedule + Site Grid + district dropdown
+  return newSites.length;
+}
 function sitesImportCSV(evt) {
   const file = evt.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    try {
-      const rows = parseCSV(e.target.result);
-      if (!rows.length) { toast('No rows parsed', 'error'); return; }
-      // Map by header to SITES_COLS order (tolerant of header naming)
-      const norm = h => h.toLowerCase().replace(/[^a-z0-9]/g,'');
-      const newSites = rows.map(r => {
-        const keys = Object.keys(r);
-        return SITES_COLS.map(col => {
-          const want = norm(col);
-          const k = keys.find(kk => norm(kk) === want || norm(kk).includes(want) || want.includes(norm(kk)));
-          return k ? String(r[k]).trim() : '';
-        });
-      }).filter(s => s[0] || s[3]);   // must have site no or name
-      if (!newSites.length) { toast('No valid site rows found', 'error'); return; }
-      SITES.length = 0; newSites.forEach(s => SITES.push(s));
-      renderSitesData();
-      sitesRebuildSchedule();
-      toast(`Imported ${newSites.length} sites`, 'success');
-    } catch(err) { console.error(err); toast('Import failed', 'error'); }
+    try { const n = applySitesCSVText(e.target.result); if (n) toast(`Imported ${n} sites`, 'success'); }
+    catch(err) { console.error(err); toast('Import failed', 'error'); }
   };
   reader.readAsText(file);
   evt.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DATABASE EXPORT  +  GITHUB LOAD  (save datasets to CSV; reload from repo)
+// ═══════════════════════════════════════════════════════════════
+function _csvQ(v){ return `"${(v==null?'':String(v)).replace(/"/g,'""')}"`; }
+function _fmtCSVDate(d, withTime){
+  if (!d) return '';
+  const dt = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  const s = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+  return withTime ? `${s} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : s;
+}
+function _downloadCSV(filename, text){
+  const blob = new Blob([text], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
+}
+// Exporters use the same canonical headers the importers expect → CSVs round-trip.
+function exportPBCSV(){
+  const d = STATE.lookups.pbEntries || [];
+  if (!d.length){ toast('No Programming Bulletins loaded to export', 'error'); return; }
+  const H=['Event','Network','DTV_Radio','Service_Name','State','Area_Served','NSW_Start_Time','NSW_End_Time'];
+  const lines=[H.map(_csvQ).join(',')].concat(d.map(e=>
+    [e.event,e.network,e.type,e.service,e.state,e.area,_fmtCSVDate(e.startDt,true),_fmtCSVDate(e.endDt,true)].map(_csvQ).join(',')));
+  _downloadCSV('BAI_Programming_Bulletins.csv', lines.join('\r\n'));
+  toast(`Exported ${d.length} bulletins`, 'success');
+}
+function exportRecommCSV(){
+  const d = STATE.lookups.recommEntries || [];
+  if (!d.length){ toast('No Recommissioning entries loaded to export', 'error'); return; }
+  const H=['Site','Service','Due_Date','OnSite_Suggested_Date','Status'];
+  const lines=[H.map(_csvQ).join(',')].concat(d.map(e=>
+    [e.site,e.service,_fmtCSVDate(e.dueDate),_fmtCSVDate(e.sugDate),e.status].map(_csvQ).join(',')));
+  _downloadCSV('BAI_Recommissioning_Schedule.csv', lines.join('\r\n'));
+  toast(`Exported ${d.length} entries`, 'success');
+}
+function exportAntennaCSV(){
+  const d = STATE.lookups.antennaSNP || [];
+  if (!d.length){ toast('No Antenna SNP records loaded to export', 'error'); return; }
+  const H=['Site','Operating_Band','Band_Description','Measurement_Date','Measurement_Period','Next_Due','BALabs_Test_Type'];
+  const lines=[H.map(_csvQ).join(',')].concat(d.map(e=>
+    [e.site,e.band,e.bandDesc,_fmtCSVDate(e.measDate),e.period,_fmtCSVDate(e.nextDue),e.testType].map(_csvQ).join(',')));
+  _downloadCSV('BAI_Antenna_SNP.csv', lines.join('\r\n'));
+  toast(`Exported ${d.length} records`, 'success');
+}
+// THSS from CSV text (accepts the exported layout OR the raw THSS_Live layout).
+function loadThssFromText(text){
+  const rows = parseCSV(text);
+  if (!rows.length){ toast('No THSS rows parsed', 'error'); return 0; }
+  const district = STATE.settings.district;
+  STATE.lookups.thssDetail = [];
+  STATE.lookups.thssCommenced = {};
+  const siteServices = {};
+  for (const r of rows){
+    const dist = findCol(r,'district');
+    if (dist && dist !== district) continue;      // honour District column if present
+    const sno = (findCol(r,'site_no','site_number','site') || '').trim();
+    const svc = (findCol(r,'service_name','service') || '').trim();
+    const cls = (findCol(r,'class','service_class') || '').trim();
+    if (!sno || !svc || cls === 'S') continue;
+    const sname = (findCol(r,'site_name') || '').trim();
+    if (!siteServices[sno]) siteServices[sno] = [];
+    if (!siteServices[sno].includes(svc)) siteServices[sno].push(svc);
+    if (sname && !STATE.lookups.siteNames[sno]) STATE.lookups.siteNames[sno] = sname;
+    const commenced = findCol(r,'commenced_date','commencement_date') || '';
+    let commencedStr = '';
+    if (commenced){ const cd = parseDate(commenced); if (cd){
+      const iso = `${cd.getFullYear()}-${String(cd.getMonth()+1).padStart(2,'0')}-${String(cd.getDate()).padStart(2,'0')}`;
+      commencedStr = fmtQOPDateTime(iso, extractTime(commenced,'00:00')); } }
+    STATE.lookups.thssDetail.push({ sno, sname, service: svc, svcClass: cls,
+      modulation:(findCol(r,'modulation')||'').trim(), area:(findCol(r,'area_served','area')||'').trim(), commenced: commencedStr });
+    if (commencedStr) STATE.lookups.thssCommenced[`${sno}|${svc.toUpperCase()}`] = commencedStr;
+  }
+  for (const [sno,svcs] of Object.entries(siteServices)) STATE.lookups.serviceMap[sno] = svcs.join('; ');
+  const count = Object.keys(siteServices).length;
+  persist();
+  setImportStatus(7, true, `<span>Updated: <span>${count}</span> sites in Service Map (from GitHub)</span>`, count);
+  if (typeof renderTHSSData === 'function') renderTHSSData();
+  return count;
+}
+// Fetch a text file. Same-origin relative paths (this GitHub Pages site) need no CORS;
+// raw.githubusercontent.com also sends permissive CORS headers.
+async function fetchGithubText(url){
+  const resp = await fetch(url, { cache:'no-store' });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return await resp.text();
+}
+async function loadSitesFromGithub(){
+  const url = (document.getElementById('gh-sites-url').value || '').trim();
+  if (!url){ toast('Enter the SITES file URL/path first', 'error'); return; }
+  STATE.connections.github.sitesUrl = url; persist();
+  toast('Loading SITES from GitHub…', 'info');
+  try { const text = await fetchGithubText(url); const n = applySitesCSVText(text);
+        if (n){ populateDistrictFilter(); toast(`Loaded ${n} sites from GitHub`, 'success'); } }
+  catch(err){ console.error(err); toast('GitHub load failed: '+err.message+' — check the path and that the repo is public', 'error'); }
+}
+async function loadThssFromGithub(){
+  const url = (document.getElementById('gh-thss-url').value || '').trim();
+  if (!url){ toast('Enter the THSS file URL/path first', 'error'); return; }
+  STATE.connections.github.thssUrl = url; persist();
+  toast('Loading THSS from GitHub…', 'info');
+  try { const text = await fetchGithubText(url); const n = loadThssFromText(text);
+        if (n) toast(`Loaded THSS for ${n} sites from GitHub`, 'success'); }
+  catch(err){ console.error(err); toast('GitHub load failed: '+err.message+' — check the path and that the repo is public', 'error'); }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -7059,6 +7198,10 @@ function parseDate(str) {
 //  IMPORT TAB RENDER
 // ═══════════════════════════════════════════════════════════════
 function renderImportTab() {
+  // Restore saved GitHub database URLs into the panel inputs
+  const gh = (STATE.connections && STATE.connections.github) || {};
+  const gs = document.getElementById('gh-sites-url'); if (gs && !gs.value) gs.value = gh.sitesUrl || '';
+  const gt = document.getElementById('gh-thss-url');  if (gt && !gt.value) gt.value = gh.thssUrl || '';
   // Update card statuses from STATE.importStatus
   for (let i = 1; i <= 7; i++) {
     const st = STATE.importStatus[i];
@@ -7469,7 +7612,7 @@ function runImport5() {
     site:     findCol(row,'site','site_name','site_no'),
     service:  findCol(row,'service','service_name'),
     dueDate:  parseDate(findCol(row,'due_date','due')),
-    sugDate:  parseDate(findCol(row,'onsite_suggested_date','suggested','suggest')),
+    sugDate:  parseDate(findCol(row,'suggested','suggest','onsite_suggested_date')),
     status:   findCol(row,'status'),
   })).filter(e => e.site && (e.dueDate || e.sugDate));
 
