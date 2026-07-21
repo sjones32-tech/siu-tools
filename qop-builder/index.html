@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.42</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.43</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -2758,6 +2758,12 @@ function districtMatch(sno) {
   return d === _districtFilter;
 }
 function titleCaseDistrict(d) { return d ? d.charAt(0).toUpperCase() + d.slice(1).toLowerCase() : d; }
+// QOP District for a row = the SITE's own region (SITES Department column), title-cased.
+// Falls back to the home-district setting only when the site has no region on file.
+function districtForSite(sno) {
+  const dept = siteDeptFor(sno);
+  return dept ? titleCaseDistrict(dept) : STATE.settings.district;
+}
 function populateDistrictFilter() {
   const sel = document.getElementById('global-district');
   if (!sel) return;
@@ -4922,7 +4928,7 @@ function detectNewSites(rows) {
   for (const sno of known) {
     if (allQOPSites.has(sno)) continue;   // exists somewhere in the year — not new
     const tpl = Object.fromEntries(cols.map(k => [k, '']));
-    tpl['District']             = STATE.settings.district;
+    tpl['District']             = districtForSite(sno);
     tpl['Site Number']          = sno;
     tpl['Site Name']            = STATE.lookups.siteNames[sno] || '';   // name lookup
     tpl['Service']              = STATE.lookups.serviceMap[sno];
@@ -5009,7 +5015,7 @@ const district = STATE.settings.district;
 
     const _newRow = {
       _uid:                   src._uid || (src._uid = 'q' + Math.random().toString(36).slice(2,8)),
-      District:               src.district || district,
+      District:               src.district || districtForSite(src.sno),
       Population:             categorisePopulation(src.popCat, src.svcClass),
       'Site Number':          src.sno,
       'Site Name':            src.sname,
@@ -5154,7 +5160,7 @@ function buildQOPRow(r, rd) {
   const timing  = _s9B.timing;
   const _s9Bnote = _s9B.note;
   return {
-    District: STATE.settings.district,
+    District: districtForSite(r.sno),
     Population: prev.popCat || popFromClass(r.cls),
     'Site Number': r.sno,
     'Site Name': r.sname,
