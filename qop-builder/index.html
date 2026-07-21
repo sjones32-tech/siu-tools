@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.40</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.41</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -2809,6 +2809,7 @@ function showTab(name) {
     }
   }
   if (name === "tripplanner") { invalidateTripCache(); renderTripPlanner(); }
+  if (name === "import")     renderImportTab();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6340,8 +6341,11 @@ async function fetchGithubText(url){
   return await resp.text();
 }
 async function loadSitesFromGithub(){
-  const url = (document.getElementById('gh-sites-url').value || '').trim();
+  const el = document.getElementById('gh-sites-url');
+  let url = ((el && el.value) || '').trim();
+  if (!url) url = (STATE.connections.github.sitesUrl || '').trim();   // fall back to saved/default
   if (!url){ toast('Enter the SITES file URL/path first', 'error'); return; }
+  if (el) el.value = url;
   STATE.connections.github.sitesUrl = url; persist();
   toast('Loading SITES from GitHub…', 'info');
   try { const text = await fetchGithubText(url); const n = applySitesCSVText(text);
@@ -6349,8 +6353,11 @@ async function loadSitesFromGithub(){
   catch(err){ console.error(err); toast('GitHub load failed: '+err.message+' — check the path and that the repo is public', 'error'); }
 }
 async function loadThssFromGithub(){
-  const url = (document.getElementById('gh-thss-url').value || '').trim();
+  const el = document.getElementById('gh-thss-url');
+  let url = ((el && el.value) || '').trim();
+  if (!url) url = (STATE.connections.github.thssUrl || '').trim();   // fall back to saved/default
   if (!url){ toast('Enter the THSS file URL/path first', 'error'); return; }
+  if (el) el.value = url;
   STATE.connections.github.thssUrl = url; persist();
   toast('Loading THSS from GitHub…', 'info');
   try { const text = await fetchGithubText(url); const n = loadThssFromText(text);
