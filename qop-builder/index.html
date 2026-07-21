@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.39</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.40</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -975,7 +975,7 @@ select option:checked, select option:hover {
           <div style="display:flex;flex-wrap:wrap;gap:18px">
             <div style="flex:1;min-width:340px">
               <div style="font-size:12px;font-weight:700;margin-bottom:5px">🗂 Site Grid + Annual Schedule (SITES)</div>
-              <input id="gh-sites-url" placeholder="data/BAI_SITES.csv"
+              <input id="gh-sites-url" placeholder="https://github.com/sjones32-tech/siu-tools/blob/main/qop-builder/Data/BAI_Sites.csv"
                 style="width:100%;box-sizing:border-box;background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:6px 9px;font-size:12px">
               <div style="display:flex;gap:6px;margin-top:7px">
                 <button class="btn btn-primary" onclick="loadSitesFromGithub()">⬆ Load from GitHub</button>
@@ -984,7 +984,7 @@ select option:checked, select option:hover {
             </div>
             <div style="flex:1;min-width:340px">
               <div style="font-size:12px;font-weight:700;margin-bottom:5px">📡 THSS / Service Map</div>
-              <input id="gh-thss-url" placeholder="data/BAI_THSS.csv"
+              <input id="gh-thss-url" placeholder="https://github.com/sjones32-tech/siu-tools/blob/main/qop-builder/Data/BAI_THSS.csv"
                 style="width:100%;box-sizing:border-box;background:var(--surf2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:6px 9px;font-size:12px">
               <div style="display:flex;gap:6px;margin-top:7px">
                 <button class="btn btn-primary" onclick="loadThssFromGithub()">⬆ Load from GitHub</button>
@@ -2604,7 +2604,11 @@ const STATE = {
       recomm: { site:'Site', service:'Service', due:'Due_Date', sug:'OnSite_Suggested_Date', status:'Status' },
       antenna:{ site:'Site', band:'Operating_Band', bandDesc:'Band_Description', measDate:'Measurement_Date', period:'Measurement_Period', nextDue:'Next_Due', testType:'BALabs_Test_Type' },
     },
-    github: { sitesUrl: 'data/BAI_SITES.csv', thssUrl: 'data/BAI_THSS.csv' },
+    github: {
+      sitesUrl: 'https://github.com/sjones32-tech/siu-tools/blob/main/qop-builder/Data/BAI_Sites.csv',
+      thssUrl:  'https://github.com/sjones32-tech/siu-tools/blob/main/qop-builder/Data/BAI_THSS.csv',
+      urlsVersion: 2,
+    },
   },
   // Session-only (never persisted)
   _session: { spToken: null, snApiKey: '', msalApp: null }
@@ -2713,6 +2717,12 @@ function loadPersisted() {
       if (data.connections.sn)     Object.assign(STATE.connections.sn,     data.connections.sn);
       if (data.connections.colMap) Object.assign(STATE.connections.colMap, data.connections.colMap);
       if (data.connections.github) Object.assign(STATE.connections.github, data.connections.github);
+      // One-time: adopt the current default GitHub data URLs, superseding any earlier saved value.
+      if ((STATE.connections.github.urlsVersion || 0) < 2) {
+        STATE.connections.github.sitesUrl = 'https://github.com/sjones32-tech/siu-tools/blob/main/qop-builder/Data/BAI_Sites.csv';
+        STATE.connections.github.thssUrl  = 'https://github.com/sjones32-tech/siu-tools/blob/main/qop-builder/Data/BAI_THSS.csv';
+        STATE.connections.github.urlsVersion = 2;
+      }
     }
   } catch(e) {}
 }
