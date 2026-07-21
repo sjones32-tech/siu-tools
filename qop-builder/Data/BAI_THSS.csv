@@ -1,214 +1,614 @@
-"Site No","Site Name","Service","Class","Modulation","Area Served","Commenced Date"
-"2025","Radio Hill RT","WIN Digital Television","D","COFDM","Cooma","11/10/2021 07:00"
-"2031","Bimmil Hill","WIN Digital Television","D","COFDM","Eden","11/10/2021 07:00"
-"2071","Mt Gillamatong","WIN Digital Television","D","COFDM","Braidwood","11/10/2021 07:00"
-"2087","Buckeridge Lookout","WIN Digital Television","D","COFDM","Narooma","11/10/2021 07:00"
-"2105","Thredbo","WIN Digital Television","D","COFDM","Thredbo","11/10/2021 07:00"
-"2118","Young","WIN Digital Television","D","COFDM","Young","11/10/2021 07:00"
-"2141","Webbs Hill","WIN Digital Television","D","COFDM","Tumut","11/10/2021 07:00"
-"2291","The Gap WIN","WIN Digital Television","D","COFDM","Adelong","11/10/2021 07:00"
-"2320","Captains Flat","WIN Digital Television","D","COFDM","Captains Flat","11/10/2021 07:00"
-"2321","Talbingo","WIN Digital Television","D","COFDM","Talbingo","11/10/2021 07:00"
-"2008","Black Mountain Tower","WIN Digital Television","A","COFDM","Canberra","11/10/2021 07:00"
-"2081","Mt Ulandra","WIN Digital Television","B","COFDM","SW Slopes/E Riverina","11/10/2021 07:00"
-"2082","Mt Wandera","WIN Digital Television","C","COFDM","Moruya","11/10/2021 07:00"
-"2108","Tuggeranong Hill","WIN Digital Television","C","COFDM","Tuggeranong Valley","11/10/2021 07:00"
-"2178","Mt Mumbulla WIN","WIN Digital Television","C","COFDM","Bega","11/10/2021 07:00"
-"2286","Chaton Ridge WIN","WIN Digital Television","E","COFDM","Bungendore","11/10/2021 07:00"
-"2498","Kianga","WIN Digital Television","E","COFDM","Dalmeny","11/10/2021 07:00"
-"2614","Mt Gray WIN","WIN Digital Television","C","COFDM","Goulburn","11/10/2021 07:00"
-"2688","Bermagui RBAH","WIN Digital Television","E","COFDM","Bermagui","11/10/2021 07:00"
-"2690","Eastgrove RBAH","WIN Digital Television","E","COFDM","Eastgrove","11/10/2021 07:00"
-"2694","Merimbula RBAH","WIN Digital Television","E","COFDM","Merimbula","11/10/2021 07:00"
-"2286","Chaton Ridge WIN","ABC Digital Television","E","COFDM","Bungendore","11/10/2021 07:00"
-"2286","Chaton Ridge WIN","Seven Digital Television","E","COFDM","Bungendore","11/10/2021 07:00"
-"2286","Chaton Ridge WIN","10 pgm","E","COFDM","Bungendore","11/10/2021 07:00"
-"2286","Chaton Ridge WIN","SBS Digital Television","E","COFDM","Bungendore","11/10/2021 07:00"
-"2498","Kianga","ABC Digital Television","E","COFDM","Dalmeny","11/10/2021 07:00"
-"2498","Kianga","Seven Digital Television","E","COFDM","Dalmeny","11/10/2021 07:00"
-"2498","Kianga","10 pgm","E","COFDM","Dalmeny","11/10/2021 07:00"
-"2498","Kianga","SBS Digital Television","E","COFDM","Dalmeny","11/10/2021 07:00"
-"2688","Bermagui RBAH","ABC Digital Television","E","COFDM","Bermagui","11/10/2021 07:00"
-"2688","Bermagui RBAH","Seven Digital Television","E","COFDM","Bermagui","11/10/2021 07:00"
-"2688","Bermagui RBAH","10 pgm","E","COFDM","Bermagui","11/10/2021 07:00"
-"2688","Bermagui RBAH","SBS Digital Television","E","COFDM","Bermagui","11/10/2021 07:00"
-"2690","Eastgrove RBAH","ABC Digital Television","E","COFDM","Eastgrove","11/10/2021 07:00"
-"2690","Eastgrove RBAH","Seven Digital Television","E","COFDM","Eastgrove","11/10/2021 07:00"
-"2690","Eastgrove RBAH","10 pgm","E","COFDM","Eastgrove","11/10/2021 07:00"
-"2690","Eastgrove RBAH","SBS Digital Television","E","COFDM","Eastgrove","11/10/2021 07:00"
-"2694","Merimbula RBAH","ABC Digital Television","E","COFDM","Merimbula","11/10/2021 07:00"
-"2694","Merimbula RBAH","Seven Digital Television","E","COFDM","Merimbula","11/10/2021 07:00"
-"2694","Merimbula RBAH","10 pgm","E","COFDM","Merimbula","11/10/2021 07:00"
-"2694","Merimbula RBAH","SBS Digital Television","E","COFDM","Merimbula","11/10/2021 07:00"
-"2118","Young","Seven Digital Television","D","COFDM","Young","11/10/2021 07:00"
-"2178","Mt Mumbulla WIN","Seven Digital Television","C","COFDM","Bega","11/10/2021 07:00"
-"2291","The Gap WIN","Seven Digital Television","D","COFDM","Adelong","11/10/2021 07:00"
-"2320","Captains Flat","Seven Digital Television","D","COFDM","Captains Flat","11/10/2021 07:00"
-"2321","Talbingo","Seven Digital Television","D","COFDM","Talbingo","11/10/2021 07:00"
-"2351","Conder","ABC Digital Television","E","COFDM","Conder","11/10/2021 07:00"
-"2351","Conder","Seven Digital Television","E","COFDM","Conder","11/10/2021 07:00"
-"2351","Conder","10 pgm","E","COFDM","Conder","11/10/2021 07:00"
-"2351","Conder","SBS Digital Television","E","COFDM","Conder","11/10/2021 07:00"
-"2351","Conder","WIN Digital Television","E","COFDM","Conder","11/10/2021 07:00"
-"2684","Gunning RBAH","ABC Digital Television","E","COFDM","Gunning","11/10/2021 07:00"
-"2684","Gunning RBAH","Seven Digital Television","E","COFDM","Gunning","11/10/2021 07:00"
-"2684","Gunning RBAH","10 pgm","E","COFDM","Gunning","11/10/2021 07:00"
-"2684","Gunning RBAH","SBS Digital Television","E","COFDM","Gunning","11/10/2021 07:00"
-"2684","Gunning RBAH","WIN Digital Television","E","COFDM","Gunning","11/10/2021 07:00"
-"2319","Batlow","Seven Digital Television","R","COFDM","Batlow","01/03/2025 00:05"
-"2319","Batlow","WIN Digital Television","R","COFDM","Batlow","01/03/2025 00:05"
-"2599","Cootamundra RBAH","SBS Digital Television","R","COFDM","Cootamundra","01/03/2025 00:05"
-"2599","Cootamundra RBAH","WIN Digital Television","R","COFDM","Cootamundra","01/03/2025 00:05"
-"2599","Cootamundra RBAH","ABC Digital Television","R","COFDM","Cootamundra","01/03/2025 00:05"
-"2599","Cootamundra RBAH","Seven Digital Television","R","COFDM","Cootamundra","01/03/2025 00:05"
-"2605","Harden RBAH","ABC Digital Television","R","COFDM","Harden","01/03/2025 00:05"
-"2605","Harden RBAH","Seven Digital Television","R","COFDM","Harden","01/03/2025 00:05"
-"2605","Harden RBAH","SBS Digital Television","R","COFDM","Harden","01/03/2025 00:05"
-"2605","Harden RBAH","WIN Digital Television","R","COFDM","Harden","01/03/2025 00:05"
-"2615","Mt Parnassus RBAH","WIN Digital Television","R","COFDM","Gundagai","01/03/2025 00:05"
-"2615","Mt Parnassus RBAH","ABC Digital Television","R","COFDM","Gundagai","01/03/2025 00:05"
-"2615","Mt Parnassus RBAH","Seven Digital Television","R","COFDM","Gundagai","01/03/2025 00:05"
-"2615","Mt Parnassus RBAH","SBS Digital Television","R","COFDM","Gundagai","01/03/2025 00:05"
-"2008","Black Mountain Tower","10 pgm","B","COFDM","Canberra","01/03/2025 00:05"
-"2081","Mt Ulandra","10 pgm","B","COFDM","Bethungra / Cootamundra","01/03/2025 00:05"
-"2319","Batlow","10 pgm","R","COFDM","Batlow","01/03/2025 00:05"
-"2599","Cootamundra RBAH","10 pgm","R","COFDM","Cootamundra","01/03/2025 00:05"
-"2605","Harden RBAH","10 pgm","R","COFDM","Harden","01/03/2025 00:05"
-"2615","Mt Parnassus RBAH","10 pgm","R","COFDM","Gundagai","01/03/2025 00:05"
-"2009","Bombala","10 pgm","D","COFDM","Bombala","01/03/2025 00:05"
-"2025","Radio Hill RT","10 pgm","D","COFDM","Cooma Town","01/03/2025 00:05"
-"2031","Bimmil Hill","10 pgm","D","COFDM","Eden","01/03/2025 00:05"
-"2048","Jinderboine Hill","10 pgm","D","COFDM","Jindabyne","01/03/2025 00:05"
-"2071","Mt Gillamatong","10 pgm","D","COFDM","Braidwood","01/03/2025 00:05"
-"2082","Mt Wandera","10 pgm","D","COFDM","Batemans Bay","01/03/2025 00:05"
-"2087","Buckeridge Lookout","10 pgm","D","COFDM","Narooma","01/03/2025 00:05"
-"2105","Thredbo","10 pgm","D","COFDM","Thredbo","01/03/2025 00:05"
-"2108","Tuggeranong Hill","10 pgm","D","COFDM","Tuggeranong","01/03/2025 00:05"
-"2118","Young","10 pgm","D","COFDM","Young","01/03/2025 00:05"
-"2141","Webbs Hill","10 pgm","D","COFDM","Tumut","01/03/2025 00:05"
-"2178","Mt Mumbulla WIN","10 pgm","D","COFDM","Bega","01/03/2025 00:05"
-"2225","Mt Roberts","10 pgm","D","COFDM","Cooma/Monaro","01/03/2025 00:05"
-"2291","The Gap WIN","10 pgm","D","COFDM","Adelong","01/03/2025 00:05"
-"2320","Captains Flat","10 pgm","D","COFDM","Captains Flat","01/03/2025 00:05"
-"2321","Talbingo","10 pgm","D","COFDM","Talbingo","01/03/2025 00:05"
-"2614","Mt Gray WIN","10 pgm","D","COFDM","Goulburn","01/03/2025 00:05"
-"2141","Webbs Hill","Triple M","D","FM","Tumut","02/09/2019 11:05"
-"2141","Webbs Hill","HIT FM","D","FM","Tumut","02/09/2019 11:05"
-"2615","Mt Parnassus RBAH","Triple M","D","FM","Gundagai","02/09/2019 11:05"
-"2008","Black Mountain Tower","MIX 106.3","A","FM","Canberra","30/04/1988 23:00"
-"2008","Black Mountain Tower","HIT 104.7","A","FM","Canberra","27/02/1988 00:00"
-"2008","Black Mountain Tower","Canberra Digital Radio","A","COFDM","Canberra","19/07/2019 00:00"
-"2108","Tuggeranong Hill","HIT 104.7","C","FM","Tuggeranong Valley","22/11/2006 00:00"
-"2108","Tuggeranong Hill","MIX 106.3","C","FM","Tuggeranong Valley","22/11/2006 00:00"
-"2108","Tuggeranong Hill","National Digital Radio","C","COFDM","Tuggeranong Valley","19/05/2018 00:00"
-"2225","Mt Roberts","SBS Digital Television","C","COFDM","Cooma/Monaro","17/05/2014 03:40"
-"2320","Captains Flat","SBS Digital Television","D","COFDM","Captains Flat","01/07/2014 00:00"
-"2008","Black Mountain Tower","SBS Radio","A","FM","Canberra","21/02/1996 00:00"
-"2008","Black Mountain Tower","Seven Digital Television","A","COFDM","Canberra","17/09/2024 00:00"
-"2008","Black Mountain Tower","National Digital Radio","B","COFDM","Canberra","23/11/2017 15:07"
-"2008","Black Mountain Tower","National Digital Radio","B","COFDM","Canberra","22/01/2018 15:07"
-"2020","Gungahlin MF","SBS Radio","A","AM","Canberra","16/10/2006 11:00"
-"2108","Tuggeranong Hill","National Digital Radio","C","COFDM","Tuggeranong Valley","11/05/2018 15:17"
-"2008","Black Mountain Tower","SBS Digital Television","A","COFDM","Canberra","20/12/2014 05:00"
-"2031","Bimmil Hill","SBS Digital Television","C","COFDM","Eden","21/11/2014 23:12"
-"2072","Mt Gray RT","SBS Digital Television","C","COFDM","Goulburn","12/12/2014 14:55"
-"2081","Mt Ulandra","SBS Digital Television","B","COFDM","SW Slopes/E Riverina","01/11/2004 09:00"
-"2082","Mt Wandera","SBS Digital Television","C","COFDM","Batemans Bay/Moruya","29/08/2014 15:46"
-"2108","Tuggeranong Hill","SBS Digital Television","C","COFDM","Tuggeranong Valley","08/11/2014 15:47"
-"2009","Bombala","SBS Digital Television","D","COFDM","Bombala","02/05/2014 13:00"
-"2025","Radio Hill RT","SBS Digital Television","D","COFDM","Cooma","08/08/2014 14:57"
-"2048","Jinderboine Hill","SBS Digital Television","D","COFDM","Jindabyne","21/11/2014 15:15"
-"2071","Mt Gillamatong","SBS Digital Television","D","COFDM","Braidwood","18/07/2014 13:40"
-"2080","Mt Taylor","SBS Digital Television","D","COFDM","Weston Creek/Woden","06/11/2014 15:20"
-"2087","Buckeridge Lookout","SBS Digital Television","D","COFDM","Narooma","29/08/2014 16:16"
-"2105","Thredbo","SBS Digital Television","D","COFDM","Thredbo","14/06/2007 09:00"
-"2118","Young","SBS Digital Television","D","COFDM","Young","24/10/2014 15:30"
-"2141","Webbs Hill","SBS Digital Television","D","COFDM","Tumut","12/12/2014 13:30"
-"2178","Mt Mumbulla WIN","SBS Digital Television","D","COFDM","Bega","12/11/2006 15:00"
-"2291","The Gap WIN","SBS Digital Television","D","COFDM","Adelong","01/07/2013 00:00"
-"2319","Batlow","SBS Digital Television","D","COFDM","Batlow","01/07/2013 00:00"
-"2321","Talbingo","SBS Digital Television","D","COFDM","Talbingo","01/07/2013 00:00"
-"2009","Bombala","Seven Digital Television","C","COFDM","Bombala","11/10/2021 07:00"
-"2025","Radio Hill RT","Seven Digital Television","D","COFDM","Cooma","11/10/2021 07:00"
-"2027","Wades Hill","Seven Digital Television","E","COFDM","Crookwell","11/10/2021 07:00"
-"2031","Bimmil Hill","Seven Digital Television","D","COFDM","Eden","11/10/2021 07:00"
-"2048","Jinderboine Hill","Seven Digital Television","D","COFDM","Jindabyne","11/10/2021 07:00"
-"2071","Mt Gillamatong","Seven Digital Television","D","COFDM","Braidwood","11/10/2021 07:00"
-"2081","Mt Ulandra","Seven Digital Television","B","COFDM","SW Slopes/E Riverina","11/10/2021 07:00"
-"2082","Mt Wandera","Seven Digital Television","C","COFDM","Moruya","11/10/2021 07:00"
-"2087","Buckeridge Lookout","Seven Digital Television","D","COFDM","Narooma","11/10/2021 07:00"
-"2105","Thredbo","Seven Digital Television","D","COFDM","Thredbo","11/10/2021 07:00"
-"2108","Tuggeranong Hill","Seven Digital Television","C","COFDM","Tuggeranong Valley","11/10/2021 07:00"
-"2141","Webbs Hill","Seven Digital Television","D","COFDM","Tumut","11/10/2021 07:00"
-"2225","Mt Roberts","Seven Digital Television","B","COFDM","Cooma/Monaro","11/10/2021 07:00"
-"2614","Mt Gray WIN","Seven Digital Television","C","COFDM","Goulburn","11/10/2021 07:00"
-"2027","Wades Hill","10 pgm","E","COFDM","Crookwell","11/10/2021 07:00"
-"2027","Wades Hill","SBS Digital Television","E","COFDM","Crookwell","11/10/2021 07:00"
-"2027","Wades Hill","WIN Digital Television","E","COFDM","Crookwell","11/10/2021 07:00"
-"2009","Bombala","WIN Digital Television","C","COFDM","Bombala","11/10/2021 07:00"
-"2048","Jinderboine Hill","WIN Digital Television","D","COFDM","Jindabyne","11/10/2021 07:00"
-"2225","Mt Roberts","WIN Digital Television","B","COFDM","Cooma/Monaro","11/10/2021 07:00"
-"2016","Brown Mountain","ABC NEWS on radio","C","FM","Bega/Cooma","01/07/2017 00:00"
-"2072","Mt Gray RT","ABC NEWS on radio","C","FM","Goulburn","01/07/2017 00:00"
-"2081","Mt Ulandra","ABC NEWS on radio","B","FM","SW Slopes/E Riverina","01/07/2017 00:00"
-"2082","Mt Wandera","ABC NEWS on radio","C","FM","Batemans Bay/Moruya","01/07/2017 00:00"
-"2008","Black Mountain Tower","ABC NEWS on radio","A","FM","Canberra","21/06/2005 14:00"
-"2008","Black Mountain Tower","ABC Triple J","A","FM","Canberra","20/08/1990 23:00"
-"2016","Brown Mountain","ABC Triple J","B","FM","Bega/Cooma","30/12/1995 01:00"
-"2072","Mt Gray RT","ABC Triple J","C","FM","Goulburn","20/10/1995 00:00"
-"2081","Mt Ulandra","ABC Triple J","B","FM","SW Slopes/E Riverina","01/11/1996 01:00"
-"2108","Tuggeranong Hill","ABC NEWS on radio","D","FM","Tuggeranong Valley","21/06/2005 14:00"
-"2108","Tuggeranong Hill","ABC Triple J","C","FM","Tuggeranong Valley","14/12/2008 02:00"
-"2008","Black Mountain Tower","ABC Classic FM","A","FM","Canberra","31/01/1976 01:00"
-"2016","Brown Mountain","ABC Classic FM","B","FM","Bega/Cooma","01/02/1985 01:00"
-"2072","Mt Gray RT","ABC Classic FM","C","FM","Goulburn","12/12/1997 01:00"
-"2081","Mt Ulandra","ABC Classic FM","B","FM","SW Slopes/E Riverina","01/12/1982 01:00"
-"2082","Mt Wandera","ABC Classic FM","B","FM","Batemans Bay/Moruya","31/01/1994 01:00"
-"2108","Tuggeranong Hill","ABC Classic FM","C","FM","Tuggeranong Valley","14/12/2008 02:00"
-"2006","Bega MF","ABC Local Radio","B","AM","Bega","07/10/1970 01:00"
-"2020","Gungahlin MF","ABC Local Radio","A","AM","Canberra","07/10/1970 01:00"
-"2072","Mt Gray RT","ABC Local Radio","C","FM","Goulburn","20/10/1995 00:00"
-"2081","Mt Ulandra","ABC Local Radio","B","FM","SW Slopes/E Riverina","21/12/1990 01:00"
-"2082","Mt Wandera","ABC Local Radio","B","FM","Batemans Bay/Moruya","20/07/1989 23:00"
-"2024","Cooma MF","ABC Local Radio","D","AM","Cooma","07/10/1970 01:00"
-"2009","Bombala","ABC Local Radio","D","FM","Bombala","01/07/1989 23:00"
-"2027","Wades Hill","ABC Local Radio","D","FM","Crookwell","24/08/1997 23:00"
-"2031","Bimmil Hill","ABC Local Radio","D","FM","Eden","29/06/1993 23:00"
-"2048","Jinderboine Hill","ABC Local Radio","D","FM","Jindabyne","26/05/1993 23:00"
-"2105","Thredbo","ABC Local Radio","D","FM","Thredbo","30/07/1990 23:00"
-"2118","Young","ABC Local Radio","D","FM","Young","18/12/1992 00:00"
-"2141","Webbs Hill","ABC Local Radio","D","FM","Tumut","22/09/1994 23:00"
-"2016","Brown Mountain","ABC Radio National","B","FM","Bega/Cooma","01/01/1993 00:00"
-"2020","Gungahlin MF","ABC Radio National","A","AM","Canberra","11/02/1970 01:00"
-"2072","Mt Gray RT","ABC Radio National","C","FM","Goulburn","21/02/2023 10:00"
-"2081","Mt Ulandra","ABC Radio National","B","FM","SW Slopes/E Riverina","29/06/1993 23:00"
-"2082","Mt Wandera","ABC Radio National","B","FM","Batemans Bay/Moruya","16/09/1990 23:00"
-"2025","Radio Hill RT","ABC Radio National","D","FM","Cooma","02/03/1993 00:00"
-"2027","Wades Hill","ABC Radio National","D","FM","Crookwell","24/08/1997 23:00"
-"2031","Bimmil Hill","ABC Radio National","D","FM","Eden","10/02/1993 00:00"
-"2048","Jinderboine Hill","ABC Radio National","D","FM","Jindabyne","10/02/1993 00:00"
-"2105","Thredbo","ABC Radio National","D","FM","Thredbo","30/07/1990 23:00"
-"2118","Young","ABC Radio National","D","FM","Young","04/11/1996 00:00"
-"2141","Webbs Hill","ABC Radio National","D","FM","Tumut","22/09/1994 23:00"
-"2008","Black Mountain Tower","ABC Digital Television","A","COFDM","Canberra","20/12/2014 05:00"
-"2072","Mt Gray RT","ABC Digital Television","C","COFDM","Goulburn","12/12/2014 14:55"
-"2080","Mt Taylor","ABC Digital Television","C","COFDM","Weston Creek/Woden","08/11/2014 16:39"
-"2081","Mt Ulandra","ABC Digital Television","B","COFDM","SW Slopes/E Riverina","01/09/2003 09:00"
-"2082","Mt Wandera","ABC Digital Television","C","COFDM","Batemans Bay/Moruya","29/08/2014 15:05"
-"2108","Tuggeranong Hill","ABC Digital Television","C","COFDM","Tuggeranong Valley","08/11/2014 15:44"
-"2225","Mt Roberts","ABC Digital Television","C","COFDM","Cooma/Monaro","01/04/2006 09:00"
-"2009","Bombala","ABC Digital Television","D","COFDM","Bombala","23/07/2014 15:17"
-"2025","Radio Hill RT","ABC Digital Television","D","COFDM","Cooma","08/08/2014 14:57"
-"2027","Wades Hill","ABC Digital Television","D","COFDM","Crookwell","19/01/2013 13:00"
-"2031","Bimmil Hill","ABC Digital Television","D","COFDM","Eden","21/11/2014 15:00"
-"2048","Jinderboine Hill","ABC Digital Television","D","COFDM","Jindabyne","21/11/2014 15:15"
-"2071","Mt Gillamatong","ABC Digital Television","D","COFDM","Braidwood","18/07/2014 13:40"
-"2087","Buckeridge Lookout","ABC Digital Television","D","COFDM","Narooma","29/07/2014 15:35"
-"2105","Thredbo","ABC Digital Television","D","COFDM","Thredbo","14/06/2007 17:00"
-"2118","Young","ABC Digital Television","D","COFDM","Young","24/10/2014 15:30"
-"2141","Webbs Hill","ABC Digital Television","D","COFDM","Tumut","12/12/2014 13:30"
-"2178","Mt Mumbulla WIN","ABC Digital Television","D","COFDM","Bega","07/05/2014 14:30"
-"2291","The Gap WIN","ABC Digital Television","D","COFDM","Adelong","01/07/2012 00:00"
-"2319","Batlow","ABC Digital Television","D","COFDM","Batlow","01/07/2013 00:00"
-"2320","Captains Flat","ABC Digital Television","D","COFDM","Captains Flat","19/07/2014 15:30"
-"2321","Talbingo","ABC Digital Television","D","COFDM","Talbingo","17/05/2012 17:00"
+Site No	Site Name	Service	Class	Modulation	Area Served	Commenced Date
+2091	Nyngan	WIN Digital Television	D	COFDM	Nyngan	11/10/2021 7:00
+2017	Buninyong Hill RT	WIN Digital Television	C	COFDM	Dubbo	11/10/2021 7:00
+2068	Mt Cenn Cruaich	WIN Digital Television	B	COFDM	Coonabarabran	11/10/2021 7:00
+2055	Jolly Nose Hill	Seven Digital Television	D	COFDM	Laurieton	11/10/2021 7:00
+2001	Kellys Plain	NBN Digital Television	E	COFDM	Armidale North	11/10/2021 7:00
+2001	Kellys Plain	10 pgm	E	COFDM	Armidale North	11/10/2021 7:00
+2001	Kellys Plain	SBS Digital Television	E	COFDM	Armidale North	11/10/2021 7:00
+2350	Uralla	ABC Digital Television	E	COFDM	Uralla	11/10/2021 7:00
+2350	Uralla	NBN Digital Television	E	COFDM	Uralla	11/10/2021 7:00
+2350	Uralla	Seven Digital Television	E	COFDM	Uralla	11/10/2021 7:00
+2350	Uralla	10 pgm	E	COFDM	Uralla	11/10/2021 7:00
+2350	Uralla	SBS Digital Television	E	COFDM	Uralla	11/10/2021 7:00
+2352	Wellington RT	ABC Digital Television	E	COFDM	Wellington	11/10/2021 7:00
+2352	Wellington RT	Seven Digital Television	E	COFDM	Wellington	11/10/2021 7:00
+2352	Wellington RT	10 pgm	E	COFDM	Wellington	11/10/2021 7:00
+2352	Wellington RT	SBS Digital Television	E	COFDM	Wellington	11/10/2021 7:00
+2352	Wellington RT	WIN Digital Television	E	COFDM	Wellington	11/10/2021 7:00
+2353	Mt Foster RT	Seven Digital Television	E	COFDM	Mt Foster IBL	11/10/2021 7:00
+2353	Mt Foster RT	10 pgm	E	COFDM	Mt Foster IBL	11/10/2021 7:00
+2353	Mt Foster RT	WIN Digital Television	E	COFDM	Mt Foster IBL	11/10/2021 7:00
+2068	Mt Cenn Cruaich	10 pgm	B	COFDM	Coonabarabran	01/03/2025 0:05
+2017	Buninyong Hill RT	10 pgm	D	COFDM	Dubbo	01/03/2025 0:05
+2091	Nyngan	10 pgm	D	COFDM	Nyngan	01/03/2025 0:05
+2127	Queensborough Trig	10 pgm	D	COFDM	Coolah	01/03/2025 0:05
+2334	Bourke Water Plant	7 pgm	D	COFDM	Bourke	01/07/2025 0:05
+2335	Brewarrina Water Plant	7 pgm	D	COFDM	Brewarrina	01/07/2025 0:05
+2598	Cobar UHF	7 pgm	D	COFDM	Cobar	01/07/2025 0:05
+2610	Lightning Ridge UHF	7 pgm	D	COFDM	Lightning Ridge	01/07/2025 0:05
+2625	Walgett Commercial	7 pgm	D	COFDM	Walgett	01/07/2025 0:05
+2334	Bourke Water Plant	JV 10 pgm	JD	COFDM	Bourke	01/07/2025 0:05
+2335	Brewarrina Water Plant	JV 10 pgm	JD	COFDM	Brewarrina	01/07/2025 0:05
+2598	Cobar UHF	JV 10 pgm	JD	COFDM	Cobar	01/07/2025 0:05
+2610	Lightning Ridge UHF	JV 10 pgm	JD	COFDM	Lightning Ridge	01/07/2025 0:05
+2625	Walgett Commercial	JV 10 pgm	JD	COFDM	Walgett	01/07/2025 0:05
+2079	Mt Sugarloaf	HIT FM	B	FM	Newcastle	02/09/2019 11:05
+2262	Mt Sugarloaf NBN	Triple M	B	FM	Newcastle	02/09/2019 11:05
+2597	Bruxner Park Radio	Triple M	C	FM	Coffs Harbour	02/09/2019 11:05
+2597	Bruxner Park Radio	HIT FM	C	FM	Coffs Harbour	02/09/2019 11:05
+2606	Jolly Nose Radio	Triple M	D	FM	Laurieton	02/09/2019 11:05
+2611	Mt Cairncross SCA	Triple M	C	FM	Port Macquarie	02/09/2019 11:05
+2611	Mt Cairncross SCA	HIT FM	C	FM	Port Macquarie	02/09/2019 11:05
+2616	Mt Yarrahapinni	Triple M	C	FM	Port Macquarie/Kempsey	02/09/2019 11:05
+2616	Mt Yarrahapinni	HIT FM	C	FM	Port Macquarie/Kempsey	02/09/2019 11:05
+2037	Kia-Ora Lookout	10 pgm	D	COFDM	Gloucester	01/05/2025 0:05
+2053	Korora Basin	10 pgm	C	COFDM	Coffs Harbour	01/05/2025 0:05
+2055	Jolly Nose Hill	SBS Digital Television	D	COFDM	Laurieton	03/10/2014 15:20
+2055	Jolly Nose Hill	10 pgm	D	COFDM	Laurieton	01/05/2025 0:05
+2063	Merriwa	SBS Digital Television	D	COFDM	Merriwa	03/06/2016 9:00
+2064	Middle Brother	10 pgm	B	COFDM	Manning River	01/05/2025 0:05
+2069	Mt Dowe	10 pgm	B	COFDM	Upper Namoi	01/05/2025 0:05
+2075	Mt Moombil	10 pgm	B	COFDM	Grafton	01/05/2025 0:05
+2079	Mt Sugarloaf	10 pgm	A	COFDM	Newcastle/Hun. River	01/05/2025 0:05
+2091	Nyngan	SBS Digital Television	D	COFDM	Nyngan	20/12/2014 9:57
+2096	Rossgole Lookout	10 pgm	C	COFDM	Upper Hunter	01/05/2025 0:05
+2112	Walgett	SBS Digital Television	D	COFDM	Walgett	29/12/2013 15:00
+2260	Mt Penang	HIT FM	B	FM	Gosford	12/08/2019 18:00
+2306	Walcha	SBS Digital Television	D	COFDM	Walcha	14/09/2014 15:30
+2306	Walcha	10 pgm	D	COFDM	Walcha	01/05/2025 0:05
+2307	Mt Helen NBN Site	10 pgm	D	COFDM	Murrurundi	01/05/2025 0:05
+2600	Debenham Road 2GO	Triple M	B	FM	Gosford	13/08/2019 12:00
+2603	Gilgandra	Triple M	D	FM	Gilgandra	20/07/2020 6:00
+2618	Nymagee Street	Triple M	D	FM	Narromine	20/07/2020 6:00
+2622	Rifle Range Road	Triple M	C	FM	Dubbo	20/07/2020 6:00
+2691	Emerald Heights Axicom	ABC Digital Television	E	COFDM	Coffs Harbour North	01/05/2025 0:05
+2691	Emerald Heights Axicom	NBN Digital Television	E	COFDM	Coffs Harbour North	01/05/2025 0:05
+2691	Emerald Heights Axicom	Seven Digital Television	E	COFDM	Coffs Harbour North	01/05/2025 0:05
+2691	Emerald Heights Axicom	10 pgm	E	COFDM	Coffs Harbour North	01/05/2025 0:05
+2691	Emerald Heights Axicom	SBS Digital Television	E	COFDM	Coffs Harbour North	01/05/2025 0:05
+2696	Toormina RBAH	ABC Digital Television	E	COFDM	Boambee/Sawtell	01/05/2025 0:05
+2696	Toormina RBAH	NBN Digital	E	COFDM	Boambee/Sawtell	01/05/2025 0:05
+2696	Toormina RBAH	Seven Digital Television	E	COFDM	Boambee/Sawtell	01/05/2025 0:05
+2696	Toormina RBAH	10 pgm	E	COFDM	Boambee/Sawtell	01/05/2025 0:05
+2696	Toormina RBAH	SBS Digital Television	E	COFDM	Boambee/Sawtell	01/05/2025 0:05
+2698	Woolgoolga RBAH	ABC Digital Television	E	COFDM	Woolgoolga	01/05/2025 0:05
+2698	Woolgoolga RBAH	NBN Digital	E	COFDM	Woolgoolga	01/05/2025 0:05
+2698	Woolgoolga RBAH	Seven Digital Television	E	COFDM	Woolgoolga	01/05/2025 0:05
+2698	Woolgoolga RBAH	10 pgm	E	COFDM	Woolgoolga	01/05/2025 0:05
+2698	Woolgoolga RBAH	SBS Digital Television	E	COFDM	Woolgoolga	01/05/2025 0:05
+2063	Merriwa	10 pgm	D	COFDM	Merriwa	01/05/2025 0:05
+2117	Wyrrabalong Trig	10 pgm	B	COFDM	Wyong	01/05/2025 0:05
+2123	Soma Mountain	10 pgm	B	COFDM	Tamworth	01/05/2025 0:05
+2125	Centenary Lookout	10 pgm	C	COFDM	Kotara	01/05/2025 0:05
+2126	Little Duval Lower	10 pgm	B	COFDM	Armidale	01/05/2025 0:05
+2135	Coorei Hill	10 pgm	D	COFDM	Dungog	01/05/2025 0:05
+2147	Hexham MF	SBS Radio	B	AM	Newcastle	14/03/1996 0:00
+2259	Gan Gan Hill RT	10 pgm	C	COFDM	Port Stephens	01/05/2025 0:05
+2595	Shepherds Hill NBN	10 pgm	C	COFDM	Merewether	01/05/2025 0:05
+2011	Bouddi Peninsula	SBS Digital Television	C	COFDM	Broken Bay	17/10/2014 15:00
+2017	Buninyong Hill RT	SBS Digital Television	C	COFDM	Dubbo	31/10/2014 15:05
+2041	Rumbulara	SBS Digital Television	C	COFDM	Gosford	17/10/2014 15:00
+2053	Korora Basin	SBS Digital Television	C	COFDM	Coffs Harbour	03/04/2014 15:20
+2064	Middle Brother	SBS Digital Television	B	COFDM	Manning River	10/10/2014 4:30
+2068	Mt Cenn Cruaich	SBS Digital Television	B	COFDM	Central Western Slopes	17/10/2014 5:00
+2069	Mt Dowe	SBS Digital Television	B	COFDM	Upper Namoi	02/08/2014 5:25
+2073	Mt Helen RT	SBS Digital Television	F	COFDM	Murrurundi	06/04/2017 15:00
+2075	Mt Moombil	SBS Digital Television	B	COFDM	Grafton/Kempsey	01/06/2004 9:00
+2079	Mt Sugarloaf	SBS Digital Television	A	COFDM	Newcastle	30/07/2015 1:35
+2096	Rossgole Lookout	SBS Digital Television	C	COFDM	Upper Hunter	22/11/2014 14:57
+2117	Wyrrabalong Trig	SBS Digital Television	C	COFDM	Wyong	17/10/2014 15:20
+2123	Soma Mountain	SBS Digital Television	C	COFDM	Tamworth	12/12/2014 5:00
+2125	Centenary Lookout	SBS Digital Television	B	COFDM	Kotara	10/03/2003 9:00
+2126	Little Duval Lower	SBS Digital Television	C	COFDM	Armidale	02/08/2014 4:45
+2262	Mt Sugarloaf NBN	SBS Digital Television	A	COFDM	Newcastle	01/05/2002 0:00
+2021	Fort Bourke Hill	SBS Digital Television	D	COFDM	Cobar	02/05/2007 17:00
+2037	Kia-Ora Lookout	SBS Digital Television	D	COFDM	Gloucester	22/09/2005 17:00
+2057	Lightning Ridge	SBS Digital Television	D	COFDM	Lightning Ridge	23/10/2013 12:00
+2127	Queensborough Trig	SBS Digital Television	D	COFDM	Coolah	18/10/2014 15:43
+2135	Coorei Hill	SBS Digital Television	D	COFDM	Dungog	28/11/2014 15:25
+2155	Mt Douglas	SBS Digital Television	D	COFDM	Vacy	01/12/2006 15:00
+2259	Gan Gan Hill RT	SBS Digital Television	D	COFDM	Port Stephens	17/11/2006 15:00
+2334	Bourke Water Plant	SBS Digital Television	D	COFDM	Bourke Town	28/11/2013 15:00
+2335	Brewarrina Water Plant	SBS Digital Television	D	COFDM	Brewarrina	22/11/2013 12:00
+2595	Shepherds Hill NBN	SBS Digital Television	D	COFDM	Merewether	28/07/2020 0:30
+2001	Kellys Plain	Seven Digital Television	E	COFDM	Armidale North	11/10/2021 7:00
+2011	Bouddi Peninsula	Seven Digital Television	C	COFDM	Broken Bay	11/10/2021 7:00
+2017	Buninyong Hill RT	Seven Digital Television	C	COFDM	Dubbo	11/10/2021 7:00
+2037	Kia-Ora Lookout	Seven Digital Television	D	COFDM	Gloucester	11/10/2021 7:00
+2041	Rumbulara	Seven Digital Television	C	COFDM	Gosford	11/10/2021 7:00
+2053	Korora Basin	Seven Digital Television	C	COFDM	Coffs Harbour	11/10/2021 7:00
+2063	Merriwa	Seven Digital Television	D	COFDM	Merriwa	11/10/2021 7:00
+2064	Middle Brother	Seven Digital Television	B	COFDM	Taree	11/10/2021 7:00
+2068	Mt Cenn Cruaich	Seven Digital Television	B	COFDM	Central Western Slopes	11/10/2021 7:00
+2069	Mt Dowe	Seven Digital Television	B	COFDM	Upper Namoi	11/10/2021 7:00
+2075	Mt Moombil	Seven Digital Television	B	COFDM	Grafton/Kempsey	11/10/2021 7:00
+2079	Mt Sugarloaf	Seven Digital Television	A	COFDM	Newcastle/Hun. River	11/10/2021 7:00
+2091	Nyngan	Seven Digital Television	D	COFDM	Nyngan	11/10/2021 7:00
+2096	Rossgole Lookout	Seven Digital Television	C	COFDM	Upper Hunter	11/10/2021 7:00
+2117	Wyrrabalong Trig	Seven Digital Television	B	COFDM	Wyong	11/10/2021 7:00
+2123	Soma Mountain	Seven Digital Television	B	COFDM	Tamworth	11/10/2021 7:00
+2125	Centenary Lookout	Seven Digital Television	C	COFDM	Kotara	11/10/2021 7:00
+2126	Little Duval Lower	Seven Digital Television	B	COFDM	Armidale	11/10/2021 7:00
+2127	Queensborough Trig	Seven Digital Television	D	COFDM	Coolah	11/10/2021 7:00
+2135	Coorei Hill	Seven Digital Television	D	COFDM	Dungog	11/10/2021 7:00
+2259	Gan Gan Hill RT	Seven Digital Television	C	COFDM	Port Stephens	11/10/2021 7:00
+2306	Walcha	Seven Digital Television	D	COFDM	Walcha	11/10/2021 7:00
+2307	Mt Helen NBN Site	Seven Digital Television	D	COFDM	Murrurundi	11/10/2021 7:00
+2595	Shepherds Hill NBN	Seven Digital Television	C	COFDM	Merewether	11/10/2021 7:00
+2598	Cobar UHF	Seven Digital Television	D	COFDM	Cobar	11/10/2021 7:00
+2127	Queensborough Trig	WIN Digital Television	D	COFDM	Coolah	11/10/2021 7:00
+2064	Middle Brother	ABC NEWS on radio	B	FM	Manning River	01/07/2017 0:00
+2068	Mt Cenn Cruaich	ABC NEWS on radio	B	FM	Central Western Slopes	01/07/2017 0:00
+2069	Mt Dowe	ABC NEWS on radio	C	FM	Upper Namoi	01/07/2017 0:00
+2075	Mt Moombil	ABC NEWS on radio	B	FM	Grafton/Kempsey	01/07/2017 0:00
+2096	Rossgole Lookout	ABC NEWS on radio	C	FM	Upper Hunter	01/07/2017 0:00
+2123	Soma Mountain	ABC NEWS on radio	C	FM	Tamworth	01/07/2017 0:00
+2133	Little Duval Upper RT	ABC NEWS on radio	C	FM	Armidale	01/07/2017 0:00
+2259	Gan Gan Hill RT	ABC NEWS on radio	C	FM	Port Stephens	01/07/2017 0:00
+2007	Beresfield MF	ABC NEWS on radio	B	AM	Newcastle	18/08/1988 23:00
+2064	Middle Brother	ABC Triple J	B	FM	Manning River	31/12/1994 1:00
+2068	Mt Cenn Cruaich	ABC Triple J	B	FM	Central Western Slopes	08/12/1994 1:00
+2069	Mt Dowe	ABC Triple J	B	FM	Upper Namoi	25/01/1996 1:00
+2075	Mt Moombil	ABC Triple J	B	FM	Grafton/Kempsey	10/03/1998 1:00
+2079	Mt Sugarloaf	ABC Triple J	B	FM	Newcastle/Hun. River	28/07/1990 23:00
+2123	Soma Mountain	ABC Triple J	C	FM	Tamworth	26/05/1996 23:00
+2133	Little Duval Upper RT	ABC Triple J	C	FM	Armidale	25/03/1996 1:00
+2260	Mt Penang	ABC NEWS on radio	C	FM	Gosford	16/05/2002 14:20
+2064	Middle Brother	ABC Classic FM	B	FM	Manning River	13/08/1994 0:00
+2068	Mt Cenn Cruaich	ABC Classic FM	B	FM	Central Western Slopes	01/12/1984 1:00
+2069	Mt Dowe	ABC Classic FM	B	FM	Upper Namoi	27/11/1992 1:00
+2075	Mt Moombil	ABC Classic FM	B	FM	Grafton/Kempsey	30/08/1992 23:00
+2079	Mt Sugarloaf	ABC Classic FM	B	FM	Newcastle/Hun. River	01/03/1980 1:00
+2123	Soma Mountain	ABC Classic FM	C	FM	Tamworth	27/11/1992 1:00
+2133	Little Duval Upper RT	ABC Classic FM	C	FM	Armidale	30/12/1992 1:00
+2007	Beresfield MF	ABC Local Radio	B	AM	Newcastle	07/10/1970 1:00
+2017	Buninyong Hill RT	ABC Local Radio	C	FM	Dubbo	01/07/2017 0:00
+2018	Byrock MF	ABC Local Radio	B	AM	Byrock	31/07/1972 23:00
+2061	Manilla MF	ABC Local Radio	B	AM	Tamworth	07/10/1970 1:00
+2064	Middle Brother	ABC Local Radio	B	FM	Manning River	29/06/1993 23:00
+2068	Mt Cenn Cruaich	ABC Local Radio	B	FM	Central Western Slopes	16/09/1991 23:00
+2069	Mt Dowe	ABC Local Radio	B	FM	Upper Namoi	11/12/1992 1:00
+2075	Mt Moombil	ABC Local Radio	B	FM	Grafton/Kempsey	29/06/1993 23:00
+2097	Smithtown MF	ABC Local Radio	B	AM	Kempsey	07/10/1970 1:00
+2103	Taree MF	ABC Local Radio	C	AM	Taree	07/10/1970 1:00
+2133	Little Duval Upper RT	ABC Local Radio	C	FM	Armidale	30/12/1992 1:00
+2260	Mt Penang	ABC Local Radio	C	FM	Gosford	23/05/2003 9:00
+2085	Muswellbrook MF	ABC Local Radio	D	AM	Muswellbrook	07/10/1970 1:00
+2021	Fort Bourke Hill	ABC Local Radio	D	FM	Cobar	13/08/1988 23:00
+2037	Kia-Ora Lookout	ABC Local Radio	D	FM	Gloucester	01/07/1993 23:00
+2038	Goodooga RT	ABC Local Radio	D	FM	Goodooga	27/05/1989 23:00
+2057	Lightning Ridge	ABC Local Radio	D	FM	Lightning Ridge	27/05/1989 23:00
+2063	Merriwa	ABC Local Radio	D	FM	Merriwa	12/05/1994 23:00
+2073	Mt Helen RT	ABC Local Radio	D	FM	Murrurundi	08/12/1993 0:00
+2091	Nyngan	ABC Local Radio	D	FM	Nyngan	12/08/1988 23:00
+2096	Rossgole Lookout	ABC Local Radio	D	FM	Upper Hunter	12/08/1993 23:00
+2107	Tottenham	ABC Local Radio	D	FM	Tottenham	12/08/1988 23:00
+2111	Clive Blakes Hill	ABC Local Radio	D	FM	Walcha	19/05/1994 23:00
+2112	Walgett	ABC Local Radio	D	FM	Walgett	01/03/1990 0:00
+2259	Gan Gan Hill RT	ABC Local Radio	D	FM	Port Stephens	12/06/2003 12:00
+2002	Macpherson Range MF	ABC Radio National	C	AM	Armidale	11/02/1970 1:00
+2007	Beresfield MF	ABC Radio National	B	AM	Newcastle	07/10/1970 1:00
+2064	Middle Brother	ABC Radio National	B	FM	Manning River	30/08/1992 23:00
+2068	Mt Cenn Cruaich	ABC Radio National	B	FM	Central Western Slopes	29/06/1993 23:00
+2069	Mt Dowe	ABC Radio National	B	FM	Upper Namoi	11/12/1992 0:00
+2075	Mt Moombil	ABC Radio National	B	FM	Grafton/Kempsey	30/08/1992 23:00
+2123	Soma Mountain	ABC Radio National	C	FM	Tamworth	14/12/1992 1:00
+2021	Fort Bourke Hill	ABC Radio National	D	FM	Cobar	11/03/2002 0:00
+2037	Kia-Ora Lookout	ABC Radio National	D	FM	Gloucester	19/03/1993 0:00
+2038	Goodooga RT	ABC Radio National	D	FM	Goodooga	27/05/1989 23:00
+2057	Lightning Ridge	ABC Radio National	D	FM	Lightning Ridge	27/05/1989 23:00
+2063	Merriwa	ABC Radio National	D	FM	Merriwa	12/05/1994 23:00
+2073	Mt Helen RT	ABC Radio National	D	FM	Murrurundi	08/12/1993 0:00
+2077	Mt Oxley RT	ABC Radio National	D	FM	Bourke	19/08/1996 23:00
+2111	Clive Blakes Hill	ABC Radio National	D	FM	Walcha	19/05/1994 23:00
+2112	Walgett	ABC Radio National	D	FM	Walgett	01/03/1990 0:00
+2259	Gan Gan Hill RT	ABC Radio National	D	FM	Port Stephens	12/06/2003 12:00
+2001	Kellys Plain	ABC Digital Television	C	COFDM	Armidale North	18/11/2012 17:00
+2011	Bouddi Peninsula	ABC Digital Television	C	COFDM	Broken Bay	17/10/2014 15:00
+2017	Buninyong Hill RT	ABC Digital Television	C	COFDM	Dubbo	31/10/2014 15:05
+2041	Rumbulara	ABC Digital Television	C	COFDM	Gosford	17/10/2014 15:00
+2053	Korora Basin	ABC Digital Television	C	COFDM	Coffs Harbour	03/04/2014 15:20
+2064	Middle Brother	ABC Digital Television	B	COFDM	Manning River	01/10/2003 8:30
+2068	Mt Cenn Cruaich	ABC Digital Television	B	COFDM	Central Western Slopes	01/11/2003 9:00
+2069	Mt Dowe	ABC Digital Television	B	COFDM	Upper Namoi	02/08/2014 5:25
+2075	Mt Moombil	ABC Digital Television	B	COFDM	Grafton/Kempsey	01/10/2003 8:30
+2079	Mt Sugarloaf	ABC Digital Television	B	COFDM	Newcastle	30/07/2015 1:34
+2117	Wyrrabalong Trig	ABC Digital Television	C	COFDM	Wyong	17/10/2014 15:20
+2123	Soma Mountain	ABC Digital Television	C	COFDM	Tamworth	12/12/2014 5:00
+2126	Little Duval Lower	ABC Digital Television	C	COFDM	Armidale	02/08/2014 4:45
+2262	Mt Sugarloaf NBN	ABC Digital Television	B	COFDM	Newcastle	01/05/2002 0:00
+2021	Fort Bourke Hill	ABC Digital Television	D	COFDM	Cobar	02/05/2007 17:00
+2037	Kia-Ora Lookout	ABC Digital Television	D	COFDM	Gloucester	27/08/2014 14:30
+2038	Goodooga RT	ABC Digital Television	D	COFDM	Goodooga	15/05/2013 15:30
+2055	Jolly Nose Hill	ABC Digital Television	D	COFDM	Laurieton	03/10/2014 15:20
+2057	Lightning Ridge	ABC Digital Television	D	COFDM	Lightning Ridge	16/12/2009 11:30
+2063	Merriwa	ABC Digital Television	D	COFDM	Merriwa	18/09/2014 15:15
+2073	Mt Helen RT	ABC Digital Television	D	COFDM	Murrurundi	02/10/2014 15:20
+2077	Mt Oxley RT	ABC Digital Television	D	COFDM	Bourke	05/07/2013 14:00
+2091	Nyngan	ABC Digital Television	D	COFDM	Nyngan	19/12/2014 14:45
+2096	Rossgole Lookout	ABC Digital Television	D	COFDM	Upper Hunter	21/11/2014 14:16
+2107	Tottenham	ABC Digital Television	D	COFDM	Tottenham	24/02/2013 12:00
+2112	Walgett	ABC Digital Television	D	COFDM	Walgett	16/12/2009 17:00
+2125	Centenary Lookout	ABC Digital Television	D	COFDM	Kotara	10/03/2003 1:00
+2127	Queensborough Trig	ABC Digital Television	D	COFDM	Coolah	18/10/2014 15:35
+2135	Coorei Hill	ABC Digital Television	D	COFDM	Dungog	28/11/2014 15:25
+2145	Borombiel Hill	ABC Digital Television	D	COFDM	Cassilis	01/01/2008 16:00
+2155	Mt Douglas	ABC Digital Television	D	COFDM	Vacy	01/01/2007 16:00
+2259	Gan Gan Hill RT	ABC Digital Television	D	COFDM	Port Stephens	17/11/2006 15:00
+2306	Walcha	ABC Digital Television	D	COFDM	Walcha	13/09/2014 14:30
+2595	Shepherds Hill NBN	ABC Digital Television	D	COFDM	Merewether	28/07/2020 0:30
+2090	Cambewarra Lookout	WIN Digital Television	D	COFDM	Nowra North	11/10/2021 7:00
+2093	Garlands Hill	WIN Digital Television	D	COFDM	Portland/Wallerawang	11/10/2021 7:00
+2601	Endicotts Hill WIN	WIN Digital Television	D	COFDM	Mudgee	11/10/2021 7:00
+2621	Hospital Hill Condobolin	WIN Digital Television	D	COFDM	Condobolin	11/10/2021 7:00
+2015	Brokers Nose	WIN Digital Television	C	COFDM	Wollongong	11/10/2021 7:00
+2070	Mt Gibraltar WIN	WIN Digital Television	C	COFDM	Bowral/Mittagong	11/10/2021 7:00
+2110	Little Forest Trig	WIN Digital Television	B	COFDM	Ulladulla	11/10/2021 7:00
+2609	Knights Hill WIN	WIN Digital Television	A	COFDM	Illawarra	11/10/2021 7:00
+2612	Gaanha bula Mt Canobolas Seven	WIN Digital Television	B	COFDM	Orange	11/10/2021 7:00
+2695	Mt Kembla RBAH	WIN Digital Television	E	COFDM	Mount Kembla	11/10/2021 7:00
+2609	Knights Hill WIN	i98FM	A	FM	Illawarra	11/10/2021 7:00
+2687	Razorback Range	C91.3FM	A	FM	Campbelltown	11/10/2021 7:00
+2695	Mt Kembla RBAH	ABC Digital Television	E	COFDM	Mount Kembla	11/10/2021 7:00
+2695	Mt Kembla RBAH	Seven Digital Television	E	COFDM	Mount Kembla	11/10/2021 7:00
+2695	Mt Kembla RBAH	10 pgm	E	COFDM	Mount Kembla	11/10/2021 7:00
+2695	Mt Kembla RBAH	SBS Digital Television	E	COFDM	Mount Kembla	11/10/2021 7:00
+2160	Falls Hill	WIN Digital Television	E	COFDM	Oberon	11/10/2021 7:00
+2160	Falls Hill	10 pgm	E	COFDM	Oberon	11/10/2021 7:00
+2160	Falls Hill	SBS Digital Television	E	COFDM	Oberon	11/10/2021 7:00
+2472	Peak Hill RT	ABC Digital Television	E	COFDM	Peak Hill	11/10/2021 7:00
+2472	Peak Hill RT	Seven Digital Television	E	COFDM	Peak Hill	11/10/2021 7:00
+2472	Peak Hill RT	10 pgm	E	COFDM	Peak Hill	11/10/2021 7:00
+2472	Peak Hill RT	SBS Digital Television	E	COFDM	Peak Hill	11/10/2021 7:00
+2472	Peak Hill RT	WIN Digital Television	E	COFDM	Peak Hill	11/10/2021 7:00
+2685	Mudgee Town RBAH	ABC Digital Television	E	COFDM	Mudgee Town	11/10/2021 7:00
+2685	Mudgee Town RBAH	Seven Digital Television	E	COFDM	Mudgee Town	11/10/2021 7:00
+2685	Mudgee Town RBAH	10 pgm	E	COFDM	Mudgee Town	11/10/2021 7:00
+2685	Mudgee Town RBAH	SBS Digital Television	E	COFDM	Mudgee Town	11/10/2021 7:00
+2685	Mudgee Town RBAH	WIN Digital Television	E	COFDM	Mudgee Town	11/10/2021 7:00
+2602	Eugowra RBAH	ABC Digital Television	R	COFDM	Eugowra	01/03/2025 0:05
+2602	Eugowra RBAH	Seven Digital Television	R	COFDM	Eugowra	01/03/2025 0:05
+2602	Eugowra RBAH	SBS Digital Television	R	COFDM	Eugowra	01/03/2025 0:05
+2602	Eugowra RBAH	WIN Digital Television	R	COFDM	Eugowra	01/03/2025 0:05
+2604	Grenfell RBAH	ABC Digital Television	R	COFDM	Grenfell	01/03/2025 0:05
+2604	Grenfell RBAH	Seven Digital Television	R	COFDM	Grenfell	01/03/2025 0:05
+2604	Grenfell RBAH	SBS Digital Television	R	COFDM	Grenfell	01/03/2025 0:05
+2604	Grenfell RBAH	WIN Digital Television	R	COFDM	Grenfell	01/03/2025 0:05
+2015	Brokers Nose	10 pgm	C	COFDM	Wollongong	01/03/2025 0:05
+2090	Cambewarra Lookout	10 pgm	C	COFDM	Nowra	01/03/2025 0:05
+2110	Little Forest Trig	10 pgm	C	COFDM	Ulladulla	01/03/2025 0:05
+2602	Eugowra RBAH	10 pgm	R	COFDM	Eugowra	01/03/2025 0:05
+2604	Grenfell RBAH	10 pgm	R	COFDM	Grenfell	01/03/2025 0:05
+2609	Knights Hill WIN	10 pgm	B	COFDM	Wollongong	01/03/2025 0:05
+2612	Gaanha bula Mt Canobolas Seven	10 pgm	B	COFDM	Orange	01/03/2025 0:05
+2049	Mt Cumbermelon	10 pgm	D	COFDM	Kandos	01/03/2025 0:05
+2058	Littleton	10 pgm	D	COFDM	Lithgow	01/03/2025 0:05
+2070	Mt Gibraltar WIN	10 pgm	D	COFDM	Bowral	01/03/2025 0:05
+2093	Garlands Hill	10 pgm	D	COFDM	Portland/Wallerawang	01/03/2025 0:05
+2099	Stanwell Park WIN	10 pgm	D	COFDM	Stanwell Park	01/03/2025 0:05
+2119	Vale Of Clwydd	10 pgm	D	COFDM	Lithgow East	01/03/2025 0:05
+2159	Bellevue Hill WIN	10 pgm	D	COFDM	Cowra	01/03/2025 0:05
+2170	Bathurst East WIN	10 pgm	D	COFDM	Bathurst	01/03/2025 0:05
+2601	Endicotts Hill WIN	10 pgm	D	COFDM	Mudgee	01/03/2025 0:05
+2621	Hospital Hill Condobolin	10 pgm	D	COFDM	Condobolin	01/03/2025 0:05
+2040	Gore Hill	HIT FM	A	FM	Sydney	02/09/2019 11:05
+2040	Gore Hill	Triple M	A	FM	Sydney	02/09/2019 11:05
+2136	Artarmon TXA	HIT FM	A	FM	Sydney	02/09/2019 11:05
+2136	Artarmon TXA	Triple M	A	FM	Sydney	02/09/2019 11:05
+2612	Gaanha bula Mt Canobolas Seven	Triple M	B	FM	Orange	02/09/2019 11:05
+2612	Gaanha bula Mt Canobolas Seven	HIT FM	B	FM	Orange	02/09/2019 11:05
+2015	Brokers Nose	2RPH	B	FM	Wollongong	14/12/2021 0:00
+2040	Gore Hill	Smooth FM 95.3	A	FM	Sydney	01/08/2005 7:00
+2093	Garlands Hill	SBS Digital Television	D	COFDM	Portland/Wallerawang	22/11/2014 15:30
+2144	Bicentennial Park MF	2SM		AM	Sydney	16/04/2026 14:00
+2040	Gore Hill	Nova FM	A	FM	Sydney	15/01/2001 0:00
+2040	Gore Hill	SBS Radio	A	FM	Sydney	30/06/1994 0:00
+2116	Windang Town MF	SBS Radio	B	AM	Wollongong	01/02/2006 7:00
+2130	Windang Peninsula MF	SBS Radio	C	AM	Wollongong	01/08/1979 0:00
+2134	Prospect MF	2RPH	C	AM	Sydney	15/11/1994 0:00
+2136	Artarmon TXA	National Digital Radio	A	COFDM	Sydney	20/09/2009 7:00
+2144	Bicentennial Park MF	SBS Radio	A	AM	Sydney	01/06/1975 0:00
+2015	Brokers Nose	SBS Digital Television	B	COFDM	Wollongong	08/01/2014 15:30
+2040	Gore Hill	SBS Digital Television	A	COFDM	Sydney	02/01/2014 12:00
+2052	Knights Hill	SBS Digital Television	A	COFDM	Illawarra	13/07/2014 5:03
+2058	Littleton	SBS Digital Television	C	COFDM	Lithgow	01/03/2005 9:00
+2067	Gaanha bula Mt Canobolas	SBS Digital Television	B	COFDM	Central Tablelands	03/10/2014 4:40
+2070	Mt Gibraltar WIN	SBS Digital Television	C	COFDM	Bowral/Mittagong	01/03/2005 9:00
+2088	North Head	SBS Digital Television	C	COFDM	Manly/Mosman	02/01/2013 12:00
+2110	Little Forest Trig	SBS Digital Television	C	COFDM	Ulladulla	01/11/2004 9:00
+2136	Artarmon TXA	SBS Digital Television	A	COFDM	Sydney	05/03/2014 2:30
+2257	Elan	SBS Digital Television	B	COFDM	Kings Cross	02/01/2014 12:00
+2023	Condobolin	SBS Digital Television	D	COFDM	Condobolin	30/10/2014 15:30
+2049	Mt Cumbermelon	SBS Digital Television	D	COFDM	Kandos	23/10/2014 15:30
+2083	Endicotts Hill	SBS Digital Television	D	COFDM	Mudgee	22/11/2014 13:00
+2090	Cambewarra Lookout	SBS Digital Television	D	COFDM	Nowra North	27/08/2014 15:20
+2099	Stanwell Park WIN	SBS Digital Television	D	COFDM	Stanwell Park	03/04/2003 15:00
+2119	Vale Of Clwydd	SBS Digital Television	D	COFDM	Lithgow East	19/06/2014 15:20
+2159	Bellevue Hill WIN	SBS Digital Television	D	COFDM	Cowra	24/10/2014 15:20
+2170	Bathurst East WIN	SBS Digital Television	D	COFDM	Bathurst	22/11/2014 15:36
+2015	Brokers Nose	Seven Digital Television	C	COFDM	Wollongong	11/10/2021 7:00
+2049	Mt Cumbermelon	Seven Digital Television	D	COFDM	Kandos	11/10/2021 7:00
+2058	Littleton	Seven Digital Television	C	COFDM	Lithgow	11/10/2021 7:00
+2070	Mt Gibraltar WIN	Seven Digital Television	C	COFDM	Bowral/Mittagong	11/10/2021 7:00
+2090	Cambewarra Lookout	Seven Digital Television	D	COFDM	Nowra North	11/10/2021 7:00
+2093	Garlands Hill	Seven Digital Television	D	COFDM	Portland/Wallerawang	11/10/2021 7:00
+2099	Stanwell Park WIN	Seven Digital Television	D	COFDM	Stanwell Park	11/10/2021 7:00
+2110	Little Forest Trig	Seven Digital Television	B	COFDM	Ulladulla	11/10/2021 7:00
+2119	Vale Of Clwydd	Seven Digital Television	D	COFDM	Lithgow East	11/10/2021 7:00
+2159	Bellevue Hill WIN	Seven Digital Television	D	COFDM	Cowra	11/10/2021 7:00
+2160	Falls Hill	Seven Digital Television	E	COFDM	Oberon	11/10/2021 7:00
+2170	Bathurst East WIN	Seven Digital Television	C	COFDM	Bathurst	11/10/2021 7:00
+2601	Endicotts Hill WIN	Seven Digital Television	D	COFDM	Mudgee	11/10/2021 7:00
+2609	Knights Hill WIN	Seven Digital Television	A	COFDM	Illawarra	11/10/2021 7:00
+2612	Gaanha bula Mt Canobolas Seven	Seven Digital Television	B	COFDM	Orange	11/10/2021 7:00
+2621	Hospital Hill Condobolin	Seven Digital Television	D	COFDM	Condobolin	11/10/2021 7:00
+2049	Mt Cumbermelon	WIN Digital Television	D	COFDM	Kandos	11/10/2021 7:00
+2058	Littleton	WIN Digital Television	C	COFDM	Lithgow	11/10/2021 7:00
+2099	Stanwell Park WIN	WIN Digital Television	D	COFDM	Stanwell Park	11/10/2021 7:00
+2119	Vale Of Clwydd	WIN Digital Television	D	COFDM	Lithgow East	11/10/2021 7:00
+2159	Bellevue Hill WIN	WIN Digital Television	D	COFDM	Cowra	11/10/2021 7:00
+2170	Bathurst East WIN	WIN Digital Television	C	COFDM	Bathurst	11/10/2021 7:00
+2052	Knights Hill	ABC NEWS on radio	A	FM	Illawarra	01/07/2017 0:00
+2058	Littleton	ABC NEWS on radio	D	FM	Lithgow	01/07/2017 0:00
+2067	Gaanha bula Mt Canobolas	ABC NEWS on radio	B	FM	Central Tablelands	01/07/2017 0:00
+2078	Mt Panorama RT	ABC NEWS on radio	C	FM	Bathurst	01/07/2017 0:00
+2083	Endicotts Hill	ABC NEWS on radio	D	FM	Mudgee	01/07/2017 0:00
+2040	Gore Hill	ABC Triple J	A	FM	Sydney	30/06/1980 0:00
+2052	Knights Hill	ABC Triple J	B	FM	Illawarra	08/01/1995 1:00
+2060	Liverpool MF	ABC NEWS on radio	A	AM	Sydney	18/08/1988 23:00
+2067	Gaanha bula Mt Canobolas	ABC Triple J	B	FM	Central Tablelands	30/12/1994 1:00
+2078	Mt Panorama RT	ABC Triple J	C	FM	Bathurst	01/03/2002 0:00
+2040	Gore Hill	ABC Classic FM	A	FM	Sydney	29/06/1994 23:00
+2052	Knights Hill	ABC Classic FM	B	FM	Illawarra	01/03/1983 1:00
+2067	Gaanha bula Mt Canobolas	ABC Classic FM	B	FM	Central Tablelands	31/07/1982 23:00
+2078	Mt Panorama RT	ABC Classic FM	C	FM	Bathurst	01/03/2002 0:00
+2028	Cumnock MF	ABC Local Radio	B	AM	Cumnock	07/10/1970 1:00
+2052	Knights Hill	ABC Local Radio	B	FM	Illawarra	14/05/1991 23:00
+2059	Lithgow MF	ABC Local Radio	C	AM	Lithgow (City)	07/10/1970 1:00
+2060	Liverpool MF	ABC Local Radio	A	AM	Sydney	07/10/1970 1:00
+2049	Mt Cumbermelon	ABC Local Radio	D	FM	Kandos	27/05/1997 23:00
+2083	Endicotts Hill	ABC Local Radio	D	FM	Mudgee	03/02/1992 0:00
+2093	Garlands Hill	ABC Local Radio	D	FM	Portland/Wallerawang	12/03/1993 0:00
+2058	Littleton	ABC Radio National	C	FM	Lithgow	12/03/1993 1:00
+2060	Liverpool MF	ABC Radio National	A	AM	Sydney	07/10/1970 1:00
+2067	Gaanha bula Mt Canobolas	ABC Radio National	B	FM	Central Tablelands	30/12/1990 0:00
+2078	Mt Panorama RT	ABC Radio National	C	FM	Bathurst	27/05/1993 23:00
+2106	Basin View MF	ABC Radio National	B	AM	Nowra	31/01/1989 0:00
+2116	Windang Town MF	ABC Radio National	B	AM	Wollongong	07/10/1970 1:00
+2023	Condobolin	ABC Radio National	D	FM	Condobolin	28/05/1996 23:00
+2049	Mt Cumbermelon	ABC Radio National	D	FM	Kandos	16/04/1997 23:00
+2093	Garlands Hill	ABC Radio National	D	FM	Portland/Wallerawang	02/07/1991 23:00
+2015	Brokers Nose	ABC Digital Television	C	COFDM	Wollongong	08/01/2014 15:30
+2040	Gore Hill	ABC Digital Television	A	COFDM	Sydney	01/07/2001 23:00
+2052	Knights Hill	ABC Digital Television	B	COFDM	Illawarra	10/07/2014 10:30
+2058	Littleton	ABC Digital Television	C	COFDM	Lithgow	01/06/2004 9:00
+2067	Gaanha bula Mt Canobolas	ABC Digital Television	B	COFDM	Central Tablelands	01/11/2003 9:00
+2070	Mt Gibraltar WIN	ABC Digital Television	C	COFDM	Bowral/Mittagong	17/04/2014 19:33
+2088	North Head	ABC Digital Television	B	COFDM	Manly/Mosman	01/08/2002 9:00
+2110	Little Forest Trig	ABC Digital Television	C	COFDM	Ulladulla	01/09/2003 9:00
+2136	Artarmon TXA	ABC Digital Television	A	COFDM	Sydney	01/12/2000 0:00
+2170	Bathurst East WIN	ABC Digital Television	C	COFDM	Bathurst	01/05/2004 9:00
+2257	Elan	ABC Digital Television	B	COFDM	Kings Cross	15/08/2002 8:00
+2023	Condobolin	ABC Digital Television	D	COFDM	Condobolin	30/10/2014 15:50
+2049	Mt Cumbermelon	ABC Digital Television	D	COFDM	Kandos	23/10/2014 15:30
+2083	Endicotts Hill	ABC Digital Television	D	COFDM	Mudgee	22/11/2014 13:00
+2090	Cambewarra Lookout	ABC Digital Television	D	COFDM	Nowra North	27/08/2014 15:15
+2093	Garlands Hill	ABC Digital Television	D	COFDM	Portland/Wallerawang	22/11/2014 15:30
+2099	Stanwell Park WIN	ABC Digital Television	D	COFDM	Stanwell Park	04/07/2014 20:27
+2119	Vale Of Clwydd	ABC Digital Television	D	COFDM	Lithgow East	19/06/2014 15:28
+2159	Bellevue Hill WIN	ABC Digital Television	D	COFDM	Cowra	24/10/2014 15:20
+2160	Falls Hill	ABC Digital Television	D	COFDM	Oberon	03/10/2014 15:30
+2025	Radio Hill RT	WIN Digital Television	D	COFDM	Cooma	11/10/2021 7:00
+2031	Bimmil Hill	WIN Digital Television	D	COFDM	Eden	11/10/2021 7:00
+2071	Mt Gillamatong	WIN Digital Television	D	COFDM	Braidwood	11/10/2021 7:00
+2087	Buckeridge Lookout	WIN Digital Television	D	COFDM	Narooma	11/10/2021 7:00
+2105	Thredbo	WIN Digital Television	D	COFDM	Thredbo	11/10/2021 7:00
+2118	Young	WIN Digital Television	D	COFDM	Young	11/10/2021 7:00
+2141	Webbs Hill	WIN Digital Television	D	COFDM	Tumut	11/10/2021 7:00
+2291	The Gap WIN	WIN Digital Television	D	COFDM	Adelong	11/10/2021 7:00
+2320	Captains Flat	WIN Digital Television	D	COFDM	Captains Flat	11/10/2021 7:00
+2321	Talbingo	WIN Digital Television	D	COFDM	Talbingo	11/10/2021 7:00
+2008	Black Mountain Tower	WIN Digital Television	A	COFDM	Canberra	11/10/2021 7:00
+2081	Mt Ulandra	WIN Digital Television	B	COFDM	SW Slopes/E Riverina	11/10/2021 7:00
+2082	Mt Wandera	WIN Digital Television	C	COFDM	Moruya	11/10/2021 7:00
+2108	Tuggeranong Hill	WIN Digital Television	C	COFDM	Tuggeranong Valley	11/10/2021 7:00
+2178	Mt Mumbulla WIN	WIN Digital Television	C	COFDM	Bega	11/10/2021 7:00
+2286	Chaton Ridge WIN	WIN Digital Television	E	COFDM	Bungendore	11/10/2021 7:00
+2498	Kianga	WIN Digital Television	E	COFDM	Dalmeny	11/10/2021 7:00
+2614	Mt Gray WIN	WIN Digital Television	C	COFDM	Goulburn	11/10/2021 7:00
+2688	Bermagui RBAH	WIN Digital Television	E	COFDM	Bermagui	11/10/2021 7:00
+2690	Eastgrove RBAH	WIN Digital Television	E	COFDM	Eastgrove	11/10/2021 7:00
+2694	Merimbula RBAH	WIN Digital Television	E	COFDM	Merimbula	11/10/2021 7:00
+2286	Chaton Ridge WIN	ABC Digital Television	E	COFDM	Bungendore	11/10/2021 7:00
+2286	Chaton Ridge WIN	Seven Digital Television	E	COFDM	Bungendore	11/10/2021 7:00
+2286	Chaton Ridge WIN	10 pgm	E	COFDM	Bungendore	11/10/2021 7:00
+2286	Chaton Ridge WIN	SBS Digital Television	E	COFDM	Bungendore	11/10/2021 7:00
+2498	Kianga	ABC Digital Television	E	COFDM	Dalmeny	11/10/2021 7:00
+2498	Kianga	Seven Digital Television	E	COFDM	Dalmeny	11/10/2021 7:00
+2498	Kianga	10 pgm	E	COFDM	Dalmeny	11/10/2021 7:00
+2498	Kianga	SBS Digital Television	E	COFDM	Dalmeny	11/10/2021 7:00
+2688	Bermagui RBAH	ABC Digital Television	E	COFDM	Bermagui	11/10/2021 7:00
+2688	Bermagui RBAH	Seven Digital Television	E	COFDM	Bermagui	11/10/2021 7:00
+2688	Bermagui RBAH	10 pgm	E	COFDM	Bermagui	11/10/2021 7:00
+2688	Bermagui RBAH	SBS Digital Television	E	COFDM	Bermagui	11/10/2021 7:00
+2690	Eastgrove RBAH	ABC Digital Television	E	COFDM	Eastgrove	11/10/2021 7:00
+2690	Eastgrove RBAH	Seven Digital Television	E	COFDM	Eastgrove	11/10/2021 7:00
+2690	Eastgrove RBAH	10 pgm	E	COFDM	Eastgrove	11/10/2021 7:00
+2690	Eastgrove RBAH	SBS Digital Television	E	COFDM	Eastgrove	11/10/2021 7:00
+2694	Merimbula RBAH	ABC Digital Television	E	COFDM	Merimbula	11/10/2021 7:00
+2694	Merimbula RBAH	Seven Digital Television	E	COFDM	Merimbula	11/10/2021 7:00
+2694	Merimbula RBAH	10 pgm	E	COFDM	Merimbula	11/10/2021 7:00
+2694	Merimbula RBAH	SBS Digital Television	E	COFDM	Merimbula	11/10/2021 7:00
+2118	Young	Seven Digital Television	D	COFDM	Young	11/10/2021 7:00
+2178	Mt Mumbulla WIN	Seven Digital Television	C	COFDM	Bega	11/10/2021 7:00
+2291	The Gap WIN	Seven Digital Television	D	COFDM	Adelong	11/10/2021 7:00
+2320	Captains Flat	Seven Digital Television	D	COFDM	Captains Flat	11/10/2021 7:00
+2321	Talbingo	Seven Digital Television	D	COFDM	Talbingo	11/10/2021 7:00
+2351	Conder	ABC Digital Television	E	COFDM	Conder	11/10/2021 7:00
+2351	Conder	Seven Digital Television	E	COFDM	Conder	11/10/2021 7:00
+2351	Conder	10 pgm	E	COFDM	Conder	11/10/2021 7:00
+2351	Conder	SBS Digital Television	E	COFDM	Conder	11/10/2021 7:00
+2351	Conder	WIN Digital Television	E	COFDM	Conder	11/10/2021 7:00
+2684	Gunning RBAH	ABC Digital Television	E	COFDM	Gunning	11/10/2021 7:00
+2684	Gunning RBAH	Seven Digital Television	E	COFDM	Gunning	11/10/2021 7:00
+2684	Gunning RBAH	10 pgm	E	COFDM	Gunning	11/10/2021 7:00
+2684	Gunning RBAH	SBS Digital Television	E	COFDM	Gunning	11/10/2021 7:00
+2684	Gunning RBAH	WIN Digital Television	E	COFDM	Gunning	11/10/2021 7:00
+2319	Batlow	Seven Digital Television	R	COFDM	Batlow	01/03/2025 0:05
+2319	Batlow	WIN Digital Television	R	COFDM	Batlow	01/03/2025 0:05
+2599	Cootamundra RBAH	SBS Digital Television	R	COFDM	Cootamundra	01/03/2025 0:05
+2599	Cootamundra RBAH	WIN Digital Television	R	COFDM	Cootamundra	01/03/2025 0:05
+2599	Cootamundra RBAH	ABC Digital Television	R	COFDM	Cootamundra	01/03/2025 0:05
+2599	Cootamundra RBAH	Seven Digital Television	R	COFDM	Cootamundra	01/03/2025 0:05
+2605	Harden RBAH	ABC Digital Television	R	COFDM	Harden	01/03/2025 0:05
+2605	Harden RBAH	Seven Digital Television	R	COFDM	Harden	01/03/2025 0:05
+2605	Harden RBAH	SBS Digital Television	R	COFDM	Harden	01/03/2025 0:05
+2605	Harden RBAH	WIN Digital Television	R	COFDM	Harden	01/03/2025 0:05
+2615	Mt Parnassus RBAH	WIN Digital Television	R	COFDM	Gundagai	01/03/2025 0:05
+2615	Mt Parnassus RBAH	ABC Digital Television	R	COFDM	Gundagai	01/03/2025 0:05
+2615	Mt Parnassus RBAH	Seven Digital Television	R	COFDM	Gundagai	01/03/2025 0:05
+2615	Mt Parnassus RBAH	SBS Digital Television	R	COFDM	Gundagai	01/03/2025 0:05
+2008	Black Mountain Tower	10 pgm	B	COFDM	Canberra	01/03/2025 0:05
+2081	Mt Ulandra	10 pgm	B	COFDM	Bethungra / Cootamundra	01/03/2025 0:05
+2319	Batlow	10 pgm	R	COFDM	Batlow	01/03/2025 0:05
+2599	Cootamundra RBAH	10 pgm	R	COFDM	Cootamundra	01/03/2025 0:05
+2605	Harden RBAH	10 pgm	R	COFDM	Harden	01/03/2025 0:05
+2615	Mt Parnassus RBAH	10 pgm	R	COFDM	Gundagai	01/03/2025 0:05
+2009	Bombala	10 pgm	D	COFDM	Bombala	01/03/2025 0:05
+2025	Radio Hill RT	10 pgm	D	COFDM	Cooma Town	01/03/2025 0:05
+2031	Bimmil Hill	10 pgm	D	COFDM	Eden	01/03/2025 0:05
+2048	Jinderboine Hill	10 pgm	D	COFDM	Jindabyne	01/03/2025 0:05
+2071	Mt Gillamatong	10 pgm	D	COFDM	Braidwood	01/03/2025 0:05
+2082	Mt Wandera	10 pgm	D	COFDM	Batemans Bay	01/03/2025 0:05
+2087	Buckeridge Lookout	10 pgm	D	COFDM	Narooma	01/03/2025 0:05
+2105	Thredbo	10 pgm	D	COFDM	Thredbo	01/03/2025 0:05
+2108	Tuggeranong Hill	10 pgm	D	COFDM	Tuggeranong	01/03/2025 0:05
+2118	Young	10 pgm	D	COFDM	Young	01/03/2025 0:05
+2141	Webbs Hill	10 pgm	D	COFDM	Tumut	01/03/2025 0:05
+2178	Mt Mumbulla WIN	10 pgm	D	COFDM	Bega	01/03/2025 0:05
+2225	Mt Roberts	10 pgm	D	COFDM	Cooma/Monaro	01/03/2025 0:05
+2291	The Gap WIN	10 pgm	D	COFDM	Adelong	01/03/2025 0:05
+2320	Captains Flat	10 pgm	D	COFDM	Captains Flat	01/03/2025 0:05
+2321	Talbingo	10 pgm	D	COFDM	Talbingo	01/03/2025 0:05
+2614	Mt Gray WIN	10 pgm	D	COFDM	Goulburn	01/03/2025 0:05
+2141	Webbs Hill	Triple M	D	FM	Tumut	02/09/2019 11:05
+2141	Webbs Hill	HIT FM	D	FM	Tumut	02/09/2019 11:05
+2615	Mt Parnassus RBAH	Triple M	D	FM	Gundagai	02/09/2019 11:05
+2008	Black Mountain Tower	MIX 106.3	A	FM	Canberra	30/04/1988 23:00
+2008	Black Mountain Tower	HIT 104.7	A	FM	Canberra	27/02/1988 0:00
+2008	Black Mountain Tower	Canberra Digital Radio	A	COFDM	Canberra	19/07/2019 0:00
+2108	Tuggeranong Hill	HIT 104.7	C	FM	Tuggeranong Valley	22/11/2006 0:00
+2108	Tuggeranong Hill	MIX 106.3	C	FM	Tuggeranong Valley	22/11/2006 0:00
+2108	Tuggeranong Hill	National Digital Radio	C	COFDM	Tuggeranong Valley	19/05/2018 0:00
+2225	Mt Roberts	SBS Digital Television	C	COFDM	Cooma/Monaro	17/05/2014 3:40
+2320	Captains Flat	SBS Digital Television	D	COFDM	Captains Flat	01/07/2014 0:00
+2008	Black Mountain Tower	SBS Radio	A	FM	Canberra	21/02/1996 0:00
+2008	Black Mountain Tower	Seven Digital Television	A	COFDM	Canberra	17/09/2024 0:00
+2008	Black Mountain Tower	National Digital Radio	B	COFDM	Canberra	23/11/2017 15:07
+2008	Black Mountain Tower	National Digital Radio	B	COFDM	Canberra	22/01/2018 15:07
+2020	Gungahlin MF	SBS Radio	A	AM	Canberra	16/10/2006 11:00
+2108	Tuggeranong Hill	National Digital Radio	C	COFDM	Tuggeranong Valley	11/05/2018 15:17
+2008	Black Mountain Tower	SBS Digital Television	A	COFDM	Canberra	20/12/2014 5:00
+2031	Bimmil Hill	SBS Digital Television	C	COFDM	Eden	21/11/2014 23:12
+2072	Mt Gray RT	SBS Digital Television	C	COFDM	Goulburn	12/12/2014 14:55
+2081	Mt Ulandra	SBS Digital Television	B	COFDM	SW Slopes/E Riverina	01/11/2004 9:00
+2082	Mt Wandera	SBS Digital Television	C	COFDM	Batemans Bay/Moruya	29/08/2014 15:46
+2108	Tuggeranong Hill	SBS Digital Television	C	COFDM	Tuggeranong Valley	08/11/2014 15:47
+2009	Bombala	SBS Digital Television	D	COFDM	Bombala	02/05/2014 13:00
+2025	Radio Hill RT	SBS Digital Television	D	COFDM	Cooma	08/08/2014 14:57
+2048	Jinderboine Hill	SBS Digital Television	D	COFDM	Jindabyne	21/11/2014 15:15
+2071	Mt Gillamatong	SBS Digital Television	D	COFDM	Braidwood	18/07/2014 13:40
+2080	Mt Taylor	SBS Digital Television	D	COFDM	Weston Creek/Woden	06/11/2014 15:20
+2087	Buckeridge Lookout	SBS Digital Television	D	COFDM	Narooma	29/08/2014 16:16
+2105	Thredbo	SBS Digital Television	D	COFDM	Thredbo	14/06/2007 9:00
+2118	Young	SBS Digital Television	D	COFDM	Young	24/10/2014 15:30
+2141	Webbs Hill	SBS Digital Television	D	COFDM	Tumut	12/12/2014 13:30
+2178	Mt Mumbulla WIN	SBS Digital Television	D	COFDM	Bega	12/11/2006 15:00
+2291	The Gap WIN	SBS Digital Television	D	COFDM	Adelong	01/07/2013 0:00
+2319	Batlow	SBS Digital Television	D	COFDM	Batlow	01/07/2013 0:00
+2321	Talbingo	SBS Digital Television	D	COFDM	Talbingo	01/07/2013 0:00
+2009	Bombala	Seven Digital Television	C	COFDM	Bombala	11/10/2021 7:00
+2025	Radio Hill RT	Seven Digital Television	D	COFDM	Cooma	11/10/2021 7:00
+2027	Wades Hill	Seven Digital Television	E	COFDM	Crookwell	11/10/2021 7:00
+2031	Bimmil Hill	Seven Digital Television	D	COFDM	Eden	11/10/2021 7:00
+2048	Jinderboine Hill	Seven Digital Television	D	COFDM	Jindabyne	11/10/2021 7:00
+2071	Mt Gillamatong	Seven Digital Television	D	COFDM	Braidwood	11/10/2021 7:00
+2081	Mt Ulandra	Seven Digital Television	B	COFDM	SW Slopes/E Riverina	11/10/2021 7:00
+2082	Mt Wandera	Seven Digital Television	C	COFDM	Moruya	11/10/2021 7:00
+2087	Buckeridge Lookout	Seven Digital Television	D	COFDM	Narooma	11/10/2021 7:00
+2105	Thredbo	Seven Digital Television	D	COFDM	Thredbo	11/10/2021 7:00
+2108	Tuggeranong Hill	Seven Digital Television	C	COFDM	Tuggeranong Valley	11/10/2021 7:00
+2141	Webbs Hill	Seven Digital Television	D	COFDM	Tumut	11/10/2021 7:00
+2225	Mt Roberts	Seven Digital Television	B	COFDM	Cooma/Monaro	11/10/2021 7:00
+2614	Mt Gray WIN	Seven Digital Television	C	COFDM	Goulburn	11/10/2021 7:00
+2027	Wades Hill	10 pgm	E	COFDM	Crookwell	11/10/2021 7:00
+2027	Wades Hill	SBS Digital Television	E	COFDM	Crookwell	11/10/2021 7:00
+2027	Wades Hill	WIN Digital Television	E	COFDM	Crookwell	11/10/2021 7:00
+2009	Bombala	WIN Digital Television	C	COFDM	Bombala	11/10/2021 7:00
+2048	Jinderboine Hill	WIN Digital Television	D	COFDM	Jindabyne	11/10/2021 7:00
+2225	Mt Roberts	WIN Digital Television	B	COFDM	Cooma/Monaro	11/10/2021 7:00
+2016	Brown Mountain	ABC NEWS on radio	C	FM	Bega/Cooma	01/07/2017 0:00
+2072	Mt Gray RT	ABC NEWS on radio	C	FM	Goulburn	01/07/2017 0:00
+2081	Mt Ulandra	ABC NEWS on radio	B	FM	SW Slopes/E Riverina	01/07/2017 0:00
+2082	Mt Wandera	ABC NEWS on radio	C	FM	Batemans Bay/Moruya	01/07/2017 0:00
+2008	Black Mountain Tower	ABC NEWS on radio	A	FM	Canberra	21/06/2005 14:00
+2008	Black Mountain Tower	ABC Triple J	A	FM	Canberra	20/08/1990 23:00
+2016	Brown Mountain	ABC Triple J	B	FM	Bega/Cooma	30/12/1995 1:00
+2072	Mt Gray RT	ABC Triple J	C	FM	Goulburn	20/10/1995 0:00
+2081	Mt Ulandra	ABC Triple J	B	FM	SW Slopes/E Riverina	01/11/1996 1:00
+2108	Tuggeranong Hill	ABC NEWS on radio	D	FM	Tuggeranong Valley	21/06/2005 14:00
+2108	Tuggeranong Hill	ABC Triple J	C	FM	Tuggeranong Valley	14/12/2008 2:00
+2008	Black Mountain Tower	ABC Classic FM	A	FM	Canberra	31/01/1976 1:00
+2016	Brown Mountain	ABC Classic FM	B	FM	Bega/Cooma	01/02/1985 1:00
+2072	Mt Gray RT	ABC Classic FM	C	FM	Goulburn	12/12/1997 1:00
+2081	Mt Ulandra	ABC Classic FM	B	FM	SW Slopes/E Riverina	01/12/1982 1:00
+2082	Mt Wandera	ABC Classic FM	B	FM	Batemans Bay/Moruya	31/01/1994 1:00
+2108	Tuggeranong Hill	ABC Classic FM	C	FM	Tuggeranong Valley	14/12/2008 2:00
+2006	Bega MF	ABC Local Radio	B	AM	Bega	07/10/1970 1:00
+2020	Gungahlin MF	ABC Local Radio	A	AM	Canberra	07/10/1970 1:00
+2072	Mt Gray RT	ABC Local Radio	C	FM	Goulburn	20/10/1995 0:00
+2081	Mt Ulandra	ABC Local Radio	B	FM	SW Slopes/E Riverina	21/12/1990 1:00
+2082	Mt Wandera	ABC Local Radio	B	FM	Batemans Bay/Moruya	20/07/1989 23:00
+2024	Cooma MF	ABC Local Radio	D	AM	Cooma	07/10/1970 1:00
+2009	Bombala	ABC Local Radio	D	FM	Bombala	01/07/1989 23:00
+2027	Wades Hill	ABC Local Radio	D	FM	Crookwell	24/08/1997 23:00
+2031	Bimmil Hill	ABC Local Radio	D	FM	Eden	29/06/1993 23:00
+2048	Jinderboine Hill	ABC Local Radio	D	FM	Jindabyne	26/05/1993 23:00
+2105	Thredbo	ABC Local Radio	D	FM	Thredbo	30/07/1990 23:00
+2118	Young	ABC Local Radio	D	FM	Young	18/12/1992 0:00
+2141	Webbs Hill	ABC Local Radio	D	FM	Tumut	22/09/1994 23:00
+2016	Brown Mountain	ABC Radio National	B	FM	Bega/Cooma	01/01/1993 0:00
+2020	Gungahlin MF	ABC Radio National	A	AM	Canberra	11/02/1970 1:00
+2072	Mt Gray RT	ABC Radio National	C	FM	Goulburn	21/02/2023 10:00
+2081	Mt Ulandra	ABC Radio National	B	FM	SW Slopes/E Riverina	29/06/1993 23:00
+2082	Mt Wandera	ABC Radio National	B	FM	Batemans Bay/Moruya	16/09/1990 23:00
+2025	Radio Hill RT	ABC Radio National	D	FM	Cooma	02/03/1993 0:00
+2027	Wades Hill	ABC Radio National	D	FM	Crookwell	24/08/1997 23:00
+2031	Bimmil Hill	ABC Radio National	D	FM	Eden	10/02/1993 0:00
+2048	Jinderboine Hill	ABC Radio National	D	FM	Jindabyne	10/02/1993 0:00
+2105	Thredbo	ABC Radio National	D	FM	Thredbo	30/07/1990 23:00
+2118	Young	ABC Radio National	D	FM	Young	04/11/1996 0:00
+2141	Webbs Hill	ABC Radio National	D	FM	Tumut	22/09/1994 23:00
+2008	Black Mountain Tower	ABC Digital Television	A	COFDM	Canberra	20/12/2014 5:00
+2072	Mt Gray RT	ABC Digital Television	C	COFDM	Goulburn	12/12/2014 14:55
+2080	Mt Taylor	ABC Digital Television	C	COFDM	Weston Creek/Woden	08/11/2014 16:39
+2081	Mt Ulandra	ABC Digital Television	B	COFDM	SW Slopes/E Riverina	01/09/2003 9:00
+2082	Mt Wandera	ABC Digital Television	C	COFDM	Batemans Bay/Moruya	29/08/2014 15:05
+2108	Tuggeranong Hill	ABC Digital Television	C	COFDM	Tuggeranong Valley	08/11/2014 15:44
+2225	Mt Roberts	ABC Digital Television	C	COFDM	Cooma/Monaro	01/04/2006 9:00
+2009	Bombala	ABC Digital Television	D	COFDM	Bombala	23/07/2014 15:17
+2025	Radio Hill RT	ABC Digital Television	D	COFDM	Cooma	08/08/2014 14:57
+2027	Wades Hill	ABC Digital Television	D	COFDM	Crookwell	19/01/2013 13:00
+2031	Bimmil Hill	ABC Digital Television	D	COFDM	Eden	21/11/2014 15:00
+2048	Jinderboine Hill	ABC Digital Television	D	COFDM	Jindabyne	21/11/2014 15:15
+2071	Mt Gillamatong	ABC Digital Television	D	COFDM	Braidwood	18/07/2014 13:40
+2087	Buckeridge Lookout	ABC Digital Television	D	COFDM	Narooma	29/07/2014 15:35
+2105	Thredbo	ABC Digital Television	D	COFDM	Thredbo	14/06/2007 17:00
+2118	Young	ABC Digital Television	D	COFDM	Young	24/10/2014 15:30
+2141	Webbs Hill	ABC Digital Television	D	COFDM	Tumut	12/12/2014 13:30
+2178	Mt Mumbulla WIN	ABC Digital Television	D	COFDM	Bega	07/05/2014 14:30
+2291	The Gap WIN	ABC Digital Television	D	COFDM	Adelong	01/07/2012 0:00
+2319	Batlow	ABC Digital Television	D	COFDM	Batlow	01/07/2013 0:00
+2320	Captains Flat	ABC Digital Television	D	COFDM	Captains Flat	19/07/2014 15:30
+2321	Talbingo	ABC Digital Television	D	COFDM	Talbingo	17/05/2012 17:00
