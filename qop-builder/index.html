@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.38</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.39</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -6313,8 +6313,19 @@ function loadThssFromText(text){
 }
 // Fetch a text file. Same-origin relative paths (this GitHub Pages site) need no CORS;
 // raw.githubusercontent.com also sends permissive CORS headers.
+// Convert a normal GitHub webpage URL to the raw (CORS-friendly) equivalent.
+// github.com/<owner>/<repo>/blob|raw/<branch>/<path>  ->  raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>
+function _resolveGithubUrl(url){
+  const u = (url || '').trim();
+  const m = u.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+)$/i);
+  return m ? `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}` : u;
+}
 async function fetchGithubText(url){
-  const resp = await fetch(url, { cache:'no-store' });
+  const target = _resolveGithubUrl(url);
+  let resp;
+  try { resp = await fetch(target, { cache:'no-store' }); }
+  catch(e){ throw new Error('request blocked (CORS/offline) — on the LIVE site use a relative path like data/BAI_SITES.csv, or a raw.githubusercontent.com URL'); }
+  if (resp.status === 404) throw new Error('404 — no file at that path (check the folder and filename)');
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return await resp.text();
 }
