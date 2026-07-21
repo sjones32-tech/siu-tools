@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.43</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.44</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -3645,6 +3645,7 @@ function renderCoverageCheck() {
 
   SITES.forEach(s => {
     const sno = s[0], sname = s[3];
+    if (!districtMatch(sno)) return;   // respect the global district filter
     const plannedMonths = {};
     for (let mi = 0; mi < 12; mi++) {
       const act = (s[8 + mi] || '').trim();
