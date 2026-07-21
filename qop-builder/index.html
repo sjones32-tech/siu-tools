@@ -607,7 +607,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.41</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.42</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -3177,12 +3177,9 @@ function reconForRow(r) {
 
 function renderSchedule() {
   _reconCache = null;   // refresh reconciliation each render
-  filteredRows = [...scheduleRows];
-  applySchedSort();
-  renderScheduleRows(filteredRows);
-  updateSchedSortHeaders();
-  document.getElementById("row-count").textContent =
-    `${scheduleRows.length} rows`;
+  // Route through applyFilters so the global district filter AND all column
+  // filters are honoured on tab-show / district change (not just on dropdown edits).
+  applyFilters();
 }
 
 function renderScheduleRows(rows) {
