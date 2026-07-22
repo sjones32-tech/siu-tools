@@ -304,6 +304,11 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 /* ── QOP export ── */
 #qop-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .qop-preview { flex: 1; overflow: auto; }
+.qop-compact table td, .qop-compact table th { padding:0 3px !important; font-size:10px !important; }
+.qop-compact table input, .qop-compact table select { font-size:9px !important; padding:0 2px !important; }
+.qop-compact table input[type="datetime-local"] { width:150px !important; }
+.qop-compact table input[type="date"] { width:116px !important; }
+#qop-col-menu label:hover { background:var(--surf); border-radius:4px; }
 
 /* ── Chunky, always-visible scrollbars so the horizontal bar is easy to
    grab on any monitor size ── */
@@ -607,7 +612,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.44</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.45</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -896,6 +901,8 @@ select option:checked, select option:hover {
         <button class="btn btn-ghost" onclick="exportQOPCSV()" id="qop-export-btn" disabled>⬇ Export CSV</button>
         <button class="btn btn-ghost" onclick="copyQOPClipboard()" id="qop-copy-btn" disabled>⎘ Copy to Clipboard</button>
         <button class="btn btn-ghost" onclick="qopClearFilters()" title="Clear all column filters and sort">⌫ Clear Filters</button>
+        <button class="btn btn-ghost" id="qop-cols-btn" onclick="qopToggleColMenu()" title="Show or hide columns">⚙ Columns</button>
+        <button class="btn btn-ghost" id="qop-compact-btn" onclick="qopToggleCompact()" title="Toggle compact density">▭ Compact</button>
         <div class="sep"></div>
         <span id="qop-status" class="text-muted text-sm">Select quarter and click Build QOP Import</span>
       </div>
@@ -5432,9 +5439,96 @@ let _qopSelected = new Set();   // origIdx of checked rows
 let _pendingQOPRestore = false;
 let _qopFilters = {};
 
+// ── QOP view preferences: column show/hide + compact density ──────────────
+const QOP_DEFAULT_HIDDEN = ['Original Activity Code','Original Audience Impact',
+  'Original Service State','Original Description','Email','Comments',
+  'Remedy Source of Truth','Modulation'];
+let _qopView = { hidden: new Set(QOP_DEFAULT_HIDDEN), compact: false };
+function loadQopView() {
+  try {
+    const j = JSON.parse(localStorage.getItem('bai_qop_view') || 'null');
+    if (j) {
+      _qopView.hidden  = new Set(Array.isArray(j.hidden) ? j.hidden : QOP_DEFAULT_HIDDEN);
+      _qopView.compact = !!j.compact;
+    }
+  } catch(e) { /* keep defaults */ }
+}
+function saveQopView() {
+  try { localStorage.setItem('bai_qop_view',
+    JSON.stringify({ hidden: [..._qopView.hidden], compact: _qopView.compact })); } catch(e) {}
+}
+function qopVisibleCols(cols) { return cols.filter(c => !_qopView.hidden.has(c)); }
+
+function qopColMenuBody() {
+  if (!qopBuiltRows.length) return '';
+  return Object.keys(qopBuiltRows[0]).map(c =>
+    `<label style="display:flex;align-items:center;gap:6px;padding:2px 5px;font-size:11px;cursor:pointer;white-space:nowrap;break-inside:avoid">
+       <input type="checkbox" ${_qopView.hidden.has(c)?'':'checked'}
+         onchange="qopSetColVisible('${c.replace(/'/g,"\\'")}', this.checked)">${esc(c)}</label>`).join('');
+}
+function qopToggleColMenu() {
+  let m = document.getElementById('qop-col-menu');
+  if (m) { m.remove(); document.removeEventListener('click', qopColMenuOutside); return; }
+  if (!qopBuiltRows.length) { toast('Build the QOP first', 'error'); return; }
+  m = document.createElement('div');
+  m.id = 'qop-col-menu';
+  m.style.cssText = 'position:absolute;z-index:60;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;max-height:64vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.55);columns:2;column-gap:18px;min-width:340px';
+  m.innerHTML = `<div style="column-span:all;display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:11px;margin-bottom:6px">
+      <span>Show columns</span>
+      <span style="font-weight:400">
+        <a href="#" onclick="qopColMenuAll(true);return false" style="color:var(--accent)">all</a> ·
+        <a href="#" onclick="qopColMenuAll(false);return false" style="color:var(--accent)">none</a> ·
+        <a href="#" onclick="qopColMenuReset();return false" style="color:var(--accent)">reset</a>
+      </span></div>` + qopColMenuBody();
+  document.body.appendChild(m);
+  const btn = document.getElementById('qop-cols-btn');
+  const r = btn.getBoundingClientRect();
+  m.style.top  = (r.bottom + window.scrollY + 4) + 'px';
+  m.style.left = Math.max(8, Math.min(r.left + window.scrollX, window.innerWidth - m.offsetWidth - 12)) + 'px';
+  setTimeout(() => document.addEventListener('click', qopColMenuOutside), 0);
+}
+function qopColMenuOutside(e) {
+  const m = document.getElementById('qop-col-menu');
+  const btn = document.getElementById('qop-cols-btn');
+  if (m && !m.contains(e.target) && e.target !== btn) {
+    m.remove(); document.removeEventListener('click', qopColMenuOutside);
+  }
+}
+function qopSetColVisible(col, visible) {
+  if (visible) _qopView.hidden.delete(col); else _qopView.hidden.add(col);
+  saveQopView();
+  renderQOPPreview(qopBuiltRows);
+}
+function qopColMenuAll(show) {
+  const cols = Object.keys(qopBuiltRows[0] || {});
+  _qopView.hidden = show ? new Set()
+    : new Set(cols.filter(c => c !== 'Site Number' && c !== 'Site Name'));  // always keep site identity
+  saveQopView();
+  const m = document.getElementById('qop-col-menu'); if (m) { m.remove(); document.removeEventListener('click', qopColMenuOutside); }
+  renderQOPPreview(qopBuiltRows);
+}
+function qopColMenuReset() {
+  _qopView.hidden = new Set(QOP_DEFAULT_HIDDEN);
+  saveQopView();
+  const m = document.getElementById('qop-col-menu'); if (m) { m.remove(); document.removeEventListener('click', qopColMenuOutside); }
+  renderQOPPreview(qopBuiltRows);
+}
+function qopToggleCompact() {
+  _qopView.compact = !_qopView.compact;
+  saveQopView();
+  applyQopCompact();
+}
+function applyQopCompact() {
+  const p = document.getElementById('qop-preview'); if (p) p.classList.toggle('qop-compact', _qopView.compact);
+  const b = document.getElementById('qop-compact-btn');
+  if (b) { b.style.background = _qopView.compact ? 'var(--accent)' : ''; b.style.color = _qopView.compact ? '#fff' : ''; }
+}
+
 function renderQOPPreview(rows) {
   if (!rows.length) return;
-  const cols = Object.keys(rows[0]);
+  const allCols = Object.keys(rows[0]);
+  const cols = qopVisibleCols(allCols);
+  applyQopCompact();
 
   // ── Apply filters → list of original indexes to display ──────────
   const visibleIdx = [];
@@ -9477,6 +9571,7 @@ async function xlProcessPH(wb) {
 // ═══════════════════════════════════════════════════════════════
 function init() {
   loadPersisted();
+  loadQopView();
 
   // Restore session fields (bearer / api key) — not persisted
   // (user must re-enter each session for security)
