@@ -279,6 +279,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 .site-grid-table .sg-cls   { width: 46px; }
 .site-grid-table .sg-sm    { width: 40px; }
 .site-grid-table .sg-month { width: auto; min-width: 68px; }
+.site-grid-table .q-div { border-left: 2px solid var(--border2); }
 .site-grid-table td:nth-child(2) {
   overflow: hidden; text-overflow: ellipsis; max-width: 240px;
 }
@@ -612,7 +613,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.48</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.49</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -774,13 +775,13 @@ select option:checked, select option:hover {
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(6)">Jan</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(7)">Feb</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(8)">Mar</th>
-              <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(9)">Apr</th>
+              <th class="sg-month q-div" style="cursor:pointer" onclick="siteGridSort(9)">Apr</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(10)">May</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(11)">Jun</th>
-              <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(12)">Jul</th>
+              <th class="sg-month q-div" style="cursor:pointer" onclick="siteGridSort(12)">Jul</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(13)">Aug</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(14)">Sep</th>
-              <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(15)">Oct</th>
+              <th class="sg-month q-div" style="cursor:pointer" onclick="siteGridSort(15)">Oct</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(16)">Nov</th>
               <th class="sg-month" style="cursor:pointer" onclick="siteGridSort(17)">Dec</th>
             </tr>
@@ -3412,15 +3413,16 @@ function renderSiteGrid() {
     const months = r.slice(8, 20);
     const alt = i % 2 === 0 ? "alt" : "";
     const monthCells = months.map((act, mi) => {
-      if (!act || !act.trim()) return `<td class="month-cell empty">–</td>`;
+      const qd = (mi === 3 || mi === 6 || mi === 9) ? ' q-div' : '';   // Q1|Q2, Q2|Q3, Q3|Q4 dividers
+      if (!act || !act.trim()) return `<td class="month-cell empty${qd}">–</td>`;
       const ac = actClass(act);
       const mNo = mi + 1;
       const clickAttr = `onclick="tripFromSiteCell('${sno}', ${mNo}, '${act.trim().replace(/'/g,"\\'")}')" style="cursor:pointer" title="View outages: ${sname} — ${act.trim()}"`;
       // When filters active, show only matching cells in colour; dim the rest
       if (_siteGridActFilters.size && !actMatchesFilters(act)) {
-        return `<td class="month-cell dimmed" ${clickAttr}>${act.trim()}</td>`;
+        return `<td class="month-cell dimmed${qd}" ${clickAttr}>${act.trim()}</td>`;
       }
-      return `<td class="month-cell ${ac}" ${clickAttr}>${act.trim()}</td>`;
+      return `<td class="month-cell ${ac}${qd}" ${clickAttr}>${act.trim()}</td>`;
     }).join("");
     frags.push(`
       <tr class="${alt}">
