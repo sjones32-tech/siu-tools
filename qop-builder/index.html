@@ -612,7 +612,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.45</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.47</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -903,6 +903,7 @@ select option:checked, select option:hover {
         <button class="btn btn-ghost" onclick="qopClearFilters()" title="Clear all column filters and sort">⌫ Clear Filters</button>
         <button class="btn btn-ghost" id="qop-cols-btn" onclick="qopToggleColMenu()" title="Show or hide columns">⚙ Columns</button>
         <button class="btn btn-ghost" id="qop-compact-btn" onclick="qopToggleCompact()" title="Toggle compact density">▭ Compact</button>
+        <button class="btn btn-ghost" id="qop-freeze-btn" onclick="qopToggleFreeze()" title="Freeze the checkbox, Site No and Site Name columns while scrolling">▣ Freeze</button>
         <div class="sep"></div>
         <span id="qop-status" class="text-muted text-sm">Select quarter and click Build QOP Import</span>
       </div>
@@ -3635,7 +3636,7 @@ function renderCoverageCheck() {
   // flag for whether ANY outage exists that month (tagged or not).
   const outageMonths = {};          // sno → Set(monthNo)  (any outage)
   const outageActs   = {};          // "sno|month" → Set(normalised trip activity)
-  const outageUids   = {};          // "sno|month" → [uids of outages that month]
+  const outageUids   = {};          // "sno|month" → [{uid, act}] of outages that month
   rows.forEach(r => {
     const sno = (r['Site Number'] || '').toString().trim();
     const m = tripRowMonth(r);
@@ -3644,7 +3645,7 @@ function renderCoverageCheck() {
     const key = `${sno}|${m}`;
     const act = normCovActivity(r['Trip Activity']);
     if (act) (outageActs[key] = outageActs[key] || new Set()).add(act);
-    if (r._uid) (outageUids[key] = outageUids[key] || []).push(r._uid);
+    if (r._uid) (outageUids[key] = outageUids[key] || []).push({ uid: r._uid, act: (r['Trip Activity']||'').toString().trim() });
   });
 
   let missed = [], wrongMonth = [], ok = [];
@@ -3695,6 +3696,22 @@ function renderCoverageCheck() {
   const bym = (a, b) => (a.month - b.month) || a.sname.localeCompare(b.sname);
   missed.sort(bym); wrongMonth.sort(bym); ok.sort(bym);
 
+  // Render the QOP-ID list for a row, colour-coding each id against the row's
+  // planned activity: green = Trip Activity matches, red = mismatch, amber = untagged.
+  const renderUids = (it) => {
+    if (!it.uids || !it.uids.length) return '<span style="color:var(--muted)">—</span>';
+    const pa = it.activity;   // undefined for the UNPLANNED card (nothing to compare)
+    return it.uids.map(u => {
+      let color = 'var(--muted)', weight = '400', deco = 'none', tip = u.act || 'no Trip Activity';
+      if (pa !== undefined) {
+        if (!u.act)                            { color = 'var(--warn)';    tip = 'no Trip Activity set'; }
+        else if (covActivityMatch(pa, u.act))  { color = 'var(--success)'; tip = 'Trip Activity: ' + u.act; }
+        else { color = 'var(--danger)'; weight = '700'; deco = 'underline'; tip = 'Trip Activity "' + u.act + '" ≠ planned "' + pa + '"'; }
+      }
+      return `<span class="mono" title="${esc(tip)}" style="color:${color};font-weight:${weight};text-decoration:${deco};font-size:10px">${esc(u.uid)}</span>`;
+    }).join('<span style="color:var(--muted);font-size:10px">, </span>');
+  };
+
   const card = (title, items, colour, emptyMsg, cols) => `
     <div style="margin:12px 14px;background:var(--surf);border:1px solid var(--border);border-left:4px solid ${colour};border-radius:var(--radius);overflow:hidden">
       <div style="padding:8px 12px;background:var(--surf2);font-weight:700;font-size:12px;display:flex;justify-content:space-between">
@@ -3706,7 +3723,7 @@ function renderCoverageCheck() {
           <td style="padding:4px 12px"><span class="mono">${esc(it.sno)}</span> ${esc(it.sname)}</td>
           <td style="padding:4px 12px;font-weight:600">${MONTH_ABBR[it.month]}</td>
           ${it.activity!==undefined ? `<td style="padding:4px 12px">${esc(it.activity)}${it.why && it.why!=='no outage' ? ` <span style="color:var(--warn);font-size:10px">— ${esc(it.why)}</span>` : ''}</td>` : ''}
-          <td style="padding:4px 12px"><span class="mono" style="color:var(--muted);font-size:10px">${(it.uids && it.uids.length) ? it.uids.map(esc).join(', ') : '—'}</span></td>
+          <td style="padding:4px 12px;line-height:1.9">${renderUids(it)}</td>
         </tr>`).join('')}</tbody>
       </table>` : `<div style="padding:14px;color:var(--muted);font-size:12px">${emptyMsg}</div>`}
     </div>`;
@@ -3714,6 +3731,7 @@ function renderCoverageCheck() {
   content.innerHTML = `
     <div style="padding:10px 14px;font-size:12px;color:var(--muted)">
       Cross-checking the <strong>Site Grid planned activity</strong> against the <strong>QOP outages</strong> and their <strong>Trip Activity</strong> (full year). A month counts as covered only when an outage carries the matching activity. Click any row to jump to that site/month. ${_tripMonths.size?`<span style="color:var(--warn)">Filtered to ${[..._tripMonths].sort((a,b)=>a-b).map(m=>MONTH_ABBR[m]).join(', ')}.</span>`:''}
+      <div style="margin-top:6px">QOP IDs: <span class="mono" style="color:var(--success)">green</span> = Trip Activity matches the planned activity · <span class="mono" style="color:var(--danger);text-decoration:underline">red</span> = mismatch (different activity) · <span class="mono" style="color:var(--warn)">amber</span> = no Trip Activity set. Hover an ID to see its Trip Activity.</div>
     </div>
     ${card('⚠ MISSED / MISMATCH — planned activity has no matching QOP outage', missed, 'var(--danger)',
         'Nothing missed — every planned month has outages. 🎉', ['Site','Month','Planned Activity','QOP IDs'])}
@@ -5443,19 +5461,20 @@ let _qopFilters = {};
 const QOP_DEFAULT_HIDDEN = ['Original Activity Code','Original Audience Impact',
   'Original Service State','Original Description','Email','Comments',
   'Remedy Source of Truth','Modulation'];
-let _qopView = { hidden: new Set(QOP_DEFAULT_HIDDEN), compact: false };
+let _qopView = { hidden: new Set(QOP_DEFAULT_HIDDEN), compact: false, freeze: true };
 function loadQopView() {
   try {
     const j = JSON.parse(localStorage.getItem('bai_qop_view') || 'null');
     if (j) {
       _qopView.hidden  = new Set(Array.isArray(j.hidden) ? j.hidden : QOP_DEFAULT_HIDDEN);
       _qopView.compact = !!j.compact;
+      _qopView.freeze  = (j.freeze !== undefined) ? !!j.freeze : true;
     }
   } catch(e) { /* keep defaults */ }
 }
 function saveQopView() {
   try { localStorage.setItem('bai_qop_view',
-    JSON.stringify({ hidden: [..._qopView.hidden], compact: _qopView.compact })); } catch(e) {}
+    JSON.stringify({ hidden: [..._qopView.hidden], compact: _qopView.compact, freeze: _qopView.freeze })); } catch(e) {}
 }
 function qopVisibleCols(cols) { return cols.filter(c => !_qopView.hidden.has(c)); }
 
@@ -5522,6 +5541,13 @@ function applyQopCompact() {
   const p = document.getElementById('qop-preview'); if (p) p.classList.toggle('qop-compact', _qopView.compact);
   const b = document.getElementById('qop-compact-btn');
   if (b) { b.style.background = _qopView.compact ? 'var(--accent)' : ''; b.style.color = _qopView.compact ? '#fff' : ''; }
+  const fb = document.getElementById('qop-freeze-btn');
+  if (fb) { fb.style.background = _qopView.freeze ? 'var(--accent)' : ''; fb.style.color = _qopView.freeze ? '#fff' : ''; }
+}
+function qopToggleFreeze() {
+  _qopView.freeze = !_qopView.freeze;
+  saveQopView();
+  renderQOPPreview(qopBuiltRows);   // re-render applies freeze + refreshes button state
 }
 
 function renderQOPPreview(rows) {
@@ -5529,6 +5555,23 @@ function renderQOPPreview(rows) {
   const allCols = Object.keys(rows[0]);
   const cols = qopVisibleCols(allCols);
   applyQopCompact();
+
+  // ── Freeze (pin) leftmost columns: checkbox, delete, Site Number, Site Name ──
+  const freeze = _qopView.freeze;
+  const FZW = { sel:30, del:48, sno:74, snm:170 };
+  const FZ = {};
+  if (freeze) {
+    let x = 0;
+    FZ.sel = x; x += FZW.sel;
+    FZ.del = x; x += FZW.del;
+    if (cols.includes('Site Number')) { FZ.sno = x; x += FZW.sno; }
+    if (cols.includes('Site Name'))   { FZ.snm = x; x += FZW.snm; }
+  }
+  const _lastFz  = ('snm' in FZ) ? 'snm' : ('sno' in FZ) ? 'sno' : ('del' in FZ) ? 'del' : null;
+  const _fzBrd   = k => (k === _lastFz ? 'border-right:2px solid var(--border2);' : '');
+  const fzH      = k => (k in FZ) ? `left:${FZ[k]}px;width:${FZW[k]}px;min-width:${FZW[k]}px;max-width:${FZW[k]}px;z-index:13;${_fzBrd(k)}` : '';
+  const fzB      = (k, bg) => (k in FZ) ? `position:sticky;left:${FZ[k]}px;width:${FZW[k]}px;min-width:${FZW[k]}px;max-width:${FZW[k]}px;z-index:4;background:${bg};overflow:hidden;text-overflow:ellipsis;${_fzBrd(k)}` : '';
+  const fzKey    = c => c === 'Site Number' ? 'sno' : c === 'Site Name' ? 'snm' : null;
 
   // ── Apply filters → list of original indexes to display ──────────
   const visibleIdx = [];
@@ -5548,27 +5591,27 @@ function renderQOPPreview(rows) {
   // ── Header row with sort indicators ───────────────────────────────
   const allVisChecked = visibleIdx.length && visibleIdx.every(ix => _qopSelected.has(ix));
   const thead = `<tr>
-    <th style="background:#0F1D2E;position:sticky;top:0;padding:6px;width:28px;border-bottom:2px solid var(--border2);z-index:11;text-align:center">
+    <th style="background:#0F1D2E;position:sticky;top:0;padding:6px;width:28px;border-bottom:2px solid var(--border2);z-index:11;text-align:center;${fzH('sel')}">
       <input type="checkbox" ${allVisChecked?'checked':''} onclick="qopToggleSelectAll(this)" title="Select all visible">
     </th>
-    <th style="background:#0F1D2E;position:sticky;top:0;padding:6px;width:34px;border-bottom:2px solid var(--border2);z-index:11"></th>
+    <th style="background:#0F1D2E;position:sticky;top:0;padding:6px;width:34px;border-bottom:2px solid var(--border2);z-index:11;${fzH('del')}"></th>
     ${cols.map(c => {
       const sorted = _qopSort.col === c;
       const arrow  = sorted ? (_qopSort.dir === 1 ? ' ▲' : ' ▼') : '';
       return `<th onclick="qopSortBy('${c.replace(/'/g,"\\'")}')"
         style="background:#0F1D2E;color:${sorted?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;
                padding:6px 7px;white-space:nowrap;position:sticky;top:0;z-index:11;
-               border-bottom:2px solid var(--border2);cursor:pointer;user-select:none"
+               border-bottom:2px solid var(--border2);cursor:pointer;user-select:none;${(k=>k?fzH(k):'')(fzKey(c))}"
         title="Click to sort">${c}${arrow}</th>`;
     }).join("")}
   </tr>
   <tr>
-    <th style="background:#0c1826;position:sticky;top:29px;padding:2px;z-index:10;border-bottom:1px solid var(--border)"></th>
-    <th style="background:#0c1826;position:sticky;top:29px;padding:2px;z-index:10;border-bottom:1px solid var(--border)">
+    <th style="background:#0c1826;position:sticky;top:29px;padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('sel')}"></th>
+    <th style="background:#0c1826;position:sticky;top:29px;padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('del')}">
       <button class="del-btn" style="padding:1px 5px;font-size:9px" title="Clear all filters"
         onclick="qopClearFilters()">⌫</button>
     </th>
-    ${cols.map(c => `<th style="background:#0c1826;position:sticky;top:29px;padding:2px 3px;z-index:10;border-bottom:1px solid var(--border)">
+    ${cols.map(c => `<th style="background:#0c1826;position:sticky;top:29px;padding:2px 3px;z-index:10;border-bottom:1px solid var(--border);${(k=>k?fzH(k):'')(fzKey(c))}">
       <input type="text" value="${(_qopFilters[c]||'').replace(/"/g,'&quot;')}"
         placeholder="filter…"
         oninput="qopFilterCol('${c.replace(/'/g,"\\'")}', this.value)"
@@ -5585,11 +5628,13 @@ function renderQOPPreview(rows) {
     const bg = hasPH ? "background:rgba(239,68,68,.06);" : (displayPos%2===0 ? "background:var(--surf);" : "");
     const checked = _qopSelected.has(origIdx);
     const rowSelBg = checked ? "background:rgba(59,130,246,.12);" : bg;
+    // Opaque equivalents for pinned cells (sticky cells must be opaque or scrolled content bleeds through)
+    const opaqueRowBg = checked ? '#17273f' : (hasPH ? '#1e1618' : (displayPos%2===0 ? '#162030' : '#0C1520'));
     return `<tr data-qrow="${origIdx}"${checked?' class="qop-row-selected"':''} style="${rowSelBg}border-bottom:1px solid var(--border)">` +
-      `<td style="padding:2px 4px;text-align:center">
+      `<td style="padding:2px 4px;text-align:center;${fzB('sel', opaqueRowBg)}">
         <input type="checkbox" ${checked?'checked':''} onclick="qopToggleSelect(${origIdx}, this)">
       </td>` +
-      `<td style="padding:2px 4px;text-align:center;white-space:nowrap">
+      `<td style="padding:2px 4px;text-align:center;white-space:nowrap;${fzB('del', opaqueRowBg)}">
         <button class="del-btn" style="padding:1px 6px;font-size:10px" title="Delete row"
           onclick="qopDeleteRow(${origIdx})">✕</button>${
           (() => { const n = qopRowIssueCount(row);
@@ -5603,7 +5648,7 @@ function renderQOPPreview(rows) {
         const cellBg  = cc ? `background:${cc.bg};` : '';
         const inpFg   = cc ? cc.fg : 'var(--text)';
         const inpW    = cc ? '600' : '400';
-        const tdStyle = `padding:2px 4px;font-size:11px;white-space:nowrap;${cellBg}`;
+        const tdStyle = `padding:2px 4px;font-size:11px;white-space:nowrap;${cellBg}` + (fzKey(c) ? fzB(fzKey(c), cc ? cc.bg : opaqueRowBg) : '');
 
         // Date columns → native date & time picker
         if (c === 'Commencement Date') {
