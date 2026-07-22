@@ -612,7 +612,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.47</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.48</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -2817,8 +2817,7 @@ function showTab(name) {
     const sb = document.getElementById('qop-submit-btn'); if (sb) sb.disabled = false;
     const cb = document.getElementById('qop-copy-btn');   if (cb) cb.disabled = false;
     if (_pendingQOPRestore) {
-      document.getElementById('qop-status').textContent =
-        `${qopBuiltRows.length} rows restored from your last session (edits preserved)`;
+      document.getElementById('qop-status').textContent = '';
       _pendingQOPRestore = false;
     }
   }
