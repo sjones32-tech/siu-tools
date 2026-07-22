@@ -613,7 +613,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.49</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.50</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -4370,8 +4370,8 @@ function antennaNoteForRow(sno, actCodeStr) {
   const dueYear = best.nextDue.getFullYear ? best.nextDue.getFullYear() : parseInt(String(best.nextDue).substring(0,4));
   const dStr = best.nextDue.toLocaleDateString ? best.nextDue.toLocaleDateString('en-AU') : String(best.nextDue);
 
-  if (dueYear < year)   return `ANTENNA TEST OVERDUE: ${best.bandDesc || best.band} was due ${dStr} — add antenna test to this outage`;
-  if (dueYear === year) return `Antenna test due this year: ${best.bandDesc || best.band} (${dStr}) — consider combining`;
+  if (dueYear < year)   return `ANTENNA TEST OVERDUE: ${sno} - ${best.bandDesc || best.band} was due ${dStr} — add antenna test to this outage`;
+  if (dueYear === year) return `Antenna test due this year: ${sno} - ${best.bandDesc || best.band} (${dStr}) — consider combining`;
   return '';
 }
 
