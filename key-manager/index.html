@@ -94,6 +94,9 @@
             to { transform: rotate(360deg); }
         }
 
+        .app-version-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border); border-radius:999px; font-size:0.72em; font-weight:700; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+        .app-version-pill .vp-dot { width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px rgba(16,185,129,.15); }
+
         .sync-status {
             display: flex;
             align-items: center;
@@ -1138,6 +1141,10 @@
             
             <div class="nav-divider"></div>
             
+            <a href="#" class="nav-item" data-page="auditlog">
+                <span class="nav-icon">🧾</span>
+                <span>Audit Log</span>
+            </a>
             <a href="#" class="nav-item" data-page="reports">
                 <span class="nav-icon">📈</span>
                 <span>Reports</span>
@@ -1163,6 +1170,7 @@
                     <span>💾</span>
                     <span id="syncStatusText">All data saved</span>
                 </div>
+                <span class="app-version-pill" title="BAI Key Manager version"><span class="vp-dot"></span>v<span id="appVersionNum"></span></span>
             </div>
 			<div class="header-actions">
                 <button class="btn btn-secondary" id="importBtn">
@@ -1701,9 +1709,13 @@
 	   preview, .eml draft export and plain-text fallback; sidebar logo image. */
 	/* v2.6.0: audit-time Add Key with new-vs-misplaced cross-check (moves a key in
 	   from another cabinet), empty-cabinet auditing, and a printable PDF audit report. */
+	/* v2.7.0: version pill in header; Audit Log page (browse + reprint saved audits);
+	   assignment/extension history in key & loan detail views; first-run seed guard
+	   (Start empty / Load samples — no more sample re-injection); overdue reminder
+	   flagging with configurable interval + review modal. */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.6.0',
+    version: '2.7.0',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -1725,6 +1737,7 @@ let appData = {
         defaultLoanDuration: 7,
         overdueThreshold: 2,
         maxExtensions: 3,
+        reminderIntervalDays: 3,
         autoReminders: true,
         collectionEmails: true,
         returnConfirmations: true,
@@ -1766,14 +1779,14 @@ function getTechnicians() { return appData.technicians || []; }
 // Initialize
 window.addEventListener('DOMContentLoaded', function() {
     loadAllDataFromStorage();
-    initializeData();
-	initializeTechnicians();
-	initializeCabinets();
+    maybeSeedOrFirstRun();
     setupEventListeners();
+    setVersionPill();
     updateDisplay();
     startAutoSave();
     startAutoBackup();
     checkFileSystemSupport();
+    checkAutoReminders();
     
     // Set up beforeunload warning
     window.addEventListener('beforeunload', function(e) {
@@ -2392,6 +2405,7 @@ function showKeyDetails(keyId) {
                         <strong>Status:</strong> <span class="badge ${key.available ? 'badge-success' : 'badge-warning'}">${key.available ? 'Available' : 'On Loan'}</span>
                     </div>
                     ${loanInfo}
+                    ${renderKeyHistoryHtml(key)}
                 </div>
             </div>
             <div class="modal-footer">
@@ -2532,6 +2546,7 @@ function saveAllDataToStorage() {
 function loadAllDataFromStorage() {
     try {
         const saved = localStorage.getItem('keyManagerData');
+        window.__hadSavedData = !!saved;
         if (saved) {
             const defaults = appData.settings;
             const loaded = JSON.parse(saved);
@@ -3200,6 +3215,11 @@ function navigateToPage(page) {
             subtitle: 'Generate reports and view analytics',
             showQuickActions: false
         },
+        auditlog: {
+            title: 'Audit Log',
+            subtitle: 'Past cabinet audits and printable reports',
+            showQuickActions: false
+        },
         settings: {
             title: 'Settings',
             subtitle: 'Configure system preferences',
@@ -3251,6 +3271,9 @@ function loadPageContent(page) {
             break;
         case 'reports':
             loadReportsContent(content);
+            break;
+        case 'auditlog':
+            loadAuditLogContent(content);
             break;
         case 'settings':
             loadSettingsContent(content);
@@ -3781,6 +3804,28 @@ function loadSettingsContent(content) {
                         </div>
                     </div>
                 </div>
+
+                <!-- Reminder Settings -->
+                <div class="form-section">
+                    <div class="form-section-title">📧 Overdue Reminder Settings</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Auto-flag overdue reminders</label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label class="switch">
+                                    <input type="checkbox" id="autoRemindersToggle" ${appData.settings.autoReminders ? 'checked' : ''}>
+                                    <span style="margin-left: 5px;">${appData.settings.autoReminders ? 'Enabled' : 'Disabled'}</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Remind again after (days)</label>
+                            <input type="number" id="reminderIntervalDays" class="form-input" value="${appData.settings.reminderIntervalDays || 3}" min="1" max="60" style="max-width: 120px;">
+                        </div>
+                    </div>
+                    <p style="font-size: 0.85em; color: var(--text-secondary); margin-top: 4px;">When enabled, the dashboard flags overdue loans not reminded within this interval. Sending still uses the branded preview / .eml flow &mdash; nothing is emailed automatically.</p>
+                </div>
+
 
                 <!-- Backup Settings -->
                 <div class="form-section">
@@ -6090,6 +6135,10 @@ function saveSettings() {
     if (maxExtensionsEl) {
         appData.settings.maxExtensions = parseInt(maxExtensionsEl.value) || appData.settings.maxExtensions;
     }
+    const autoRemindersToggleEl = document.getElementById('autoRemindersToggle');
+    if (autoRemindersToggleEl) appData.settings.autoReminders = autoRemindersToggleEl.checked;
+    const reminderIntervalEl = document.getElementById('reminderIntervalDays');
+    if (reminderIntervalEl) appData.settings.reminderIntervalDays = parseInt(reminderIntervalEl.value) || appData.settings.reminderIntervalDays || 3;
     
     // Restart auto-save with new interval
     if (autoSaveEnabled) {
@@ -6148,7 +6197,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.6.0',
+                version: '2.7.0',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -6169,6 +6218,7 @@ function clearStorage() {
                     defaultLoanDuration: 7,
                     overdueThreshold: 2,
                     maxExtensions: 3,
+                    reminderIntervalDays: 3,
                     autoReminders: true,
                     collectionEmails: true,
                     returnConfirmations: true,
@@ -6342,6 +6392,7 @@ function renderLoansTable(){
             if(overdue) actions += '<button class="btn btn-sm btn-danger" data-action="loan:remind" data-id="'+id+'">Remind</button>';
             actions += '<button class="btn btn-sm btn-warning" data-action="loan:extend" data-id="'+id+'">Extend</button>';
             actions += '<button class="btn btn-sm btn-success" data-action="loan:return" data-id="'+id+'">Return</button>';
+            actions += '<button class="btn btn-sm btn-secondary" data-action="loan:history" data-id="'+id+'">History</button>';
             html += '<tr><td class="cell-mono">'+escapeHtml(loan.keyId)+'<div style="font-weight:400;color:var(--text-secondary);font-size:.85em">'+escapeHtml(key?key.description:'Unknown')+'</div></td>'
                 + '<td>'+escapeHtml(loan.customerName||'')+'</td>'
                 + '<td>'+escapeHtml(loan.siteName||'')+(loan.siteNumber?(' ('+escapeHtml(loan.siteNumber)+')'):'')+'</td>'
@@ -6420,7 +6471,14 @@ function renderNeedsAttention(){
         card('red','Overdue', overdue.length, overdue.length ? ('<ul>'+li(overdue, l=>'<li data-action="loan:return" data-id="'+escapeAttr(l.id)+'">'+escapeHtml(l.keyId)+' \u2014 '+escapeHtml(l.customerName||'')+'</li>')+'</ul>') : '<div class="na-ok">None overdue</div>')
         + card('yellow','Due soon', dueSoon.length, dueSoon.length ? ('<ul>'+li(dueSoon, l=>'<li data-action="loan:extend" data-id="'+escapeAttr(l.id)+'">'+escapeHtml(l.keyId)+' \u2014 due '+escapeHtml(l.expectedReturnDate)+'</li>')+'</ul>') : ('<div class="na-ok">Nothing due within '+soonDays+' days</div>'))
         + card('blue','Unassigned keys', unassigned.length, unassigned.length ? ('<ul>'+li(unassigned, k=>'<li data-action="key:assign" data-id="'+escapeAttr(k.id)+'">'+escapeHtml(k.id)+' \u2014 '+escapeHtml(k.description||'')+'</li>')+'</ul>') : '<div class="na-ok">All available keys assigned</div>')
-        + card(cabs.length?'yellow':'blue','Cabinets near capacity', cabs.length, cabs.length ? ('<ul>'+cabs.slice(0,4).map(c=>'<li style="cursor:default">'+escapeHtml(c.name)+' \u2014 '+c.used+'/'+c.cap+'</li>').join('')+'</ul>') : '<div class="na-ok">Plenty of space</div>');
+        + card(cabs.length?'yellow':'blue','Cabinets near capacity', cabs.length, cabs.length ? ('<ul>'+cabs.slice(0,4).map(c=>'<li style="cursor:default">'+escapeHtml(c.name)+' \u2014 '+c.used+'/'+c.cap+'</li>').join('')+'</ul>') : '<div class="na-ok">Plenty of space</div>')
+        + (function(){
+            if(!appData.settings.autoReminders) return card('blue','Reminders','\u2014','<div class="na-ok" style="color:var(--text-secondary)">Auto-reminders off</div>');
+            var iv = appData.settings.reminderIntervalDays || 3;
+            var due = loans.filter(function(l){ if(new Date(l.expectedReturnDate) >= today) return false; var last = l.lastReminderDate ? new Date(l.lastReminderDate) : null; return !last || ((today - last)/86400000) >= iv; });
+            return card(due.length?'red':'blue','Reminders due', due.length, due.length ? ('<ul>'+li(due, function(l){ return '<li data-action="loan:remind" data-id="'+escapeAttr(l.id)+'">'+escapeHtml(l.keyId)+' \u2014 '+escapeHtml(l.customerName||'')+'</li>'; })+'<li style="cursor:pointer;color:var(--primary);font-weight:600;" onclick="showReminderReview()">Review all due \u2192</li></ul>') : '<div class="na-ok">No reminders due</div>');
+        })()
+;
 }
 
 function dispatchTableAction(scope, action, id){
@@ -6435,6 +6493,7 @@ function dispatchTableAction(scope, action, id){
         if(action === 'remind') return sendReminder(id);
         if(action === 'extend') return showExtendModal(id);
         if(action === 'return') return showReturnModal(id);
+        if(action === 'history') return showLoanHistory(id);
     } else if(scope === 'tech'){
         if(action === 'edit') return editTechnician(id);
         if(action === 'keys') return viewTechnicianKeys(id);
@@ -7147,6 +7206,212 @@ function generateAuditPDF(audit){
         currentAudit.results[keyId].notes = n.value;
     });
 })();
+
+
+// ===================== v2.7.0: version pill, audit log, history views, first-run seed guard, reminders =====================
+function setVersionPill(){
+    var el = document.getElementById('appVersionNum');
+    if(el) el.textContent = (appData && appData.version) ? appData.version : '';
+}
+
+/* ---- First-run seed guard (#3) ---- */
+function maybeSeedOrFirstRun(){
+    // Returning or intentionally-cleared datasets already have a saved blob: never auto-seed.
+    if(window.__hadSavedData){ return; }
+    if(appData.metadata && appData.metadata.firstRunDone){ return; }
+    showFirstRunModal();
+}
+function showFirstRunModal(){
+    var existing = document.getElementById('firstRunModal'); if(existing) existing.remove();
+    var modal = document.createElement('div');
+    modal.className = 'modal show'; modal.id = 'firstRunModal';
+    modal.innerHTML =
+        '<div class="modal-content" style="max-width:480px;">'
+        + '<div class="modal-header"><h3 class="modal-title">Welcome to Key Manager</h3></div>'
+        + '<div class="modal-body">'
+        + '<p style="color:var(--text-secondary);font-size:0.92em;line-height:1.5;">This is a fresh start with no saved data. How would you like to begin?</p>'
+        + '<div style="display:grid;gap:12px;margin-top:16px;">'
+        + '<button class="btn btn-primary" style="padding:16px;text-align:left;line-height:1.4;" onclick="firstRunStartEmpty()"><strong>Start empty</strong><br><span style="font-weight:400;font-size:0.85em;opacity:.9;">Begin with no keys, technicians or cabinets &mdash; add your own.</span></button>'
+        + '<button class="btn btn-secondary" style="padding:16px;text-align:left;line-height:1.4;" onclick="firstRunLoadSamples()"><strong>Load sample data</strong><br><span style="font-weight:400;font-size:0.85em;color:var(--text-secondary);">Populate example keys, technicians and cabinets to explore the app.</span></button>'
+        + '</div></div></div>';
+    document.body.appendChild(modal);
+}
+function closeFirstRunModal(){ var m = document.getElementById('firstRunModal'); if(m) m.remove(); }
+function firstRunStartEmpty(){
+    if(!appData.metadata) appData.metadata = {};
+    ['keys','loans','sites','technicians','cabinets','audits','backups'].forEach(function(k){ if(!Array.isArray(appData[k])) appData[k] = []; });
+    appData.metadata.firstRunDone = true;
+    saveAllDataToStorage();
+    closeFirstRunModal();
+    updateDisplay();
+    showAlert('Started with an empty database', 'success');
+}
+function firstRunLoadSamples(){
+    if(!appData.metadata) appData.metadata = {};
+    initializeData();
+    initializeTechnicians();
+    initializeCabinets();
+    appData.metadata.firstRunDone = true;
+    saveAllDataToStorage();
+    closeFirstRunModal();
+    updateDisplay();
+    if(typeof loadPageContent === 'function') loadPageContent(currentPage);
+    showAlert('Sample data loaded', 'success');
+}
+
+/* ---- Audit Log page (#1) ---- */
+function loadAuditLogContent(content){
+    var audits = Array.isArray(appData.audits) ? appData.audits.slice() : [];
+    audits.sort(function(a,b){ return String(b.timestamp||b.date||'').localeCompare(String(a.timestamp||a.date||'')); });
+    var rowsHtml;
+    if(audits.length === 0){
+        rowsHtml = '<tr><td colspan="8" class="table-empty">No audits recorded yet. Run an audit from the Key Cabinet page \u2014 completed audits appear here for review and re-printing.</td></tr>';
+    } else {
+        rowsHtml = audits.map(function(a){
+            var s = a.summary || {};
+            var id = escapeAttr(a.id);
+            var newMoved = (s.new||0) + (s.relocated||0);
+            return '<tr>'
+                + '<td>'+escapeHtml(a.date||'')+'</td>'
+                + '<td>'+escapeHtml(a.cabinetName||'')+'</td>'
+                + '<td>'+escapeHtml(a.auditedBy||'\u2014')+'</td>'
+                + '<td><span class="badge badge-info">'+(s.total||0)+'</span></td>'
+                + '<td><span style="color:var(--success);font-weight:600;">'+(s.found||0)+'</span></td>'
+                + '<td>'+(((s.lost||0)+(s.damaged||0))>0 ? ('<span style="color:var(--danger);font-weight:600;">'+((s.lost||0)+(s.damaged||0))+'</span>') : '0')+'</td>'
+                + '<td>'+(newMoved>0 ? ('<span style="color:var(--primary);font-weight:600;">+'+newMoved+'</span>') : '\u2014')+'</td>'
+                + '<td><div class="row-actions"><button class="btn btn-sm btn-primary" onclick="viewAuditPdf(\''+id+'\')">View PDF</button></div></td>'
+                + '</tr>';
+        }).join('');
+    }
+    content.innerHTML =
+        '<div class="card"><div class="card-header"><div class="card-title">Audit Log</div>'
+        + '<span class="result-count" style="margin-left:0">'+audits.length+' audit(s) recorded</span></div>'
+        + '<div class="card-body">'
+        + '<div class="table-scroll"><table class="data-table"><thead><tr>'
+        + '<th class="no-sort">Date</th><th class="no-sort">Cabinet</th><th class="no-sort">Audited by</th>'
+        + '<th class="no-sort">Keys</th><th class="no-sort">Found</th><th class="no-sort">Lost/Dmg</th><th class="no-sort">New/Moved</th><th class="no-sort">Report</th>'
+        + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
+        + '</div></div>';
+}
+function viewAuditPdf(auditId){
+    var a = (appData.audits||[]).find(function(x){ return x.id === auditId; });
+    if(!a){ showAlert('Audit record not found', 'error'); return; }
+    if(typeof generateAuditPDF === 'function'){ generateAuditPDF(a); } else { showAlert('PDF generator unavailable', 'error'); }
+}
+
+/* ---- History views (#2) ---- */
+function renderKeyHistoryHtml(key){
+    if(!key || !Array.isArray(key.assignmentHistory) || key.assignmentHistory.length === 0) return '';
+    var rows = key.assignmentHistory.slice().reverse().map(function(h){
+        var when = h.date ? new Date(h.date).toLocaleString() : '';
+        var what;
+        if(h.action === 'unassigned') what = 'Unassigned from ' + escapeHtml(h.previousTechnician||'\u2014') + (h.returnedToCabinet ? (' \u2192 ' + escapeHtml(h.returnedToCabinet)) : '');
+        else if(h.action === 'relocated') what = 'Moved ' + escapeHtml(h.from||'') + ' \u2192 ' + escapeHtml(h.to||'') + (h.locationNumber ? (' (' + escapeHtml(h.locationNumber) + ')') : '');
+        else what = escapeHtml(h.action||'');
+        return '<tr><td style="white-space:nowrap;color:var(--text-secondary);font-size:.85em;vertical-align:top;">'+escapeHtml(when)+'</td><td style="font-size:.9em;">'+what+(h.notes?('<div style="color:var(--text-secondary);font-size:.85em;">'+escapeHtml(h.notes)+'</div>'):'')+'</td></tr>';
+    }).join('');
+    return '<div style="margin-top:15px;"><div style="font-weight:600;font-size:.9em;margin-bottom:6px;">Assignment history</div>'
+        + '<div class="table-scroll"><table class="data-table"><tbody>'+rows+'</tbody></table></div></div>';
+}
+function showLoanHistory(loanId){
+    var loan = getLoans().find(function(l){ return l.id === loanId; });
+    if(!loan){ showAlert('Loan not found', 'error'); return; }
+    var key = getKeys().find(function(k){ return k.id === loan.keyId; });
+    var ext = Array.isArray(loan.extensionHistory) ? loan.extensionHistory : [];
+    var extHtml;
+    if(ext.length === 0){
+        extHtml = '<div class="na-ok" style="color:var(--text-secondary);padding:8px 0;">No extensions recorded.</div>';
+    } else {
+        extHtml = '<div class="table-scroll"><table class="data-table"><thead><tr><th class="no-sort">Extended on</th><th class="no-sort">Old due</th><th class="no-sort">New due</th><th class="no-sort">Reason</th></tr></thead><tbody>'
+            + ext.slice().reverse().map(function(e){ return '<tr><td>'+escapeHtml(e.extendedOn||'')+'</td><td>'+escapeHtml(e.oldDueDate||'')+'</td><td>'+escapeHtml(e.newDueDate||'')+'</td><td>'+escapeHtml(e.reason||'')+'</td></tr>'; }).join('')
+            + '</tbody></table></div>';
+    }
+    var collected = loan.keyCollectedBy && loan.keyCollectionDate;
+    var existing = document.getElementById('loanHistoryModal'); if(existing) existing.remove();
+    var modal = document.createElement('div');
+    modal.className = 'modal show'; modal.id = 'loanHistoryModal';
+    modal.innerHTML =
+        '<div class="modal-content" style="max-width:640px;">'
+        + '<div class="modal-header"><h3 class="modal-title">Loan history \u2014 ' + escapeHtml(loan.keyId) + '</h3>'
+        + '<button class="modal-close" onclick="this.closest(\'.modal\').remove()">\u00d7</button></div>'
+        + '<div class="modal-body">'
+        + '<div style="background:var(--bg-secondary);padding:15px;border-radius:8px;font-size:.9em;line-height:1.6;">'
+        + '<strong>Key:</strong> ' + escapeHtml(loan.keyId) + ' \u2014 ' + escapeHtml(key ? (key.description||'') : '') + '<br>'
+        + '<strong>Customer:</strong> ' + escapeHtml(loan.customerName||'') + (loan.customerCompany ? (' (' + escapeHtml(loan.customerCompany) + ')') : '') + '<br>'
+        + '<strong>Site:</strong> ' + escapeHtml(loan.siteName||'') + (loan.siteNumber ? (' (' + escapeHtml(loan.siteNumber) + ')') : '') + '<br>'
+        + '<strong>Loaned:</strong> ' + escapeHtml(loan.loanDate||'') + ' &nbsp; <strong>Due:</strong> ' + escapeHtml(loan.expectedReturnDate||'') + (loan.actualReturnDate ? (' &nbsp; <strong>Returned:</strong> ' + escapeHtml(loan.actualReturnDate)) : '') + '<br>'
+        + '<strong>Status:</strong> ' + escapeHtml(loan.status||'') + (loan.reminderCount ? (' &nbsp; \u00b7 ' + loan.reminderCount + ' reminder(s) sent') : '')
+        + (collected ? ('<br><strong>Collected by:</strong> ' + escapeHtml(loan.keyCollectedBy) + ' \u00b7 ' + escapeHtml(new Date(loan.keyCollectionDate).toLocaleString())) : '')
+        + '</div>'
+        + '<div style="margin-top:16px;"><div style="font-weight:600;font-size:.95em;margin-bottom:8px;">Extension history</div>' + extHtml + '</div>'
+        + '</div>'
+        + '<div class="modal-footer"><button class="btn btn-secondary" onclick="this.closest(\'.modal\').remove()">Close</button></div>'
+        + '</div>';
+    document.body.appendChild(modal);
+}
+
+/* ---- Overdue reminder flagging (#5) ---- */
+function getDueReminders(){
+    if(!appData.settings.autoReminders) return [];
+    var today = new Date(); today.setHours(0,0,0,0);
+    var iv = appData.settings.reminderIntervalDays || 3;
+    return getLoans().filter(function(l){
+        if(l.status !== 'active') return false;
+        if(new Date(l.expectedReturnDate) >= today) return false;
+        var last = l.lastReminderDate ? new Date(l.lastReminderDate) : null;
+        return !last || ((today - last)/86400000) >= iv;
+    });
+}
+function checkAutoReminders(){
+    if(!appData.settings.autoReminders) return;
+    var due = getDueReminders();
+    if(due.length){ showAlert(due.length + ' overdue loan(s) need a reminder \u2014 see the dashboard', 'info'); }
+}
+function showReminderReview(){
+    var due = getDueReminders();
+    var existing = document.getElementById('reminderReviewModal'); if(existing) existing.remove();
+    var body;
+    if(due.length === 0){
+        body = '<div class="na-ok" style="color:var(--text-secondary);padding:10px 0;">No reminders are due right now.</div>';
+    } else {
+        var today = new Date(); today.setHours(0,0,0,0);
+        body = '<div class="table-scroll"><table class="data-table"><thead><tr><th class="no-sort">Key</th><th class="no-sort">Customer</th><th class="no-sort">Due</th><th class="no-sort">Last reminder</th><th class="no-sort"></th></tr></thead><tbody>'
+            + due.map(function(l){
+                var over = Math.floor((today - new Date(l.expectedReturnDate))/86400000);
+                var last = l.lastReminderDate ? new Date(l.lastReminderDate).toLocaleDateString() : 'never';
+                return '<tr><td class="cell-mono">'+escapeHtml(l.keyId)+'</td><td>'+escapeHtml(l.customerName||'')+'</td>'
+                    + '<td>'+escapeHtml(l.expectedReturnDate||'')+'<div style="color:var(--danger);font-size:.85em;font-weight:600;">'+over+'d overdue</div></td>'
+                    + '<td style="color:var(--text-secondary);font-size:.9em;">'+escapeHtml(last)+' \u00b7 '+(l.reminderCount||0)+' sent</td>'
+                    + '<td><button class="btn btn-sm btn-danger" data-action="loan:remind" data-id="'+escapeAttr(l.id)+'">Send</button></td></tr>';
+            }).join('')
+            + '</tbody></table></div><p style="font-size:.82em;color:var(--text-secondary);margin-top:10px;">Each reminder opens the branded preview (with Outlook / .eml export). Nothing is sent automatically.</p>';
+    }
+    var modal = document.createElement('div');
+    modal.className = 'modal show'; modal.id = 'reminderReviewModal';
+    modal.innerHTML =
+        '<div class="modal-content" style="max-width:680px;">'
+        + '<div class="modal-header"><h3 class="modal-title">Reminders due (' + due.length + ')</h3>'
+        + '<button class="modal-close" onclick="this.closest(\'.modal\').remove()">\u00d7</button></div>'
+        + '<div class="modal-body">' + body + '</div>'
+        + '<div class="modal-footer"><button class="btn btn-secondary" onclick="this.closest(\'.modal\').remove()">Close</button></div>'
+        + '</div>';
+    document.body.appendChild(modal);
+}
+
+window.setVersionPill = setVersionPill;
+window.maybeSeedOrFirstRun = maybeSeedOrFirstRun;
+window.showFirstRunModal = showFirstRunModal;
+window.firstRunStartEmpty = firstRunStartEmpty;
+window.firstRunLoadSamples = firstRunLoadSamples;
+window.closeFirstRunModal = closeFirstRunModal;
+window.loadAuditLogContent = loadAuditLogContent;
+window.viewAuditPdf = viewAuditPdf;
+window.renderKeyHistoryHtml = renderKeyHistoryHtml;
+window.showLoanHistory = showLoanHistory;
+window.getDueReminders = getDueReminders;
+window.checkAutoReminders = checkAutoReminders;
+window.showReminderReview = showReminderReview;
+
 
 // Make functions globally accessible
 // Complete list of window assignments
