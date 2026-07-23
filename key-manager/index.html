@@ -1713,9 +1713,12 @@
 	   assignment/extension history in key & loan detail views; first-run seed guard
 	   (Start empty / Load samples — no more sample re-injection); overdue reminder
 	   flagging with configurable interval + review modal. */
+	/* v2.8.0: reports overhaul (date-range filter, per-technician & per-cabinet
+	   breakdowns, Excel + PDF export); managed customers & sites (editable records
+	   merged with loan-derived entries, fed into the loan customer picker). */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.7.0',
+    version: '2.8.0',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -2563,6 +2566,7 @@ function loadAllDataFromStorage() {
 			if (!Array.isArray(appData.technicians)) appData.technicians = [];
 			if (!Array.isArray(appData.cabinets)) appData.cabinets = [];
 			if (!Array.isArray(appData.audits)) appData.audits = [];
+			if (!Array.isArray(appData.customers)) appData.customers = [];
 			
         }
     } 
@@ -2710,6 +2714,7 @@ function createBackup(type = 'manual') {
                 technicians: [...(appData.technicians || [])],
                 cabinets: [...(appData.cabinets || [])],
                 audits: [...(appData.audits || [])],
+                customers: [...(appData.customers || [])],
                 settings: { ...appData.settings }
             },
             size: JSON.stringify(appData).length
@@ -2810,6 +2815,7 @@ function restoreBackup(backupId) {
         if (Array.isArray(backup.data.technicians)) appData.technicians = [...backup.data.technicians];
         if (Array.isArray(backup.data.cabinets)) appData.cabinets = [...backup.data.cabinets];
         if (Array.isArray(backup.data.audits)) appData.audits = [...backup.data.audits];
+        if (Array.isArray(backup.data.customers)) appData.customers = [...backup.data.customers];
         appData.settings = { ...appData.settings, ...backup.data.settings };
         
         // Save and update
@@ -2994,6 +3000,12 @@ function exportData(format = 'excel') {
             const historyWS = XLSX.utils.json_to_sheet(appData.loans);
             XLSX.utils.book_append_sheet(wb, historyWS, "Loan History");
             
+            // Managed Customers
+            if (appData.customers && appData.customers.length > 0) {
+                const customersWS = XLSX.utils.json_to_sheet(appData.customers);
+                XLSX.utils.book_append_sheet(wb, customersWS, "Customers");
+            }
+            
             // Sites
 			if (appData.sites.length > 0) {
 				const sitesWS = XLSX.utils.json_to_sheet(appData.sites);
@@ -3020,6 +3032,7 @@ function exportData(format = 'excel') {
 				'Active Loans': activeLoans.length,
 				'Overdue Loans': getOverdueLoans().length,
 				'Total Sites': appData.sites.length,
+				'Total Customers': appData.customers ? appData.customers.length : 0,
 				'Total Technicians': appData.technicians ? appData.technicians.length : 0,
 				'Total Cabinets': appData.cabinets ? appData.cabinets.length : 0,
 				'Export Date': new Date().toLocaleString(),
@@ -3672,67 +3685,47 @@ function loadHistoryContent(content) {
 }
 
 function loadCustomersContent(content) {
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Customer Database</div>
-            </div>
-            <div class="card-body">
-                <div id="customersList"></div>
-            </div>
-        </div>
-    `;
+    content.innerHTML = ''
+        + '<div class="card"><div class="card-header"><div class="card-title">Customer Database</div>'
+        + '<button class="btn btn-sm btn-primary" onclick="showCustomerModal()"><span>+</span> Add Customer</button>'
+        + '</div><div class="card-body"><div id="customersList"></div></div></div>';
     displayCustomers();
 }
 
 function loadSitesContent(content) {
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Site Locations</div>
-            </div>
-            <div class="card-body">
-                <div id="sitesList"></div>
-            </div>
-        </div>
-    `;
+    content.innerHTML = ''
+        + '<div class="card"><div class="card-header"><div class="card-title">Site Locations</div>'
+        + '<button class="btn btn-sm btn-primary" onclick="showSiteModal()"><span>+</span> Add Site</button>'
+        + '</div><div class="card-body"><div id="sitesList"></div></div></div>';
     displaySites();
 }
 
 function loadReportsContent(content) {
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Reports & Analytics</div>
-            </div>
-            <div class="card-body">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                    <div class="stat-card" style="cursor: pointer;" onclick="generateReport('monthly')">
-                        <div class="stat-icon blue"><span>📊</span></div>
-                        <div class="stat-details">
-                            <div class="stat-label">Monthly Report</div>
-                            <div style="font-size: 0.9em; color: var(--text-secondary);">Generate monthly activity report</div>
-                        </div>
-                    </div>
-                    <div class="stat-card" style="cursor: pointer;" onclick="generateReport('overdue')">
-                        <div class="stat-icon red"><span>⚠️</span></div>
-                        <div class="stat-details">
-                            <div class="stat-label">Overdue Report</div>
-                            <div style="font-size: 0.9em; color: var(--text-secondary);">View all overdue items</div>
-                        </div>
-                    </div>
-                    <div class="stat-card" style="cursor: pointer;" onclick="generateReport('customer')">
-                        <div class="stat-icon green"><span>👥</span></div>
-                        <div class="stat-details">
-                            <div class="stat-label">Customer Report</div>
-                            <div style="font-size: 0.9em; color: var(--text-secondary);">Customer loan history</div>
-                        </div>
-                    </div>
-                </div>
-                <div id="reportOutput" style="margin-top: 30px;"></div>
-            </div>
-        </div>
-    `;
+    content.innerHTML = ''
+        + '<div class="card"><div class="card-header"><div class="card-title">Reports & Analytics</div>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<button class="btn btn-sm btn-success" onclick="exportReportExcel()">\u2b07\ufe0f Excel</button>'
+        + '<button class="btn btn-sm btn-primary" onclick="exportReportPDF()">\ud83d\udda8\ufe0f PDF</button>'
+        + '</div></div>'
+        + '<div class="card-body">'
+        + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;">'
+        + '<div class="form-group" style="margin:0;"><label class="form-label">From</label><input type="date" id="reportDateFrom" class="form-input" style="max-width:170px;"></div>'
+        + '<div class="form-group" style="margin:0;"><label class="form-label">To</label><input type="date" id="reportDateTo" class="form-input" style="max-width:170px;"></div>'
+        + '<button class="btn btn-primary" onclick="renderReports()">Apply</button>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+        + '<button class="btn btn-sm btn-secondary" onclick="setReportPreset(\'month\')">This month</button>'
+        + '<button class="btn btn-sm btn-secondary" onclick="setReportPreset(\'30\')">Last 30 days</button>'
+        + '<button class="btn btn-sm btn-secondary" onclick="setReportPreset(\'90\')">Last 90 days</button>'
+        + '<button class="btn btn-sm btn-secondary" onclick="setReportPreset(\'all\')">All time</button>'
+        + '</div></div>'
+        + '<div id="reportRangeLabel" style="font-size:.85em;color:var(--text-secondary);margin-bottom:16px;"></div>'
+        + '<div id="reportSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;"></div>'
+        + '<div style="display:grid;grid-template-columns:1fr;gap:24px;">'
+        + '<div><div style="font-weight:700;margin-bottom:8px;">By technician</div><div id="reportTech"></div></div>'
+        + '<div><div style="font-weight:700;margin-bottom:8px;">By cabinet</div><div id="reportCabinet"></div></div>'
+        + '</div>'
+        + '</div></div>';
+    setReportPreset('30');
 }
 
 function loadSettingsContent(content) {
@@ -4083,95 +4076,90 @@ function displayCompleteHistory() {
 }
 
 function displayCustomers() {
-    const loans = getLoans();
-    // Get unique customers from loans
-    const customers = {};
-    loans.forEach(loan => {
-        if (!customers[loan.customerEmail]) {
-            customers[loan.customerEmail] = {
-                name: loan.customerName,
-                email: loan.customerEmail,
-                phone: loan.customerPhone,
-                company: loan.customerCompany || 'N/A',
-                loans: []
-            };
-        }
-        customers[loan.customerEmail].loans.push(loan);
-    });
-    
-    const container = document.getElementById('customersList');
+    var container = document.getElementById('customersList');
     if (!container) return;
-    
-    const customerArray = Object.values(customers);
-    
-    if (customerArray.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No customers yet</div></div>';
+    var loans = getLoans();
+    var derived = {};
+    loans.forEach(function(l){
+        var k = ((l.customerEmail||'').toLowerCase()) || ('name:' + ((l.customerName||'').toLowerCase()));
+        if (k === 'name:') return;
+        if (!derived[k]) derived[k] = { name:l.customerName||'', email:l.customerEmail||'', phone:l.customerPhone||'', company:l.customerCompany||'', loans:[] };
+        derived[k].loans.push(l);
+    });
+    var managed = (appData.customers||[]);
+    var rows = [], used = {};
+    managed.forEach(function(c){
+        var k = ((c.email||'').toLowerCase()) || ('name:' + ((c.name||'').toLowerCase()));
+        used[k] = true;
+        var dd = derived[k];
+        rows.push({ managed:true, id:c.id, name:c.name||'', email:c.email||'', phone:c.phone||'', company:c.company||'', notes:c.notes||'', loans: dd ? dd.loans : [] });
+    });
+    Object.keys(derived).forEach(function(k){
+        if (used[k]) return;
+        var dd = derived[k];
+        rows.push({ managed:false, name:dd.name, email:dd.email, phone:dd.phone, company:dd.company||'N/A', notes:'', loans:dd.loans });
+    });
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83d\udc65</div><div class="empty-text">No customers yet</div><div style="margin-top:12px;"><button class="btn btn-primary" onclick="showCustomerModal()">+ Add Customer</button></div></div>';
         return;
     }
-    
-    container.innerHTML = customerArray.map(customer => `
-        <div class="key-item">
-            <div class="key-header">
-                <div>
-                    <div class="key-id">${customer.name}</div>
-                    <div class="key-details">
-                        <strong>Email:</strong> ${customer.email}<br>
-                        <strong>Phone:</strong> ${customer.phone}<br>
-                        <strong>Company:</strong> ${customer.company}
-                    </div>
-                    <div class="key-meta">
-                        <span>📋 ${customer.loans.length} loan(s)</span>
-                        <span>✅ ${customer.loans.filter(l => l.status === 'returned').length} returned</span>
-                        <span>⚠️ ${customer.loans.filter(l => l.status === 'active').length} active</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    rows.sort(function(a,b){ return ((b.managed?1:0)-(a.managed?1:0)) || String(a.name).localeCompare(String(b.name)); });
+    container.innerHTML = rows.map(function(c){
+        var active = c.loans.filter(function(l){ return l.status === 'active'; }).length;
+        var returned = c.loans.filter(function(l){ return l.status === 'returned'; }).length;
+        var badge = c.managed ? '<span class="badge badge-info">Managed</span>' : '<span class="badge" style="background:var(--bg-secondary);color:var(--text-secondary);">From loans</span>';
+        var actions = c.managed
+            ? '<button class="btn btn-sm btn-secondary" onclick="showCustomerModal(\'' + escapeAttr(c.id) + '\')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteCustomer(\'' + escapeAttr(c.id) + '\')">Delete</button>'
+            : '<button class="btn btn-sm btn-primary" onclick="promoteCustomerFromLoans(\'' + jsAttr(c.name) + '\',\'' + jsAttr(c.email) + '\',\'' + jsAttr(c.phone) + '\',\'' + jsAttr(c.company) + '\')">Save as managed</button>';
+        return '<div class="key-item"><div class="key-header"><div style="flex:1;">'
+            + '<div class="key-id">' + escapeHtml(c.name) + ' ' + badge + '</div>'
+            + '<div class="key-details"><strong>Email:</strong> ' + escapeHtml(c.email||'\u2014') + '<br><strong>Phone:</strong> ' + escapeHtml(c.phone||'\u2014') + '<br><strong>Company:</strong> ' + escapeHtml(c.company||'\u2014') + (c.notes ? ('<br><strong>Notes:</strong> ' + escapeHtml(c.notes)) : '') + '</div>'
+            + '<div class="key-meta"><span>\ud83d\udccb ' + c.loans.length + ' loan(s)</span><span>\u2705 ' + returned + ' returned</span><span>\u26a0\ufe0f ' + active + ' active</span></div>'
+            + '</div><div class="row-actions" style="align-self:flex-start;">' + actions + '</div></div></div>';
+    }).join('');
 }
 
 function displaySites() {
-    const loans = getLoans();
-    // Get unique sites from loans
-    const sites = {};
-    loans.forEach(loan => {
-        const siteKey = loan.siteNumber;
-        if (!sites[siteKey]) {
-            sites[siteKey] = {
-                name: loan.siteName,
-                number: loan.siteNumber,
-                loans: []
-            };
-        }
-        sites[siteKey].loans.push(loan);
-    });
-    
-    const container = document.getElementById('sitesList');
+    var container = document.getElementById('sitesList');
     if (!container) return;
-    
-    const siteArray = Object.values(sites);
-    
-    if (siteArray.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-text">No sites recorded</div></div>';
+    var loans = getLoans();
+    var derived = {};
+    loans.forEach(function(l){
+        var k = (l.siteNumber||'').trim() || ('name:' + ((l.siteName||'').toLowerCase().trim()));
+        if (k === 'name:' || k === '') return;
+        if (!derived[k]) derived[k] = { name:l.siteName||'', number:l.siteNumber||'', loans:[] };
+        derived[k].loans.push(l);
+    });
+    var managed = (appData.sites||[]);
+    var rows = [], used = {};
+    managed.forEach(function(st){
+        var k = (st.number||'').trim() || ('name:' + ((st.name||'').toLowerCase().trim()));
+        used[k] = true;
+        var dd = derived[k];
+        rows.push({ managed:true, id:st.id, name:st.name||'', number:st.number||'', address:st.address||'', notes:st.notes||'', loans: dd ? dd.loans : [] });
+    });
+    Object.keys(derived).forEach(function(k){
+        if (used[k]) return;
+        var dd = derived[k];
+        rows.push({ managed:false, name:dd.name, number:dd.number, address:'', notes:'', loans:dd.loans });
+    });
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udfe2</div><div class="empty-text">No sites recorded</div><div style="margin-top:12px;"><button class="btn btn-primary" onclick="showSiteModal()">+ Add Site</button></div></div>';
         return;
     }
-    
-    container.innerHTML = siteArray.map(site => `
-        <div class="key-item">
-            <div class="key-header">
-                <div>
-                    <div class="key-id">${site.name}</div>
-                    <div class="key-details">
-                        <strong>Site Number:</strong> ${site.number}
-                    </div>
-                    <div class="key-meta">
-                        <span>🔑 ${site.loans.length} key loan(s)</span>
-                        <span>📅 Last activity: ${site.loans[site.loans.length - 1].loanDate}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    rows.sort(function(a,b){ return ((b.managed?1:0)-(a.managed?1:0)) || String(a.name).localeCompare(String(b.name)); });
+    container.innerHTML = rows.map(function(st){
+        var lastLoan = st.loans.length ? st.loans[st.loans.length-1] : null;
+        var badge = st.managed ? '<span class="badge badge-info">Managed</span>' : '<span class="badge" style="background:var(--bg-secondary);color:var(--text-secondary);">From loans</span>';
+        var actions = st.managed
+            ? '<button class="btn btn-sm btn-secondary" onclick="showSiteModal(\'' + escapeAttr(st.id) + '\')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteSite(\'' + escapeAttr(st.id) + '\')">Delete</button>'
+            : '<button class="btn btn-sm btn-primary" onclick="promoteSiteFromLoans(\'' + jsAttr(st.name) + '\',\'' + jsAttr(st.number) + '\')">Save as managed</button>';
+        return '<div class="key-item"><div class="key-header"><div style="flex:1;">'
+            + '<div class="key-id">' + escapeHtml(st.name||'\u2014') + ' ' + badge + '</div>'
+            + '<div class="key-details"><strong>Site Number:</strong> ' + escapeHtml(st.number||'\u2014') + (st.address ? ('<br><strong>Address:</strong> ' + escapeHtml(st.address)) : '') + (st.notes ? ('<br><strong>Notes:</strong> ' + escapeHtml(st.notes)) : '') + '</div>'
+            + '<div class="key-meta"><span>\ud83d\udd11 ' + st.loans.length + ' key loan(s)</span>' + (lastLoan ? ('<span>\ud83d\udcc5 Last activity: ' + escapeHtml(lastLoan.loanDate||'') + '</span>') : '') + '</div>'
+            + '</div><div class="row-actions" style="align-self:flex-start;">' + actions + '</div></div></div>';
+    }).join('');
 }
 
 function generateReport(type) {
@@ -6197,7 +6185,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.7.0',
+                version: '2.8.0',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -6211,6 +6199,7 @@ function clearStorage() {
                 technicians: [],
                 cabinets: [],
                 audits: [],
+                customers: [],
                 settings: {
                     dbLocation: 'Browser Storage',
                     backupFrequency: 'daily',
@@ -6623,15 +6612,22 @@ function keyComboInput(val){
 // ----- customer field (customers are derived from past loans) -----
 function getLoanCustomerList(){
     const seen = {}, out = [];
-    getLoans().forEach(function(l){
-        const key = (l.customerEmail||'').toLowerCase() || ('name:' + (l.customerName||'').toLowerCase());
-        if(key === 'name:') return;
-        if(!seen[key]){ seen[key] = { name:l.customerName||'', email:l.customerEmail||'', phone:l.customerPhone||'', company:l.customerCompany||'', count:0 }; out.push(seen[key]); }
-        seen[key].count++;
+    const keyOf = function(name, email){ return (email||'').toLowerCase() || ('name:' + (name||'').toLowerCase()); };
+    (appData.customers||[]).forEach(function(c){
+        const k = keyOf(c.name, c.email);
+        if(k === 'name:') return;
+        if(!seen[k]){ seen[k] = { name:c.name||'', email:c.email||'', phone:c.phone||'', company:c.company||'', count:0, managed:true }; out.push(seen[k]); }
     });
-    out.sort(function(a,b){ return (b.count - a.count) || a.name.localeCompare(b.name); });
+    getLoans().forEach(function(l){
+        const k = keyOf(l.customerName, l.customerEmail);
+        if(k === 'name:') return;
+        if(!seen[k]){ seen[k] = { name:l.customerName||'', email:l.customerEmail||'', phone:l.customerPhone||'', company:l.customerCompany||'', count:0, managed:false }; out.push(seen[k]); }
+        seen[k].count++;
+    });
+    out.sort(function(a,b){ return ((b.managed?1:0)-(a.managed?1:0)) || (b.count - a.count) || a.name.localeCompare(b.name); });
     return out;
 }
+
 function customerComboItems(q){
     const ql = (q || '').toLowerCase();
     const matches = getLoanCustomerList().filter(function(c){
@@ -7411,6 +7407,306 @@ window.showLoanHistory = showLoanHistory;
 window.getDueReminders = getDueReminders;
 window.checkAutoReminders = checkAutoReminders;
 window.showReminderReview = showReminderReview;
+
+
+
+// ===================== v2.8.0: managed customers & sites (#6) + reports overhaul (#4) =====================
+function getCustomers(){ if(!Array.isArray(appData.customers)) appData.customers = []; return appData.customers; }
+function _sites(){ if(!Array.isArray(appData.sites)) appData.sites = []; return appData.sites; }
+
+/* ---- Managed customers ---- */
+function showCustomerModal(id){
+    var c = id ? getCustomers().find(function(x){ return x.id === id; }) : null;
+    var ex = document.getElementById('customerModalDyn'); if(ex) ex.remove();
+    var v = function(x){ return escapeAttr(x||''); };
+    var modal = document.createElement('div');
+    modal.className = 'modal show'; modal.id = 'customerModalDyn';
+    modal.innerHTML =
+        '<div class="modal-content" style="max-width:520px;">'
+        + '<div class="modal-header"><h3 class="modal-title">' + (c ? 'Edit Customer' : 'Add Customer') + '</h3>'
+        + '<button class="modal-close" onclick="this.closest(\'.modal\').remove()">\u00d7</button></div>'
+        + '<div class="modal-body">'
+        + '<input type="hidden" id="custMgId" value="' + v(c && c.id) + '">'
+        + '<div class="form-group"><label class="form-label">Name *</label><input type="text" id="custMgName" class="form-input" value="' + v(c && c.name) + '"></div>'
+        + '<div class="form-row"><div class="form-group"><label class="form-label">Email</label><input type="email" id="custMgEmail" class="form-input" value="' + v(c && c.email) + '"></div>'
+        + '<div class="form-group"><label class="form-label">Phone</label><input type="text" id="custMgPhone" class="form-input" value="' + v(c && c.phone) + '"></div></div>'
+        + '<div class="form-group"><label class="form-label">Company</label><input type="text" id="custMgCompany" class="form-input" value="' + v(c && c.company) + '"></div>'
+        + '<div class="form-group"><label class="form-label">Notes</label><textarea id="custMgNotes" class="form-textarea">' + escapeHtml(c && c.notes ? c.notes : '') + '</textarea></div>'
+        + '</div>'
+        + '<div class="modal-footer"><button class="btn btn-secondary" onclick="this.closest(\'.modal\').remove()">Cancel</button>'
+        + '<button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button></div>'
+        + '</div>';
+    document.body.appendChild(modal);
+    var nm = document.getElementById('custMgName'); if(nm) nm.focus();
+}
+function saveCustomer(){
+    var idEl = document.getElementById('custMgId');
+    var name = ((document.getElementById('custMgName')||{}).value||'').trim();
+    if(!name){ showAlert('Customer name is required', 'error'); var n=document.getElementById('custMgName'); if(n) n.classList.add('invalid'); return; }
+    var rec = {
+        name: name,
+        email: ((document.getElementById('custMgEmail')||{}).value||'').trim(),
+        phone: ((document.getElementById('custMgPhone')||{}).value||'').trim(),
+        company: ((document.getElementById('custMgCompany')||{}).value||'').trim(),
+        notes: ((document.getElementById('custMgNotes')||{}).value||'').trim()
+    };
+    var list = getCustomers();
+    var editId = idEl ? idEl.value : '';
+    if(editId){
+        var i = list.findIndex(function(x){ return x.id === editId; });
+        if(i !== -1){ rec.id = editId; list[i] = rec; } else { rec.id = 'CUST-' + Date.now(); list.push(rec); }
+    } else { rec.id = 'CUST-' + Date.now(); list.push(rec); }
+    markDataChanged();
+    var m = document.getElementById('customerModalDyn'); if(m) m.remove();
+    displayCustomers();
+    showAlert('Customer saved', 'success');
+}
+function deleteCustomer(id){
+    var list = getCustomers();
+    var i = list.findIndex(function(x){ return x.id === id; });
+    if(i === -1) return;
+    var removed = list[i], at = i;
+    list.splice(i, 1);
+    markDataChanged();
+    displayCustomers();
+    showUndoToast('Customer deleted', function(){ getCustomers().splice(Math.min(at, getCustomers().length), 0, removed); markDataChanged(); displayCustomers(); });
+}
+function promoteCustomerFromLoans(name, email, phone, company){
+    var list = getCustomers();
+    var k = (email||'').toLowerCase() || ('name:' + (name||'').toLowerCase());
+    var exists = list.some(function(c){ return (((c.email||'').toLowerCase()) || ('name:'+(c.name||'').toLowerCase())) === k; });
+    if(exists){ showAlert('Already a managed customer', 'info'); return; }
+    list.push({ id:'CUST-' + Date.now(), name:name||'', email:email||'', phone:phone||'', company:(company==='N/A'?'':(company||'')), notes:'' });
+    markDataChanged();
+    displayCustomers();
+    showAlert('Saved as managed customer', 'success');
+}
+
+/* ---- Managed sites ---- */
+function showSiteModal(id){
+    var st = id ? _sites().find(function(x){ return x.id === id; }) : null;
+    var ex = document.getElementById('siteModalDyn'); if(ex) ex.remove();
+    var v = function(x){ return escapeAttr(x||''); };
+    var modal = document.createElement('div');
+    modal.className = 'modal show'; modal.id = 'siteModalDyn';
+    modal.innerHTML =
+        '<div class="modal-content" style="max-width:520px;">'
+        + '<div class="modal-header"><h3 class="modal-title">' + (st ? 'Edit Site' : 'Add Site') + '</h3>'
+        + '<button class="modal-close" onclick="this.closest(\'.modal\').remove()">\u00d7</button></div>'
+        + '<div class="modal-body">'
+        + '<input type="hidden" id="siteMgId" value="' + v(st && st.id) + '">'
+        + '<div class="form-row"><div class="form-group"><label class="form-label">Site Name *</label><input type="text" id="siteMgName" class="form-input" value="' + v(st && st.name) + '"></div>'
+        + '<div class="form-group"><label class="form-label">Site Number</label><input type="text" id="siteMgNumber" class="form-input" value="' + v(st && st.number) + '"></div></div>'
+        + '<div class="form-group"><label class="form-label">Address</label><input type="text" id="siteMgAddress" class="form-input" value="' + v(st && st.address) + '"></div>'
+        + '<div class="form-group"><label class="form-label">Notes</label><textarea id="siteMgNotes" class="form-textarea">' + escapeHtml(st && st.notes ? st.notes : '') + '</textarea></div>'
+        + '</div>'
+        + '<div class="modal-footer"><button class="btn btn-secondary" onclick="this.closest(\'.modal\').remove()">Cancel</button>'
+        + '<button class="btn btn-primary" onclick="saveSite()">Save Site</button></div>'
+        + '</div>';
+    document.body.appendChild(modal);
+    var nm = document.getElementById('siteMgName'); if(nm) nm.focus();
+}
+function saveSite(){
+    var idEl = document.getElementById('siteMgId');
+    var name = ((document.getElementById('siteMgName')||{}).value||'').trim();
+    if(!name){ showAlert('Site name is required', 'error'); var n=document.getElementById('siteMgName'); if(n) n.classList.add('invalid'); return; }
+    var rec = {
+        name: name,
+        number: ((document.getElementById('siteMgNumber')||{}).value||'').trim(),
+        address: ((document.getElementById('siteMgAddress')||{}).value||'').trim(),
+        notes: ((document.getElementById('siteMgNotes')||{}).value||'').trim()
+    };
+    var list = _sites();
+    var editId = idEl ? idEl.value : '';
+    if(editId){
+        var i = list.findIndex(function(x){ return x.id === editId; });
+        if(i !== -1){ rec.id = editId; list[i] = rec; } else { rec.id = 'SITE-' + Date.now(); list.push(rec); }
+    } else { rec.id = 'SITE-' + Date.now(); list.push(rec); }
+    markDataChanged();
+    var m = document.getElementById('siteModalDyn'); if(m) m.remove();
+    displaySites();
+    showAlert('Site saved', 'success');
+}
+function deleteSite(id){
+    var list = _sites();
+    var i = list.findIndex(function(x){ return x.id === id; });
+    if(i === -1) return;
+    var removed = list[i], at = i;
+    list.splice(i, 1);
+    markDataChanged();
+    displaySites();
+    showUndoToast('Site deleted', function(){ _sites().splice(Math.min(at, _sites().length), 0, removed); markDataChanged(); displaySites(); });
+}
+function promoteSiteFromLoans(name, number){
+    var list = _sites();
+    var k = (number||'').trim() || ('name:' + (name||'').toLowerCase());
+    var exists = list.some(function(s){ return (((s.number||'').trim()) || ('name:'+(s.name||'').toLowerCase())) === k; });
+    if(exists){ showAlert('Already a managed site', 'info'); return; }
+    list.push({ id:'SITE-' + Date.now(), name:name||'', number:number||'', address:'', notes:'' });
+    markDataChanged();
+    displaySites();
+    showAlert('Saved as managed site', 'success');
+}
+
+/* ---- Reports engine ---- */
+function _inRange(dateStr, from, to){
+    if(!from && !to) return true;
+    if(!dateStr) return false;
+    var d = new Date(dateStr);
+    if(isNaN(d.getTime())) return false;
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+}
+function getReportRange(){
+    var f = document.getElementById('reportDateFrom'), t = document.getElementById('reportDateTo');
+    var from = (f && f.value) ? new Date(f.value + 'T00:00:00') : null;
+    var to = (t && t.value) ? new Date(t.value + 'T23:59:59') : null;
+    return { from:from, to:to, fromStr:(f && f.value) || '', toStr:(t && t.value) || '' };
+}
+function setReportPreset(preset){
+    var f = document.getElementById('reportDateFrom'), t = document.getElementById('reportDateTo');
+    if(!f || !t) return;
+    var today = new Date(); today.setHours(0,0,0,0);
+    var iso = function(dt){ return dt.toISOString().split('T')[0]; };
+    if(preset === 'all'){ f.value = ''; t.value = ''; }
+    else if(preset === 'month'){ f.value = iso(new Date(today.getFullYear(), today.getMonth(), 1)); t.value = iso(today); }
+    else { var days = parseInt(preset, 10) || 30; var s = new Date(today); s.setDate(s.getDate() - (days - 1)); f.value = iso(s); t.value = iso(today); }
+    renderReports();
+}
+function _reportData(){
+    var range = getReportRange();
+    var loans = getLoans();
+    var inRange = loans.filter(function(l){ return _inRange(l.loanDate, range.from, range.to); });
+    return { range:range, loans:loans, inRange:inRange };
+}
+function _reportSummaryRows(d){
+    var returnedInRange = d.loans.filter(function(l){ return l.actualReturnDate && _inRange(l.actualReturnDate, d.range.from, d.range.to); });
+    var activeNow = d.loans.filter(function(l){ return l.status === 'active'; }).length;
+    var overdueNow = (typeof getOverdueLoans === 'function') ? getOverdueLoans().length : 0;
+    var durs = returnedInRange.map(function(l){ var a = new Date(l.loanDate), b = new Date(l.actualReturnDate); return (isNaN(a.getTime())||isNaN(b.getTime())) ? null : Math.max(0, Math.round((b - a)/86400000)); }).filter(function(x){ return x !== null; });
+    var avg = durs.length ? Math.round(durs.reduce(function(s,x){ return s + x; }, 0) / durs.length) : 0;
+    return [
+        { label:'Loans created', value:d.inRange.length },
+        { label:'Returned', value:returnedInRange.length },
+        { label:'Active now', value:activeNow },
+        { label:'Overdue now', value:overdueNow },
+        { label:'Avg loan length (days)', value:avg }
+    ];
+}
+function _reportTechRows(d){
+    var keys = getKeys();
+    var names = {};
+    (appData.technicians||[]).forEach(function(t){ if(t && t.name) names[t.name] = true; });
+    keys.forEach(function(k){ if(k.assignedTechnician) names[k.assignedTechnician] = true; });
+    d.loans.forEach(function(l){ if(l.keyCollectedBy) names[l.keyCollectedBy] = true; });
+    return Object.keys(names).map(function(name){
+        return {
+            Technician: name,
+            'Keys assigned': keys.filter(function(k){ return k.assignedTechnician === name; }).length,
+            'Loans handled': d.inRange.filter(function(l){ return l.keyCollectedBy === name; }).length,
+            'Active (theirs)': d.loans.filter(function(l){ return l.keyCollectedBy === name && l.status === 'active'; }).length
+        };
+    }).sort(function(a,b){ return b['Loans handled'] - a['Loans handled'] || String(a.Technician).localeCompare(String(b.Technician)); });
+}
+function _reportCabRows(d){
+    var keys = getKeys();
+    var today = new Date(); today.setHours(0,0,0,0);
+    var locOf = {}; keys.forEach(function(k){ locOf[k.id] = k.location; });
+    return (appData.cabinets||[]).map(function(c){
+        var inCab = keys.filter(function(k){ return k.location === c.name; });
+        var cap = c.capacity || 50;
+        var loansRange = d.inRange.filter(function(l){ return locOf[l.keyId] === c.name; }).length;
+        var overdueNow = d.loans.filter(function(l){ return l.status === 'active' && locOf[l.keyId] === c.name && new Date(l.expectedReturnDate) < today; }).length;
+        return {
+            Cabinet: c.name,
+            Keys: inCab.length,
+            Capacity: cap,
+            'Utilisation': (cap ? Math.round(inCab.length / cap * 100) : 0) + '%',
+            'Loans (range)': loansRange,
+            'Overdue now': overdueNow
+        };
+    }).sort(function(a,b){ return b['Loans (range)'] - a['Loans (range)'] || String(a.Cabinet).localeCompare(String(b.Cabinet)); });
+}
+function _tableFromRows(rows, emptyMsg){
+    if(!rows || rows.length === 0) return '<div class="na-ok" style="color:var(--text-secondary);padding:10px 0;">' + (emptyMsg||'No data') + '</div>';
+    var cols = Object.keys(rows[0]);
+    var head = '<thead><tr>' + cols.map(function(c){ return '<th class="no-sort">' + escapeHtml(c) + '</th>'; }).join('') + '</tr></thead>';
+    var body = '<tbody>' + rows.map(function(r){ return '<tr>' + cols.map(function(c,i){ return '<td' + (i===0 ? ' class="cell-mono"' : '') + '>' + escapeHtml(String(r[c])) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody>';
+    return '<div class="table-scroll"><table class="data-table">' + head + body + '</table></div>';
+}
+function renderReports(){
+    var d = _reportData();
+    var label = document.getElementById('reportRangeLabel');
+    if(label){ label.textContent = (d.range.fromStr || d.range.toStr) ? ('Showing loans dated ' + (d.range.fromStr||'\u2026') + ' to ' + (d.range.toStr||'\u2026')) : 'Showing all loans (all time)'; }
+    var sum = document.getElementById('reportSummary');
+    if(sum){ sum.innerHTML = _reportSummaryRows(d).map(function(s){ return '<div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:14px 16px;"><div style="font-size:1.7em;font-weight:800;color:var(--primary);line-height:1;">' + s.value + '</div><div style="font-size:.78em;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin-top:6px;">' + escapeHtml(s.label) + '</div></div>'; }).join(''); }
+    var techEl = document.getElementById('reportTech'); if(techEl) techEl.innerHTML = _tableFromRows(_reportTechRows(d), 'No technician activity');
+    var cabEl = document.getElementById('reportCabinet'); if(cabEl) cabEl.innerHTML = _tableFromRows(_reportCabRows(d), 'No cabinets defined');
+}
+function exportReportExcel(){
+    if(typeof XLSX === 'undefined'){ showAlert('Excel library not available', 'error'); return; }
+    var d = _reportData();
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_reportSummaryRows(d).map(function(r){ return { Metric:r.label, Value:r.value }; })), 'Summary');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_reportTechRows(d)), 'By Technician');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_reportCabRows(d)), 'By Cabinet');
+    if(d.inRange.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.inRange), 'Loans In Range');
+    XLSX.writeFile(wb, 'keymanager-report-' + new Date().toISOString().split('T')[0] + '.xlsx');
+    showAlert('Report exported to Excel', 'success');
+}
+function exportReportPDF(){
+    var d = _reportData();
+    var rangeTxt = (d.range.fromStr || d.range.toStr) ? ((d.range.fromStr||'\u2026') + ' to ' + (d.range.toStr||'\u2026')) : 'All time';
+    var sumRows = _reportSummaryRows(d), techRows = _reportTechRows(d), cabRows = _reportCabRows(d);
+    var tbl = function(rows, empty){
+        if(!rows.length) return '<p style="color:#6b7280;">' + empty + '</p>';
+        var cols = Object.keys(rows[0]);
+        return '<table><thead><tr>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>'
+            + rows.map(function(r){ return '<tr>' + cols.map(function(c){ return '<td>' + String(r[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+    };
+    var chips = sumRows.map(function(s){ return '<div class="chip"><div class="cn">' + s.value + '</div><div class="cl">' + s.label + '</div></div>'; }).join('');
+    var html = ''
+        + '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Key Management Report</title><style>'
+        + '@page{size:A4;margin:12mm;} body{font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#1f2937;font-size:11px;margin:0;}'
+        + '.hd{background:#0b2942;color:#fff;padding:16px 20px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;}'
+        + '.hd .t1{font-size:16px;font-weight:800;letter-spacing:.5px;}.hd .t2{font-size:11px;opacity:.85;}.hd .rep{font-size:13px;font-weight:700;}'
+        + '.rng{margin:12px 0;font-size:11px;color:#374151;}'
+        + '.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0 18px;}'
+        + '.chip{border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center;}.chip .cn{font-size:18px;font-weight:800;line-height:1;color:#2563eb;}.chip .cl{font-size:8px;text-transform:uppercase;color:#6b7280;margin-top:3px;}'
+        + 'h3{font-size:12px;margin:18px 0 6px;}'
+        + 'table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:6px;}th{background:#f3f4f6;text-align:left;padding:6px 8px;font-size:8px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;border-bottom:1px solid #e5e7eb;}td{padding:5px 8px;border-bottom:1px solid #eef0f2;}'
+        + '.foot{margin-top:18px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;text-align:center;}'
+        + '.btnbar{margin-top:18px;text-align:center;}.btnbar button{padding:9px 18px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;}@media print{.btnbar{display:none;}}'
+        + '</style></head><body>'
+        + '<div class="hd"><div><div class="t1">BAI COMMUNICATIONS</div><div class="t2">Site Integrity Unit</div></div><div class="rep">KEY MANAGEMENT REPORT</div></div>'
+        + '<div class="rng"><strong>Date range:</strong> ' + rangeTxt + ' &nbsp;&middot;&nbsp; <strong>Generated:</strong> ' + new Date().toLocaleString() + '</div>'
+        + '<div class="chips">' + chips + '</div>'
+        + '<h3>By technician</h3>' + tbl(techRows, 'No technician activity.')
+        + '<h3>By cabinet</h3>' + tbl(cabRows, 'No cabinets defined.')
+        + '<div class="foot">BAI Communications &middot; Site Integrity Unit &middot; Generated ' + new Date().toLocaleString() + '</div>'
+        + '<div class="btnbar"><button onclick="window.print()">Print / Save as PDF</button></div>'
+        + '</body></html>';
+    var w = window.open('', '_blank', 'width=900,height=1000,scrollbars=yes');
+    if(!w){ showAlert('Pop-up blocked \u2014 allow pop-ups to generate the report', 'error'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.onload = function(){ try{ w.focus(); w.print(); }catch(e){} };
+}
+
+window.getCustomers = getCustomers;
+window.showCustomerModal = showCustomerModal;
+window.saveCustomer = saveCustomer;
+window.deleteCustomer = deleteCustomer;
+window.promoteCustomerFromLoans = promoteCustomerFromLoans;
+window.showSiteModal = showSiteModal;
+window.saveSite = saveSite;
+window.deleteSite = deleteSite;
+window.promoteSiteFromLoans = promoteSiteFromLoans;
+window.getReportRange = getReportRange;
+window.setReportPreset = setReportPreset;
+window.renderReports = renderReports;
+window.exportReportExcel = exportReportExcel;
+window.exportReportPDF = exportReportPDF;
 
 
 // Make functions globally accessible
