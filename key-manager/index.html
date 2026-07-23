@@ -1716,9 +1716,11 @@
 	/* v2.8.0: reports overhaul (date-range filter, per-technician & per-cabinet
 	   breakdowns, Excel + PDF export); managed customers & sites (editable records
 	   merged with loan-derived entries, fed into the loan customer picker). */
+	/* v2.8.1: fix header version pill showing the version stored in old saved data
+	   instead of the running build (build version now wins on load). */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.8.0',
+    version: '2.8.1',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -2552,9 +2554,12 @@ function loadAllDataFromStorage() {
         window.__hadSavedData = !!saved;
         if (saved) {
             const defaults = appData.settings;
+            const codeVersion = appData.version;
             const loaded = JSON.parse(saved);
             // Merge with default structure to ensure all properties exist
             appData = { ...appData, ...loaded };
+            // Keep the running app/build version, not the version persisted in older saved data
+            appData.version = codeVersion;
             // Preserve any new default settings keys not present in saved data
             appData.settings = { ...defaults, ...(loaded.settings || {}) };
             
@@ -6185,7 +6190,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.8.0',
+                version: '2.8.1',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
