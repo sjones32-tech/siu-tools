@@ -1137,6 +1137,10 @@
 				<span class="nav-icon">🗄️</span>
 				<span>Key Cabinet</span>
 			</a>
+			<a href="#" class="nav-item" data-page="keytags">
+				<span class="nav-icon">🏷️</span>
+				<span>Key Tags</span>
+			</a>
 			<div class="nav-divider"></div>
             <a href="#" class="nav-item" data-page="sites">
                 <span class="nav-icon">🏢</span>
@@ -1737,9 +1741,12 @@
 	   in key history); Import button added to Settings; Excel import now prefers the
 	   Loan History sheet (no longer drops returned loans) and imports Customers;
 	   Audit Summary sheet added to Excel export. */
+	/* v2.11.0: Key Tags tab — generate printable CODE128 barcode labels (barcode
+	   value = Key ID) for all keys, a cabinet, or a scope; single-key tag button in
+	   key details; Key Transfer now defaults to nothing selected. */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.10.0',
+    version: '2.11.0',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -2433,6 +2440,7 @@ function showKeyDetails(keyId) {
                 </div>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-primary" onclick="printKeyTag('${key.id}')">🏷️ Print tag</button>
                 <button class="btn btn-secondary" onclick="closeModal('keyDetailsModal')">Close</button>
             </div>
         </div>
@@ -3267,6 +3275,11 @@ function navigateToPage(page) {
             subtitle: 'Generate reports and view analytics',
             showQuickActions: false
         },
+        keytags: {
+            title: 'Key Tags',
+            subtitle: 'Generate scannable barcode tags for keys',
+            showQuickActions: false
+        },
         transfer: {
             title: 'Key Transfer',
             subtitle: 'Move keys from one technician to another',
@@ -3334,6 +3347,9 @@ function loadPageContent(page) {
             break;
         case 'transfer':
             loadTransferContent(content);
+            break;
+        case 'keytags':
+            loadKeyTagsContent(content);
             break;
         case 'settings':
             loadSettingsContent(content);
@@ -6233,7 +6249,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.10.0',
+                version: '2.11.0',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -7834,7 +7850,7 @@ function renderTransferKeys(){
     var rows = keys.map(function(k){
         var onLoan = (k.available === false);
         return '<tr>'
-            + '<td style="width:38px;text-align:center;"><input type="checkbox" class="transfer-key-cb" data-key-id="' + escapeAttr(k.id) + '" checked></td>'
+            + '<td style="width:38px;text-align:center;"><input type="checkbox" class="transfer-key-cb" data-key-id="' + escapeAttr(k.id) + '"></td>'
             + '<td class="cell-mono">' + escapeHtml(k.id) + '</td>'
             + '<td>' + escapeHtml(k.description || '') + '</td>'
             + '<td>' + escapeHtml(k.location || '') + (k.locationNumber ? (' \u00b7 ' + escapeHtml(k.locationNumber)) : '') + '</td>'
@@ -7843,7 +7859,7 @@ function renderTransferKeys(){
     }).join('');
     el.innerHTML = ''
         + '<div style="display:flex;align-items:center;gap:12px;margin:6px 0 10px;">'
-        + '<label style="font-size:.9em;cursor:pointer;"><input type="checkbox" id="transferSelectAll" checked onchange="transferToggleAll(this.checked)"> Select all</label>'
+        + '<label style="font-size:.9em;cursor:pointer;"><input type="checkbox" id="transferSelectAll" onchange="transferToggleAll(this.checked)"> Select all</label>'
         + '<span style="color:var(--text-secondary);font-size:.85em;">' + keys.length + ' key(s) assigned to ' + escapeHtml(from) + '</span>'
         + '</div>'
         + '<div class="table-scroll"><table class="data-table"><thead><tr><th class="no-sort"></th><th class="no-sort">Key</th><th class="no-sort">Description</th><th class="no-sort">Location</th><th class="no-sort">Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
@@ -7887,6 +7903,121 @@ window.renderTransferKeys = renderTransferKeys;
 window.transferToggleAll = transferToggleAll;
 window.doKeyTransfer = doKeyTransfer;
 window.openImportExport = openImportExport;
+
+
+
+// ===================== v2.11.0: key tag / barcode label generator (barcode value = Key ID) =====================
+function _tagKeysByScope(scope, cabinetName){
+    var keys = getKeys();
+    if(scope === 'available') return keys.filter(function(k){ return k.available !== false; });
+    if(scope === 'onloan') return keys.filter(function(k){ return k.available === false; });
+    if(scope === 'cabinet') return keys.filter(function(k){ return k.location === cabinetName; });
+    return keys.slice();
+}
+function updateTagCount(){
+    var scope = (document.getElementById('tagScope') || {}).value || 'all';
+    var cab = (document.getElementById('tagCabinet') || {}).value || '';
+    var wrap = document.getElementById('tagCabinetWrap'); if(wrap) wrap.style.display = (scope === 'cabinet') ? '' : 'none';
+    var copies = Math.max(1, Math.min(50, parseInt((document.getElementById('tagCopies') || {}).value, 10) || 1));
+    var keys = _tagKeysByScope(scope, cab);
+    var el = document.getElementById('tagCount');
+    if(el) el.textContent = keys.length + ' key(s) \u2192 ' + (keys.length * copies) + ' tag(s) to print';
+}
+function loadKeyTagsContent(content){
+    var cabs = (appData.cabinets || []);
+    var cabOpts = cabs.map(function(c){ return '<option value="' + escapeAttr(c.name) + '">' + escapeHtml(c.name) + '</option>'; }).join('');
+    content.innerHTML = ''
+        + '<div class="card"><div class="card-header"><div class="card-title">Key Tags</div></div>'
+        + '<div class="card-body">'
+        + '<p style="color:var(--text-secondary);font-size:.9em;margin-bottom:16px;">Generate scannable CODE128 tags for your keys. The barcode value is the <strong>Key ID</strong>, so a scan matches exactly what this app tracks.</p>'
+        + '<div class="form-row">'
+        + '<div class="form-group"><label class="form-label">Which keys</label><select id="tagScope" class="form-select" onchange="updateTagCount()"><option value="all">All keys</option><option value="available">Available only</option><option value="onloan">On loan only</option><option value="cabinet">By cabinet</option></select></div>'
+        + '<div class="form-group" id="tagCabinetWrap" style="display:none;"><label class="form-label">Cabinet</label><select id="tagCabinet" class="form-select" onchange="updateTagCount()">' + cabOpts + '</select></div>'
+        + '</div>'
+        + '<div class="form-row">'
+        + '<div class="form-group"><label class="form-label">Label size</label><select id="tagSize" class="form-select"><option value="37x21">37 \u00d7 21 mm</option><option value="50x30">50 \u00d7 30 mm</option><option value="40x20">40 \u00d7 20 mm</option><option value="63x38">63 \u00d7 38 mm</option></select></div>'
+        + '<div class="form-group"><label class="form-label">Copies per key</label><input type="number" id="tagCopies" class="form-input" value="1" min="1" max="50" style="max-width:120px;" oninput="updateTagCount()"></div>'
+        + '<div class="form-group"><label class="form-label">Header text</label><input type="text" id="tagHeader" class="form-input" value="BAI KEY" maxlength="24"></div>'
+        + '</div>'
+        + '<label class="check" style="margin:4px 0 14px;display:flex;align-items:center;gap:8px;font-size:.9em;"><input type="checkbox" id="tagShowLogo" checked style="width:auto;"> Show BAI logo on tags</label>'
+        + '<div id="tagCount" style="font-size:.9em;color:var(--text-secondary);margin-bottom:14px;"></div>'
+        + '<button class="btn btn-primary" onclick="generateKeyTagsFromForm()">\ud83c\udff7\ufe0f Generate &amp; print tags</button>'
+        + '<p style="font-size:.82em;color:var(--text-secondary);margin-top:10px;">Opens a print-ready A4 sheet in a new window. The barcode library loads online, so this step needs an internet connection.</p>'
+        + '</div></div>';
+    updateTagCount();
+}
+function generateKeyTagsFromForm(){
+    var scope = (document.getElementById('tagScope') || {}).value || 'all';
+    var cab = (document.getElementById('tagCabinet') || {}).value || '';
+    var keys = _tagKeysByScope(scope, cab);
+    if(keys.length === 0){ showAlert('No keys match that selection', 'error'); return; }
+    var size = ((document.getElementById('tagSize') || {}).value || '37x21').split('x');
+    generateKeyTags(keys.map(function(k){ return k.id; }), {
+        width: parseInt(size[0], 10) || 37,
+        height: parseInt(size[1], 10) || 21,
+        copies: Math.max(1, Math.min(50, parseInt((document.getElementById('tagCopies') || {}).value, 10) || 1)),
+        header: ((document.getElementById('tagHeader') || {}).value || 'BAI KEY').trim() || 'BAI KEY',
+        showLogo: (document.getElementById('tagShowLogo') || {}).checked !== false
+    });
+}
+function printKeyTag(keyId){
+    generateKeyTags([keyId], { width:37, height:21, copies:1, header:'BAI KEY', showLogo:true });
+}
+function generateKeyTags(keyIds, opts){
+    var allKeys = getKeys();
+    var list = keyIds.map(function(id){ return allKeys.find(function(k){ return k.id === id; }); }).filter(Boolean);
+    if(list.length === 0){ showAlert('No keys to tag', 'error'); return; }
+    opts = opts || {};
+    var W = opts.width || 37, H = opts.height || 21, copies = opts.copies || 1;
+    var header = opts.header || 'BAI KEY', showLogo = opts.showLogo !== false;
+    var logoUrl = 'https://cdn.bfldr.com/V9KRPA8/at/qc5hwfrxk25hrr6pbzgwww/BAI_Communications_Logo_Element_blue.ai?auto=webp&format=png';
+    var headerFs = Math.max(6, Math.min(H * 0.4, 11));
+    var codeFs = Math.max(5, Math.min(H * 0.3, 9));
+    var logoSz = Math.max(3, Math.min(H * 0.22, 5));
+    var modW = Math.max(0.8, Math.min(W / 35, 2));
+    var barH = Math.round(Math.max(28, Math.min(H * 2.4, 90)));
+    function labelHTML(k){
+        var logo = showLogo ? ('<span style="display:inline-flex;align-items:center"><img src="' + logoUrl + '" alt="" style="width:' + logoSz.toFixed(2) + 'mm;height:' + logoSz.toFixed(2) + 'mm;object-fit:contain" onerror="this.style.display=\'none\'"></span>') : '';
+        var subTxt = k.description || k.location || '';
+        var sub = subTxt ? ('<div class="ki sub" style="font-size:' + (codeFs * 0.8).toFixed(1) + 'pt">' + escapeHtml(subTxt) + '</div>') : '';
+        return '<div class="kl" style="width:' + W + 'mm;height:' + H + 'mm">'
+            + '<div class="lh">' + logo + '<h2 style="font-size:' + headerFs.toFixed(1) + 'pt">' + escapeHtml(header) + '</h2></div>'
+            + '<div class="bc"><svg data-code="' + escapeAttr(k.id) + '"></svg></div>'
+            + '<div class="ki" style="font-size:' + codeFs.toFixed(1) + 'pt">' + escapeHtml(k.id) + '</div>'
+            + sub + '</div>';
+    }
+    var labels = '';
+    list.forEach(function(k){ for(var c = 0; c < copies; c++){ labels += labelHTML(k); } });
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Key Tags</title>'
+        + '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>'
+        + '<style>'
+        + '@page{size:A4;margin:0}'
+        + 'body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}'
+        + '.sheet{display:flex;flex-wrap:wrap;align-content:flex-start;width:210mm;padding:5mm;box-sizing:border-box}'
+        + '.kl{margin:1mm;padding:1mm;border:1px solid #000;background:#fff;text-align:center;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;flex:0 0 auto;overflow:hidden}'
+        + '.lh{display:flex;align-items:center;justify-content:center;gap:1.5mm;margin-bottom:.3mm}'
+        + '.kl h2{margin:0;font-weight:700;text-transform:uppercase;line-height:1}'
+        + '.bc{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:.4mm 0}'
+        + '.bc svg{max-width:100%;max-height:100%;height:auto;width:auto}'
+        + '.ki{margin:0;font-weight:700;line-height:1.15;font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}'
+        + '.ki.sub{font-weight:600;opacity:.85}'
+        + '.toolbar{padding:12px;text-align:center;background:#f3f4f6;font-family:system-ui,Segoe UI,Arial,sans-serif;font-size:14px;color:#111}'
+        + '.toolbar button{padding:9px 18px;background:#0a52cc;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-left:8px}'
+        + '@media print{.toolbar{display:none}}'
+        + '</style></head><body>'
+        + '<div class="toolbar">' + list.length + ' key(s), ' + (list.length * copies) + ' tag(s)<button onclick="window.print()">Print</button></div>'
+        + '<div class="sheet">' + labels + '</div>'
+        + '<script>(function(){function r(){document.querySelectorAll("svg[data-code]").forEach(function(s){try{JsBarcode(s,s.getAttribute("data-code"),{format:"CODE128",width:' + modW.toFixed(2) + ',height:' + barH + ',displayValue:false,margin:2});}catch(e){}});setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);}if(window.JsBarcode){r();}else{var n=0,t=setInterval(function(){n++;if(window.JsBarcode){clearInterval(t);r();}else if(n>100){clearInterval(t);var tb=document.querySelector(".toolbar");if(tb)tb.insertAdjacentHTML("beforeend","<div style=\'color:#b00;margin-top:8px\'>Barcode library did not load \u2014 check your internet connection, then use Print.</div>");}},50);}})();<\/script>'
+        + '</body></html>';
+    var w = window.open('', '_blank', 'width=900,height=1000,scrollbars=yes');
+    if(!w){ showAlert('Pop-up blocked \u2014 allow pop-ups to generate tags', 'error'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+}
+window.loadKeyTagsContent = loadKeyTagsContent;
+window.updateTagCount = updateTagCount;
+window.generateKeyTagsFromForm = generateKeyTagsFromForm;
+window.printKeyTag = printKeyTag;
+window.generateKeyTags = generateKeyTags;
 
 
 // Make functions globally accessible
