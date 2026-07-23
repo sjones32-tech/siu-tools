@@ -1129,6 +1129,10 @@
 				<span class="nav-icon">🙋🏻‍♂️</span>
 				<span>Technicians</span>
 			</a>
+			<a href="#" class="nav-item" data-page="transfer">
+				<span class="nav-icon">🔄</span>
+				<span>Key Transfer</span>
+			</a>
 			<a href="#" class="nav-item" data-page="keycabinet">
 				<span class="nav-icon">🗄️</span>
 				<span>Key Cabinet</span>
@@ -1729,9 +1733,13 @@
 	/* v2.9.0: load a keymanager JSON export directly from SharePoint (fetch with
 	   credentials, same-site only); Import widened to accept .json; build version
 	   reapplied on any data load. */
+	/* v2.10.0: Key Transfer tab (reassign a technician's keys to another tech, logged
+	   in key history); Import button added to Settings; Excel import now prefers the
+	   Loan History sheet (no longer drops returned loans) and imports Customers;
+	   Audit Summary sheet added to Excel export. */
 	// Enhanced Data Structure with Metadata
 let appData = {
-    version: '2.9.0',
+    version: '2.10.0',
     metadata: {
         lastModified: null,
         lastBackup: null,
@@ -3042,6 +3050,13 @@ function exportData(format = 'excel') {
 				XLSX.utils.book_append_sheet(wb, cabinetsWS, "Cabinets");
 			}
 
+			// Audit Summary (report only - full audit detail round-trips via JSON, not Excel)
+			if (appData.audits && appData.audits.length > 0) {
+				const auditRows = appData.audits.map(function(a){ var sm = a.summary || {}; return { Date:a.date||'', Cabinet:a.cabinetName||'', AuditedBy:a.auditedBy||'', Total:sm.total||0, Found:sm.found||0, Lost:sm.lost||0, Damaged:sm.damaged||0, OnLoan:sm.onloan||0, New:sm.new||0, Moved:sm.relocated||0 }; });
+				const auditWS = XLSX.utils.json_to_sheet(auditRows);
+				XLSX.utils.book_append_sheet(wb, auditWS, "Audit Summary");
+			}
+
             
             // Summary
             const summary = [{
@@ -3140,8 +3155,8 @@ function handleFileUpload(event) {
                 }
                 
                 // Import Loans
-                if (workbook.SheetNames.includes('Active Loans') || workbook.SheetNames.includes('Loans')) {
-                    const sheetName = workbook.SheetNames.includes('Active Loans') ? 'Active Loans' : 'Loans';
+                if (workbook.SheetNames.includes('Loan History') || workbook.SheetNames.includes('Active Loans') || workbook.SheetNames.includes('Loans')) {
+                    const sheetName = workbook.SheetNames.includes('Loan History') ? 'Loan History' : (workbook.SheetNames.includes('Active Loans') ? 'Active Loans' : 'Loans');
                     const loansSheet = workbook.Sheets[sheetName];
                     const loansData = XLSX.utils.sheet_to_json(loansSheet);
                     appData.loans = loansData;
@@ -3169,6 +3184,11 @@ if (workbook.SheetNames.includes('Technicians')) {
     const techniciansData = XLSX.utils.sheet_to_json(techniciansSheet);
     appData.technicians = techniciansData;
     imported.technicians = appData.technicians.length;
+}
+
+// Import Customers (managed)
+if (workbook.SheetNames.includes('Customers')) {
+    appData.customers = XLSX.utils.sheet_to_json(workbook.Sheets['Customers']);
 }
 
 saveAllDataToStorage();
@@ -3247,6 +3267,11 @@ function navigateToPage(page) {
             subtitle: 'Generate reports and view analytics',
             showQuickActions: false
         },
+        transfer: {
+            title: 'Key Transfer',
+            subtitle: 'Move keys from one technician to another',
+            showQuickActions: false
+        },
         auditlog: {
             title: 'Audit Log',
             subtitle: 'Past cabinet audits and printable reports',
@@ -3306,6 +3331,9 @@ function loadPageContent(page) {
             break;
         case 'auditlog':
             loadAuditLogContent(content);
+            break;
+        case 'transfer':
+            loadTransferContent(content);
             break;
         case 'settings':
             loadSettingsContent(content);
@@ -3753,6 +3781,7 @@ function loadSettingsContent(content) {
             <div class="card-header">
                 <div class="card-title">System Settings</div>
                 <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-sm btn-primary" onclick="openImportExport()">📥 Import</button>
                     <button class="btn btn-sm btn-success" onclick="quickSaveAll()">💾 Save Now</button>
                     <button class="btn btn-sm btn-primary" onclick="createBackup('manual')">📦 Create Backup</button>
                     <button class="btn btn-sm btn-secondary" onclick="clearStorage()">🗑️ Clear Storage</button>
@@ -6204,7 +6233,7 @@ function clearStorage() {
         if (confirm('This action CANNOT be undone. Are you absolutely sure you want to delete everything?')) {
             localStorage.clear();
             appData = {
-                version: '2.9.0',
+                version: '2.10.0',
                 metadata: {
                     lastModified: null,
                     lastBackup: null,
@@ -7322,6 +7351,7 @@ function renderKeyHistoryHtml(key){
         var what;
         if(h.action === 'unassigned') what = 'Unassigned from ' + escapeHtml(h.previousTechnician||'\u2014') + (h.returnedToCabinet ? (' \u2192 ' + escapeHtml(h.returnedToCabinet)) : '');
         else if(h.action === 'relocated') what = 'Moved ' + escapeHtml(h.from||'') + ' \u2192 ' + escapeHtml(h.to||'') + (h.locationNumber ? (' (' + escapeHtml(h.locationNumber) + ')') : '');
+        else if(h.action === 'transferred') what = 'Transferred from ' + escapeHtml(h.fromTechnician||'\u2014') + ' \u2192 ' + escapeHtml(h.toTechnician||'\u2014');
         else what = escapeHtml(h.action||'');
         return '<tr><td style="white-space:nowrap;color:var(--text-secondary);font-size:.85em;vertical-align:top;">'+escapeHtml(when)+'</td><td style="font-size:.9em;">'+what+(h.notes?('<div style="color:var(--text-secondary);font-size:.85em;">'+escapeHtml(h.notes)+'</div>'):'')+'</td></tr>';
     }).join('');
@@ -7766,6 +7796,97 @@ function loadFromCloud(){
         });
 }
 window.loadFromCloud = loadFromCloud;
+
+
+
+// ===================== v2.10.0: technician key transfer + settings import =====================
+function _transferTechs(){
+    return getTechnicians().slice().sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+}
+function loadTransferContent(content){
+    var techs = _transferTechs();
+    var opts = '<option value="">\u2014 Select technician \u2014</option>' + techs.map(function(t){
+        return '<option value="' + escapeAttr(t.name||'') + '">' + escapeHtml(t.name||'') + (t.status && t.status !== 'Active' ? (' (' + escapeHtml(t.status) + ')') : '') + '</option>';
+    }).join('');
+    content.innerHTML = ''
+        + '<div class="card"><div class="card-header"><div class="card-title">Key Transfer</div></div>'
+        + '<div class="card-body">'
+        + '<p style="color:var(--text-secondary);font-size:.9em;margin-bottom:16px;">Move keys currently assigned to one technician over to another. Each transfer is recorded in the key history.</p>'
+        + '<div class="form-row">'
+        + '<div class="form-group"><label class="form-label">From technician</label><select id="transferFrom" class="form-select" onchange="renderTransferKeys()">' + opts + '</select></div>'
+        + '<div class="form-group"><label class="form-label">To technician</label><select id="transferTo" class="form-select">' + opts + '</select></div>'
+        + '</div>'
+        + '<div id="transferKeyList" style="margin-top:8px;"></div>'
+        + '<div style="margin-top:18px;"><button class="btn btn-primary" onclick="doKeyTransfer()">Transfer selected keys</button></div>'
+        + '</div></div>';
+    renderTransferKeys();
+}
+function transferToggleAll(on){
+    document.querySelectorAll('.transfer-key-cb').forEach(function(c){ c.checked = on; });
+}
+function renderTransferKeys(){
+    var el = document.getElementById('transferKeyList');
+    if(!el) return;
+    var from = (document.getElementById('transferFrom') || {}).value || '';
+    if(!from){ el.innerHTML = '<div class="na-ok" style="color:var(--text-secondary);padding:10px 0;">Select a \u201cfrom\u201d technician to see the keys assigned to them.</div>'; return; }
+    var keys = getKeys().filter(function(k){ return k.assignedTechnician === from; });
+    if(keys.length === 0){ el.innerHTML = '<div class="na-ok" style="color:var(--text-secondary);padding:10px 0;">No keys are currently assigned to ' + escapeHtml(from) + '.</div>'; return; }
+    var rows = keys.map(function(k){
+        var onLoan = (k.available === false);
+        return '<tr>'
+            + '<td style="width:38px;text-align:center;"><input type="checkbox" class="transfer-key-cb" data-key-id="' + escapeAttr(k.id) + '" checked></td>'
+            + '<td class="cell-mono">' + escapeHtml(k.id) + '</td>'
+            + '<td>' + escapeHtml(k.description || '') + '</td>'
+            + '<td>' + escapeHtml(k.location || '') + (k.locationNumber ? (' \u00b7 ' + escapeHtml(k.locationNumber)) : '') + '</td>'
+            + '<td>' + (onLoan ? '<span class="badge badge-warning">On loan</span>' : '<span class="badge badge-success">Available</span>') + '</td>'
+            + '</tr>';
+    }).join('');
+    el.innerHTML = ''
+        + '<div style="display:flex;align-items:center;gap:12px;margin:6px 0 10px;">'
+        + '<label style="font-size:.9em;cursor:pointer;"><input type="checkbox" id="transferSelectAll" checked onchange="transferToggleAll(this.checked)"> Select all</label>'
+        + '<span style="color:var(--text-secondary);font-size:.85em;">' + keys.length + ' key(s) assigned to ' + escapeHtml(from) + '</span>'
+        + '</div>'
+        + '<div class="table-scroll"><table class="data-table"><thead><tr><th class="no-sort"></th><th class="no-sort">Key</th><th class="no-sort">Description</th><th class="no-sort">Location</th><th class="no-sort">Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+function doKeyTransfer(){
+    var from = (document.getElementById('transferFrom') || {}).value || '';
+    var to = (document.getElementById('transferTo') || {}).value || '';
+    if(!from){ showAlert('Choose the technician to transfer from', 'error'); return; }
+    if(!to){ showAlert('Choose the technician to transfer to', 'error'); return; }
+    if(from === to){ showAlert('Pick two different technicians', 'error'); return; }
+    var checked = Array.prototype.slice.call(document.querySelectorAll('.transfer-key-cb:checked'));
+    var ids = checked.map(function(c){ return c.getAttribute('data-key-id'); });
+    if(ids.length === 0){ showAlert('Select at least one key to transfer', 'error'); return; }
+    if(!confirm('Transfer ' + ids.length + ' key(s) from ' + from + ' to ' + to + '?')) return;
+    var keys = getKeys();
+    var when = new Date().toISOString();
+    var today = when.split('T')[0];
+    var n = 0;
+    ids.forEach(function(id){
+        var k = keys.find(function(x){ return x.id === id; });
+        if(!k) return;
+        if(!Array.isArray(k.assignmentHistory)) k.assignmentHistory = [];
+        k.assignmentHistory.push({ action:'transferred', fromTechnician:from, toTechnician:to, date:when });
+        k.assignedTechnician = to;
+        k.assignedDate = today;
+        n++;
+    });
+    markDataChanged();
+    showAlert('Transferred ' + n + ' key(s) from ' + from + ' to ' + to, 'success');
+    renderTransferKeys();
+    updateDisplay();
+}
+function openImportExport(){
+    var m = document.getElementById('importExportModal');
+    if(m) m.classList.add('show');
+    var cu = document.getElementById('cloudUrlInput');
+    if(cu && !cu.value) cu.value = (appData.settings && appData.settings.cloudUrl) || 'https://baicommunications.sharepoint.com/sites/BAIBA-SNSWFS/Shared%20Documents/Apps/Site_Keys/keymanager-data.json';
+}
+window.loadTransferContent = loadTransferContent;
+window.renderTransferKeys = renderTransferKeys;
+window.transferToggleAll = transferToggleAll;
+window.doKeyTransfer = doKeyTransfer;
+window.openImportExport = openImportExport;
 
 
 // Make functions globally accessible
