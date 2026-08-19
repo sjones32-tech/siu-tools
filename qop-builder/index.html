@@ -613,7 +613,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.50b</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.50c</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -5544,7 +5544,7 @@ function applyQopCompact() {
   if (b) { b.style.background = _qopView.compact ? 'var(--accent)' : ''; b.style.color = _qopView.compact ? '#fff' : ''; }
   const fb = document.getElementById('qop-freeze-btn');
   if (fb) { fb.style.background = _qopView.freeze ? 'var(--accent)' : ''; fb.style.color = _qopView.freeze ? '#fff' : ''; }
-  qopSyncStickyOffsets();   // row 1's height just changed — realign row 2
+  
 }
 
 function qopToggleFreeze() {
@@ -5552,13 +5552,7 @@ function qopToggleFreeze() {
   saveQopView();
   renderQOPPreview(qopBuiltRows);   // re-render applies freeze + refreshes button state
 }
-function qopSyncStickyOffsets() {
-  const wrap = document.getElementById('qop-preview');
-  const row1 = wrap && wrap.querySelector('thead tr:first-child');
-  if (!wrap || !row1) return;
-  const h = row1.getBoundingClientRect().height;
-  if (h) wrap.style.setProperty('--qop-hdr2-top', h + 'px');
-}
+
 
 function renderQOPPreview(rows) {
   if (!rows.length) return;
@@ -5601,33 +5595,27 @@ function renderQOPPreview(rows) {
   // ── Header row with sort indicators ───────────────────────────────
   const allVisChecked = visibleIdx.length && visibleIdx.every(ix => _qopSelected.has(ix));
   const thead = `<tr>
-    <th style="background:#0F1D2E;position:sticky;top:0;padding:6px;width:28px;border-bottom:2px solid var(--border2);z-index:11;text-align:center;${fzH('sel')}">
+    <th style="background:#0F1D2E;position:sticky;top:0;padding:4px;width:28px;border-bottom:2px solid var(--border2);z-index:11;text-align:center;vertical-align:middle;${fzH('sel')}">
       <input type="checkbox" ${allVisChecked?'checked':''} onclick="qopToggleSelectAll(this)" title="Select all visible">
     </th>
-    <th style="background:#0F1D2E;position:sticky;top:0;padding:6px;width:34px;border-bottom:2px solid var(--border2);z-index:11;${fzH('del')}"></th>
+    <th style="background:#0F1D2E;position:sticky;top:0;padding:4px;width:34px;border-bottom:2px solid var(--border2);z-index:11;text-align:center;vertical-align:middle;${fzH('del')}">
+      <button class="del-btn" style="padding:1px 5px;font-size:9px" title="Clear all filters" onclick="qopClearFilters()">⌫</button>
+    </th>
     ${cols.map(c => {
       const sorted = _qopSort.col === c;
       const arrow  = sorted ? (_qopSort.dir === 1 ? ' ▲' : ' ▼') : '';
-      return `<th onclick="qopSortBy('${c.replace(/'/g,"\\'")}')"
-        style="background:#0F1D2E;color:${sorted?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;
-               padding:6px 7px;white-space:nowrap;position:sticky;top:0;z-index:11;
-               border-bottom:2px solid var(--border2);cursor:pointer;user-select:none;${(k=>k?fzH(k):'')(fzKey(c))}"
-        title="Click to sort">${c}${arrow}</th>`;
+      return `<th style="background:#0F1D2E;color:${sorted?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;
+               padding:4px 6px;white-space:nowrap;position:sticky;top:0;z-index:11;
+               border-bottom:2px solid var(--border2);${(k=>k?fzH(k):'')(fzKey(c))}">
+        <div onclick="qopSortBy('${c.replace(/'/g,"\\'")}')" style="cursor:pointer;user-select:none;margin-bottom:3px" title="Click to sort">${c}${arrow}</div>
+        <input type="text" value="${(_qopFilters[c]||'').replace(/"/g,'&quot;')}"
+          placeholder="filter…"
+          oninput="qopFilterCol('${c.replace(/'/g,"\\'")}', this.value)"
+          onclick="event.stopPropagation()"
+          style="width:100%;min-width:60px;background:var(--surf2);border:1px solid ${_qopFilters[c]?'var(--warn)':'var(--border)'};
+                 color:var(--text);font-weight:400;font-size:10px;padding:2px 5px;border-radius:3px;box-sizing:border-box">
+      </th>`;
     }).join("")}
-  </tr>
-  <tr>
-    <th style="background:#0c1826;position:sticky;top:var(--qop-hdr2-top,29px);padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('sel')}"></th>
-    <th style="background:#0c1826;position:sticky;top:var(--qop-hdr2-top,29px);padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('del')}">
-      <button class="del-btn" style="padding:1px 5px;font-size:9px" title="Clear all filters"
-        onclick="qopClearFilters()">⌫</button>
-    </th>
-    ${cols.map(c => `<th style="background:#0c1826;position:sticky;top:var(--qop-hdr2-top,29px);padding:2px 3px;z-index:10;border-bottom:1px solid var(--border);${(k=>k?fzH(k):'')(fzKey(c))}">
-      <input type="text" value="${(_qopFilters[c]||'').replace(/"/g,'&quot;')}"
-        placeholder="filter…"
-        oninput="qopFilterCol('${c.replace(/'/g,"\\'")}', this.value)"
-        style="width:100%;min-width:60px;background:var(--surf2);border:1px solid ${_qopFilters[c]?'var(--warn)':'var(--border)'};
-               color:var(--text);font-size:10px;padding:2px 5px;border-radius:3px">
-    </th>`).join("")}
   </tr>`;
 
   let ph_conflicts = 0;
@@ -5776,7 +5764,7 @@ function renderQOPPreview(rows) {
         <tbody id="qop-tbody">${tbodyRows}</tbody>
       </table>
     </div>`;
-	  qopSyncStickyOffsets();
+	  
 }
 
 // ── Sort & filter handlers ────────────────────────────────────
