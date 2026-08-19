@@ -613,7 +613,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.50</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.50b</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -5544,11 +5544,20 @@ function applyQopCompact() {
   if (b) { b.style.background = _qopView.compact ? 'var(--accent)' : ''; b.style.color = _qopView.compact ? '#fff' : ''; }
   const fb = document.getElementById('qop-freeze-btn');
   if (fb) { fb.style.background = _qopView.freeze ? 'var(--accent)' : ''; fb.style.color = _qopView.freeze ? '#fff' : ''; }
+  qopSyncStickyOffsets();   // row 1's height just changed — realign row 2
 }
+
 function qopToggleFreeze() {
   _qopView.freeze = !_qopView.freeze;
   saveQopView();
   renderQOPPreview(qopBuiltRows);   // re-render applies freeze + refreshes button state
+}
+function qopSyncStickyOffsets() {
+  const wrap = document.getElementById('qop-preview');
+  const row1 = wrap && wrap.querySelector('thead tr:first-child');
+  if (!wrap || !row1) return;
+  const h = row1.getBoundingClientRect().height;
+  if (h) wrap.style.setProperty('--qop-hdr2-top', h + 'px');
 }
 
 function renderQOPPreview(rows) {
@@ -5607,12 +5616,12 @@ function renderQOPPreview(rows) {
     }).join("")}
   </tr>
   <tr>
-    <th style="background:#0c1826;position:sticky;top:29px;padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('sel')}"></th>
-    <th style="background:#0c1826;position:sticky;top:29px;padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('del')}">
+    <th style="background:#0c1826;position:sticky;top:var(--qop-hdr2-top,29px);padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('sel')}"></th>
+    <th style="background:#0c1826;position:sticky;top:var(--qop-hdr2-top,29px);padding:2px;z-index:10;border-bottom:1px solid var(--border);${fzH('del')}">
       <button class="del-btn" style="padding:1px 5px;font-size:9px" title="Clear all filters"
         onclick="qopClearFilters()">⌫</button>
     </th>
-    ${cols.map(c => `<th style="background:#0c1826;position:sticky;top:29px;padding:2px 3px;z-index:10;border-bottom:1px solid var(--border);${(k=>k?fzH(k):'')(fzKey(c))}">
+    ${cols.map(c => `<th style="background:#0c1826;position:sticky;top:var(--qop-hdr2-top,29px);padding:2px 3px;z-index:10;border-bottom:1px solid var(--border);${(k=>k?fzH(k):'')(fzKey(c))}">
       <input type="text" value="${(_qopFilters[c]||'').replace(/"/g,'&quot;')}"
         placeholder="filter…"
         oninput="qopFilterCol('${c.replace(/'/g,"\\'")}', this.value)"
@@ -5767,6 +5776,7 @@ function renderQOPPreview(rows) {
         <tbody id="qop-tbody">${tbodyRows}</tbody>
       </table>
     </div>`;
+	  qopSyncStickyOffsets();
 }
 
 // ── Sort & filter handlers ────────────────────────────────────
