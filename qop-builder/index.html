@@ -621,7 +621,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.52</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.53</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -1455,7 +1455,8 @@ select option:checked, select option:hover {
             <div class="setting-group">
               <h3>Configuration</h3>
               <div class="setting-row"><label>Year</label>
-                <input class="setting-inp" id="s-year" type="number" value="2026" min="2025" max="2030"></div>
+                <input class="setting-inp" id="s-year" type="number" value="2026" min="2025" max="2030"
+                       title="The QOP build target year. When you build a QOP, all dates shift to land in this year — regardless of what year the imported source data (Sheet1) actually is. Set this to 2027 to prepare Q1 2027 ahead of time."></div>
               <div class="setting-row"><label>District</label>
                 <input class="setting-inp" id="s-district" type="text" value="Sydney"></div>
               <div class="setting-row"><label>Default Technician</label>
@@ -7599,6 +7600,13 @@ function runImport1() {
   }
 
   // ── Build qopSource from CSV rows ─────────────────────────────────
+  // Detect the dominant year actually present in the file, rather than
+  // requiring it to be exactly year-1 — this lets you build a target year
+  // (e.g. 2027) straight from older source data (e.g. 2025's actual QOP)
+  // without needing an intervening year's import first.
+  const _detectedSrcYear = detectDominantYear(rows, r =>
+    getf(r,'planned_start_date','start_date','commencement_date','date'));
+
   const newSource = [];
   for (const row of rows) {
     const startDate = getf(row,'planned_start_date','start_date','commencement_date','date');
@@ -7606,7 +7614,7 @@ function runImport1() {
       const d = parseDate(startDate);
       if (d) {
         const y = d.getFullYear();
-        if (y !== year-1 && y !== year && y !== 2000) continue;
+        if (y !== _detectedSrcYear && y !== 2000) continue;
       }
     }
     newSource.push({
@@ -7636,9 +7644,12 @@ function runImport1() {
   }
 
   if (!newSource.length) {
-    toast('All rows filtered out — check the Start Date year matches (' + (year-1) + ' or ' + year + ')', 'error');
+    toast('All rows filtered out — no consistent Start Date year found in the file', 'error');
     setImportStatus(1, false, '<span style="color:var(--danger)">0 records after year filter — check dates</span>', 0);
     return;
+  }
+  if (_detectedSrcYear && _detectedSrcYear !== year - 1) {
+    toast(`Source data is from ${_detectedSrcYear} — dates will shift to build year ${year} (Settings → Year) when you click Build QOP Import.`, 'info');
   }
 
   newSource.forEach((s, idx) => { if (!s._uid) s._uid = 'q' + idx; });
@@ -9463,20 +9474,26 @@ Switching district to "${detectedDistrict}" to match the imported data.`;
     persist();
   }
 
-  // ── Store ALL rows (filter only by year: prev year + current year) ──
+  // ── Store ALL rows from the dominant year present in the file ──
+  // (not strictly year-1 — lets you build a target year straight from
+  // older source data, e.g. Q1 2027 from 2025's actual QOP)
+  const _detectedSrcYearXl = detectDominantYear(rows, r => norm(r,'Planned_Start_Date','planned_start_date'));
   const filtered = rows.filter(r => {
     const s = norm(r,'Planned_Start_Date','planned_start_date');
     if (s) {
       const d = parseDate(s);
       if (d) {
         const y = d.getFullYear();
-        // Keep prev year, current year, sentinel year 2000
-        if (y !== year-1 && y !== year && y !== 2000) return false;
+        // Keep the detected source year + sentinel year 2000
+        if (y !== _detectedSrcYearXl && y !== 2000) return false;
       }
       // If unparseable, keep the row (don't silently drop data)
     }
     return true;
   });
+  if (_detectedSrcYearXl && _detectedSrcYearXl !== year - 1) {
+    toast(`Source data is from ${_detectedSrcYearXl} — dates will shift to build year ${year} (Settings → Year) when you click Build QOP Import.`, 'info');
+  }
 
   let _uidSeq = 0;
   STATE.qopSource = filtered.map(row => ({
@@ -9570,10 +9587,37 @@ function fmtQOPDateTime(isoDate, timeHHMM) {
 }
 
 // Shift a date string +1 year, handling Feb 29 → Feb 28
+// Detect the single most common calendar year present in a set of rows'
+// date fields (ignoring the 2000 sentinel used for "no fixed date"). Used
+// so Sheet1/CSV imports accept whatever year the source data actually is,
+// rather than requiring it to be exactly one year before the build year —
+// the build year (Settings → Year) is applied separately via shiftDateOneYear.
+function detectDominantYear(rows, getDateStr) {
+  const counts = {};
+  for (const row of rows) {
+    const s = getDateStr(row);
+    if (!s) continue;
+    const d = parseDate(s);
+    if (!d) continue;
+    const y = d.getFullYear();
+    if (y === 2000) continue;   // sentinel, not a real data year
+    counts[y] = (counts[y] || 0) + 1;
+  }
+  const entries = Object.entries(counts);
+  if (!entries.length) return null;
+  entries.sort((a,b) => b[1] - a[1]);
+  return parseInt(entries[0][0]);
+}
+
+// Shift a date so it lands in the configured target build year
+// (STATE.settings.year), regardless of how many years old the source data
+// is. This lets you build, e.g., Q1 2027 straight from 2025's actual QOP
+// (Sheet1) without needing an intervening 2026 import first — just set
+// Year to 2027 in Settings and rebuild.
 function shiftDateOneYear(dateStr) {
   const d = parseDate(dateStr);
   if (!d) return dateStr;
-  let y = d.getFullYear() + 1;
+  let y = STATE.settings.year;
   let m = d.getMonth();      // 0-indexed
   let day = d.getDate();
   // Leap-year edge case: Feb 29 → Feb 28
