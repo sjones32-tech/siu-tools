@@ -621,7 +621,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.53</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.54</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -5108,11 +5108,14 @@ const district = STATE.settings.district;
     // Filter to selected quarter
     if (months && !months.includes(mNo)) continue;
 
-    // Date to use: confirmed override > shifted +1yr from source
+    // Date to use: confirmed override (only if it's actually in this year's
+    // build target — otherwise it's stale from a previous target year) >
+    // freshly shifted date
     const shifted  = shiftDateOneYear(src.startDate);
     const schedKey = `${src.sno}:${mNo}`;
     const override = schedMap[schedKey];
-    const useDate  = override?.confirmedDate || shifted;
+    const overrideValid = override?.confirmedDate && isDateInTargetYear(override.confirmedDate);
+    const useDate  = overrideValid ? override.confirmedDate : shifted;
     const techName = override?.techName || src.name || STATE.settings.tech;
     const notes    = override?.notes    || src.comments || '';
 
@@ -7668,7 +7671,7 @@ function runImport1() {
       const rd = getRow(r.id);
       if (!STATE.rows[r.id]) STATE.rows[r.id] = {};
       STATE.rows[r.id].prevQOP = src;
-      if (!rd.confirmedDate) setRow(r.id, 'confirmedDate', shifted);
+      if (!rd.confirmedDate || !isDateInTargetYear(rd.confirmedDate)) setRow(r.id, 'confirmedDate', shifted);
       if (!rd.techName && src.name) STATE.rows[r.id].techName = src.name;
       matched++;
     }
@@ -9543,7 +9546,7 @@ Switching district to "${detectedDistrict}" to match the imported data.`;
       const rd = getRow(r.id);
       if (!STATE.rows[r.id]) STATE.rows[r.id] = {};
       STATE.rows[r.id].prevQOP = src;
-      if (!rd.confirmedDate) {
+      if (!rd.confirmedDate || !isDateInTargetYear(rd.confirmedDate)) {
         setRow(r.id, 'confirmedDate', shifted);
       }
       if (!rd.techName && src.name) STATE.rows[r.id].techName = src.name;
@@ -9607,6 +9610,15 @@ function detectDominantYear(rows, getDateStr) {
   if (!entries.length) return null;
   entries.sort((a,b) => b[1] - a[1]);
   return parseInt(entries[0][0]);
+}
+
+// A confirmed/overridden date is only trustworthy if it's actually in the
+// CURRENT build target year — otherwise it's a leftover from a previous
+// build year (e.g. dates confirmed while Year was 2026, now Year is 2027)
+// and must not silently override a fresh shift into the new target year.
+function isDateInTargetYear(dateStr) {
+  const d = parseDate(dateStr);
+  return !!d && d.getFullYear() === STATE.settings.year;
 }
 
 // Shift a date so it lands in the configured target build year
