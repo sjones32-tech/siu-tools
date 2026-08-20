@@ -304,7 +304,15 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); }
 
 /* ── QOP export ── */
 #qop-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-.qop-preview { flex: 1; overflow: auto; }
+.qop-preview { flex: 1; overflow: hidden; }
+
+/* Row-snap scrolling so the table always comes to rest on a whole row
+   boundary — prevents a partially-scrolled row from sitting squashed
+   behind the sticky header. scroll-padding-top is set from JS (see
+   renderQOPPreview) to match the header's actual rendered height, since
+   that height varies with Compact mode / column filters. */
+#qop-preview .scroll-lg { scroll-snap-type: y proximity; }
+#qop-preview #qop-tbody tr { scroll-snap-align: start; scroll-snap-stop: normal; }
 .qop-compact table td, .qop-compact table th { padding:0 3px !important; font-size:10px !important; }
 .qop-compact table input, .qop-compact table select { font-size:9px !important; padding:0 2px !important; }
 .qop-compact table input[type="datetime-local"] { width:150px !important; }
@@ -613,7 +621,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.50c</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.51</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -5764,7 +5772,15 @@ function renderQOPPreview(rows) {
         <tbody id="qop-tbody">${tbodyRows}</tbody>
       </table>
     </div>`;
-	  
+
+  // Keep row-snap aligned to just below the sticky header — header height
+  // changes with Compact mode / column visibility, so measure it fresh
+  // after every render rather than hardcoding an offset.
+  requestAnimationFrame(() => {
+    const scrollEl = document.querySelector('#qop-preview .scroll-lg');
+    const headEl   = document.querySelector('#qop-preview thead');
+    if (scrollEl && headEl) scrollEl.style.scrollPaddingTop = headEl.offsetHeight + 'px';
+  });
 }
 
 // ── Sort & filter handlers ────────────────────────────────────
