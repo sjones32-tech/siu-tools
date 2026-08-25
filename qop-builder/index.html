@@ -621,7 +621,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.54</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.55</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -5553,6 +5553,139 @@ function qopCellColor(col, row) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  OPER-PR-2008A REFERENCE DATA — for QOP Export hover tooltips
+//  §15.1 Activity Category and Number List (Attachment D)
+//  §8.1 Audience Impact codes  ·  §8.2 Service State codes
+// ═══════════════════════════════════════════════════════════════
+const MAINT_ACTIVITY_REF = {
+  '1':   { cat:'Site Health Check', desc:'Site Health Check', note:'Non service affecting only, otherwise becomes a PM visit' },
+  '2':   { cat:'Site Health Check', desc:'Site Health Check', note:'Non service affecting only, otherwise becomes a PM visit' },
+  '3':   { cat:'', desc:'', note:'' },
+  '10':  { cat:'Monthly PM', desc:'Monthly PM', note:'EG. At Cap City TXA sites e.g., Black Mountain Tower, where a site health check will not do, and a true PM is required (A Class) but we do not own the EPP' },
+  '11':  { cat:'Monthly PM & EPP Test Run', desc:'Monthly EPP Test Run', note:'Indicate EPP Number (s)' },
+  '20':  { cat:'Quarterly PM', desc:'Quarterly PM', note:'Service affecting (QOP)' },
+  '21':  { cat:'Quarterly PM & EPP Test Run', desc:'Quarterly EPP Test Run', note:'Indicate EPP Number (s)' },
+  '22':  { cat:'', desc:'', note:'' },
+  '23':  { cat:'Quarterly ACU PM', desc:'Quarterly ACU PM', note:'Primary Window only for Populations Exceeding class limit. State Main or Standby' },
+  '24':  { cat:'Quarterly ACU (Grounds) PM', desc:'Quarterly ACU (Grounds) PM', note:'Approved for Secondary Window where populations exceed point where primary window outages would normally apply' },
+  '30':  { cat:'Six Monthly PM', desc:'Six Monthly PM', note:'Service affecting or Non Service Affecting' },
+  '31':  { cat:'Six Monthly PM & EPP Test Run', desc:'Six Monthly EPP Test Run', note:'Nil / SWG' },
+  '32':  { cat:'', desc:'', note:'' },
+  '33':  { cat:'Six Monthly ACU PM', desc:'Six Monthly ACU PM', note:'Primary Window only for Populations Exceeding class limit. State Main or Standby' },
+  '34':  { cat:'Six Monthly ACU (Grounds) PM', desc:'Six Monthly ACU (Grounds) PM', note:'Approved for Secondary Window where populations exceed point where primary window outages would normally apply' },
+  '40':  { cat:'Annual PoP / PM / ATR', desc:'Annual PoP', note:'State which service' },
+  '41':  { cat:'Annual Antenna Test', desc:'Annual Antenna Test', note:'Separated from the PoP due to high number of rejections' },
+  '42':  { cat:'Annual ACU (Grounds) PM', desc:'Annual ACU (Grounds) PM', note:'Approved for Secondary Window where populations exceed point where primary window outages would normally apply' },
+  '43':  { cat:'Annual EPP Service and Load Test', desc:'Annual EPP Service and Load Test', note:'As per the guidelines in OPS3013 Paragraph xx' },
+  '44':  { cat:'', desc:'Reserved', note:'' },
+  '45':  { cat:'Annual PM', desc:'Annual PM', note:'Annual PM' },
+  '46':  { cat:'', desc:'Reserved', note:'' },
+  '90':  { cat:'Bi Annual PM', desc:'TX Water Cooling System PM', note:'' },
+  '99':  { cat:'Triennial PM / TIR', desc:'TIR', note:'' },
+  '101': { cat:'Battery PM', desc:'Battery PM - EPP start', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '102': { cat:'Battery PM', desc:'Battery PM - EPP control', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '103': { cat:'Battery PM', desc:'Battery PM - Station', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '104': { cat:'Battery PM', desc:'Battery PM - RTU', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '105': { cat:'Battery PM', desc:'Battery PM - Fire system', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '106': { cat:'Battery PM', desc:'Battery PM - Nautel', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '107': { cat:'Battery PM', desc:'Battery PM - EPP PLC', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '108': { cat:'Battery PM', desc:'Battery PM - AC PLC', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '109': { cat:'Battery PM', desc:'Battery PM - UPS', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '110': { cat:'Battery PM', desc:'Battery PM - Nautel TX', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '111': { cat:'Battery PM', desc:'Battery PM - Harris TX', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '112': { cat:'Battery PM', desc:'Battery PM - Fire pump', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '113': { cat:'Battery PM', desc:'Battery PM - Rubidium standard', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '114': { cat:'Battery PM', desc:'Battery PM - MT5600', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '115': { cat:'Battery PM', desc:'Battery PM - R&S FM', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '116': { cat:'Battery PM', desc:'Battery PM - TX controller other', note:'Battery change frequency as prescribed in OPS3016 and NMS 1.05' },
+  '50':  { cat:'', desc:'Grounds PM', note:'Could be done in conjunction with Monthly / Quarterly / 6 Monthly. Include in an above Maintenance Category as required.' },
+  '51':  { cat:'', desc:'Reserved', note:'' },
+  '52':  { cat:'', desc:'Building Air Handling PM', note:'' },
+  '53':  { cat:'', desc:'Building Cooling System PM', note:'' },
+  '54':  { cat:'', desc:'Dehydrator PM', note:'' },
+  '55':  { cat:'', desc:'Fire Extinguisher Tag and Test', note:'' },
+  '56':  { cat:'', desc:'Fire System PM', note:'' },
+  '57':  { cat:'', desc:'Main Program Link PM', note:'' },
+  '58':  { cat:'', desc:'Main Transmitter PM', note:'Include with 6 monthly or Annual Maintenance visit' },
+  '59':  { cat:'', desc:'Mast Lights Change', note:'' },
+  '60':  { cat:'', desc:'PIE PM', note:'' },
+  '61':  { cat:'', desc:'Standby Transmitter PM', note:'Include with 6 monthly or Annual Maintenance visit' },
+  '62':  { cat:'', desc:'Supply Transfer Switch PM', note:'5 Yearly' },
+  '63':  { cat:'', desc:'TX Air Handling PM', note:'' },
+  '64':  { cat:'', desc:'Valve Change', note:'' },
+  '65':  { cat:'', desc:'Electrical Distribution System PM', note:'Thermo scan for A and B Class. Non Contact Thermometer for C and D Class.' },
+  '66':  { cat:'', desc:'Tag and Test', note:'' },
+  '67':  { cat:'', desc:'RTU Maintenance & Alarm Test', note:'' },
+  '68':  { cat:'', desc:'UPS PM', note:'' },
+  '69':  { cat:'', desc:'Building Cleaning', note:'' },
+  '70':  { cat:'', desc:'Transmission System Level Line-up', note:'Site equipment level line-up from test input point to transmitter or combiner monitor point or off-air monitor as indicated in TSA' },
+};
+
+const AUDIENCE_IMPACT_REF = {
+  'EPP':   'Normal Scheduled EPP Load Tests (replaces SWG/NOP)',
+  'EPP-A': 'Annual EPP Service and Load Test — period of LOR and two switching breaks between the nominated times; no effect on public',
+  'EPP-S': 'Synchronous changeover; no effect on public',
+  'NIL':   'No effect on public',
+  'OFF':   'Service Off',
+  'RPW':   'Reduced power/coverage — state the level of reduction in the Timing Reason column',
+  'SWG':   'SWG break (under 30 seconds)',
+  'TRF':   'Transfer of a service to the alternate site (e.g. DTV Capital City sites) — no full SWG break',
+};
+
+const SERVICE_STATE_REF = {
+  'NOP': 'Normal Operation',
+  'BMP': 'Below Minimum Performance Level (below -1dB)',
+  'BAP': 'Below Accountable Performance Level (below -4dB)',
+  'LOR': 'Loss of Redundancy',
+  'OFF': 'Off',
+};
+
+// Build the "code — description" tooltip text for a QOP Export cell value,
+// sourced from OPER-PR-2008A. Handles comma-separated multi-code cells
+// (e.g. "40, 41"). Returns '' for columns with no reference table, or blank cells.
+function codeDescription(col, rawVal) {
+  const val = (rawVal || '').toString().trim();
+  if (!val) return '';
+  const parts = val.split(',').map(p => p.trim()).filter(Boolean);
+
+  if (col === 'Maintenance Activity Number') {
+    return parts.map(code => {
+      const ref = MAINT_ACTIVITY_REF[code];
+      if (!ref) return `${code} — not listed in OPER-PR-2008A §15.1`;
+      if (!ref.desc) return `${code} — no description recorded in OPER-PR-2008A §15.1 (blank/reserved number)`;
+      const catPart  = (ref.cat && ref.cat !== ref.desc) ? ` (${ref.cat})` : '';
+      const notePart = ref.note ? ` — ${ref.note}` : '';
+      return `${code} — ${ref.desc}${catPart}${notePart}`;
+    }).join('  ·  ');
+  }
+
+  if (col === 'Audience Impact') {
+    return parts.map(code => {
+      const d = AUDIENCE_IMPACT_REF[code.toUpperCase()];
+      return d ? `${code} — ${d}` : `${code} — not a recognised Audience Impact code (OPER-PR-2008A §8.1)`;
+    }).join('  ·  ');
+  }
+
+  if (col === 'Service State') {
+    return parts.map(code => {
+      const d = SERVICE_STATE_REF[code.toUpperCase()];
+      return d ? `${code} — ${d}` : `${code} — not a recognised Service State code (OPER-PR-2008A §8.2)`;
+    }).join('  ·  ');
+  }
+
+  return '';
+}
+
+// Combined QOP Export cell tooltip: validation/flag reason (if the cell is
+// flagged) plus the OPER-PR-2008A code description (Activity Number / AI / SS).
+function qopTooltipText(col, row, val, cc) {
+  const flagTxt = cc ? (qopFlagReason(col, row) || ('[FLAG] ' + val)) : '';
+  const desc    = codeDescription(col, val);
+  if (flagTxt && desc) return flagTxt + '   ·   ' + desc;
+  return flagTxt || desc || val;
+}
+
 // Count issues per row for the row-level indicator
 function qopRowIssueCount(row) {
   let n = 0;
@@ -5772,7 +5905,7 @@ function renderQOPPreview(rows) {
               style="background:${cc ? 'transparent' : 'var(--surf2)'};border:1px solid ${cc ? 'transparent' : 'var(--border)'};
                      color:${inpFg};font-weight:${inpW};color-scheme:dark;
                      font-size:11px;padding:2px 4px;width:130px;border-radius:3px"
-              title="${cc ? (qopFlagReason(c, row) || ('[FLAG] ' + val)).replace(/"/g,"'") : val.replace(/"/g,"'")}">
+              title="${qopTooltipText(c, row, val, cc).replace(/"/g,"'")}">
           </td>`;
         }
         if (QOP_DATE_COLS.includes(c)) {
@@ -5783,7 +5916,7 @@ function renderQOPPreview(rows) {
               style="background:${cc ? 'transparent' : 'var(--surf2)'};border:1px solid ${cc ? 'transparent' : 'var(--border)'};
                      color:${inpFg};font-weight:${inpW};color-scheme:dark;
                      font-size:11px;padding:2px 4px;width:165px;border-radius:3px"
-              title="${cc ? (qopFlagReason(c, row) || ('[FLAG] ' + val)).replace(/"/g,"'") : val.replace(/"/g,"'")}">
+              title="${qopTooltipText(c, row, val, cc).replace(/"/g,"'")}">
           </td>`;
         }
 
@@ -5823,7 +5956,7 @@ function renderQOPPreview(rows) {
                    font-size:11px;padding:2px 4px;min-width:80px;width:${Math.min(Math.max(val.length*7+20,80),260)}px;border-radius:3px"
             onfocus="this.style.borderColor='var(--accent)'"
             onblur="this.style.borderColor='transparent'"
-            title="${cc ? (qopFlagReason(c, row) || ('[FLAG] ' + val)).replace(/"/g,"'") : val.replace(/"/g,"'")}">
+            title="${qopTooltipText(c, row, val, cc).replace(/"/g,"'")}">
         </td>`;
       }).join("") + "</tr>";
   }).join("");
