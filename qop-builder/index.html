@@ -621,7 +621,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.57</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.58</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -2946,15 +2946,24 @@ function showTab(name) {
 //  Planned (Site Grid) vs actual (QOP outages) for the full year.
 // ═══════════════════════════════════════════════════════════════
 function computeCoverageStats() {
-  // Build full-year outage months per site WITHOUT disturbing the trip cache
+  // Build full-year outage months per site WITHOUT disturbing the trip cache.
+  // Mirrors buildTripFullYear()/renderCoverageCheck() exactly so the Dashboard
+  // panel and the Trip Planner's Coverage Check page always agree.
   const yearRows = (STATE.qopSource && STATE.qopSource.length)
     ? buildQOPRowsForMonths(null)
     : qopBuiltRows.slice();
-  const outageMonths = {};
+  applyTripTags(yearRows);   // pick up manually-tagged Trip Activities — same source Coverage Check reads
+
+  const outageMonths = {};        // sno -> Set(month) : ANY outage exists
+  const outageActs   = {};        // "sno|month" -> Set(normalised Trip Activity)
   yearRows.forEach(r => {
     const sno = (r['Site Number'] || '').toString().trim();
     const m = tripRowMonth(r);
-    if (sno && m) (outageMonths[sno] = outageMonths[sno] || new Set()).add(m);
+    if (!sno || !m) return;
+    (outageMonths[sno] = outageMonths[sno] || new Set()).add(m);
+    const key = `${sno}|${m}`;
+    const act = normCovActivity(r['Trip Activity']);
+    if (act) (outageActs[key] = outageActs[key] || new Set()).add(act);
   });
 
   let planned = 0, covered = 0, missed = 0, unplanned = 0;
@@ -2963,6 +2972,7 @@ function computeCoverageStats() {
 
   SITES.forEach(s => {
     const sno = s[0], cls = (s[4]||'').trim() || '—';
+    if (!districtMatch(sno)) return;   // ← same district scoping as Coverage Check (was previously missing)
     const have = outageMonths[sno] || new Set();
     if (!byClass[cls]) byClass[cls] = {planned:0, covered:0};
     for (let mi = 0; mi < 12; mi++) {
@@ -2970,7 +2980,12 @@ function computeCoverageStats() {
       const m = mi + 1;
       if (act) {
         planned++; byMonth[m].planned++; byClass[cls].planned++;
-        if (have.has(m)) { covered++; byMonth[m].covered++; byClass[cls].covered++; }
+        // Covered only when an outage exists AND its Trip Activity matches the
+        // planned activity — identical rule to renderCoverageCheck()'s "ok" list,
+        // not just "an outage exists" (that was the source of the mismatch).
+        const actSet = outageActs[`${sno}|${m}`] || new Set();
+        const isCovered = have.has(m) && [...actSet].some(a => covActivityMatch(act, a));
+        if (isCovered) { covered++; byMonth[m].covered++; byClass[cls].covered++; }
         else missed++;
       }
     }
@@ -2996,8 +3011,9 @@ function renderCoveragePanel() {
 
   // Donut gauge (conic-gradient)
   const gaugeColor = c.pct >= 95 ? 'var(--success)' : c.pct >= 80 ? 'var(--warn)' : 'var(--danger)';
+  const donutTip = `${c.covered} of ${c.planned} planned activities have a matching QOP outage with the correct Trip Activity, this year. A month only counts as covered when the outage's Trip Activity matches the planned activity — same rule as Coverage Check.`;
   const donut = `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:150px">
+    <div title="${esc(donutTip)}" style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:150px;cursor:default">
       <div style="width:130px;height:130px;border-radius:50%;
         background:conic-gradient(${gaugeColor} ${c.pct*3.6}deg, var(--surf2) 0);
         display:flex;align-items:center;justify-content:center;position:relative">
@@ -3010,14 +3026,14 @@ function renderCoveragePanel() {
     </div>`;
 
   // Mini stat tiles
-  const tile = (n, lbl, col) => `<div style="flex:1;min-width:90px;background:var(--surf2);border-radius:var(--radius);padding:10px 12px;text-align:center">
+  const tile = (n, lbl, col, tip) => `<div title="${esc(tip)}" style="flex:1;min-width:90px;background:var(--surf2);border-radius:var(--radius);padding:10px 12px;text-align:center;cursor:default">
     <div style="font-size:22px;font-weight:800;color:${col}">${n}</div>
     <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${lbl}</div></div>`;
   const tiles = `<div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
-    ${tile(c.covered,'Covered','var(--success)')}
-    ${tile(c.missed,'Missed','var(--danger)')}
-    ${tile(c.unplanned,'Unplanned Mo.','var(--warn)')}
-    ${tile(Object.keys(c.byClass).length,'Classes','var(--text)')}
+    ${tile(c.covered,'Covered','var(--success)','Planned activities with a QOP outage whose Trip Activity matches the planned activity.')}
+    ${tile(c.missed,'Missed','var(--danger)','Planned activities with no outage, an untagged outage, or a Trip Activity that doesn\u2019t match what was planned.')}
+    ${tile(c.unplanned,'Unplanned Mo.','var(--warn)','QOP outages that fall in a site + month with no planned activity on the Site Grid.')}
+    ${tile(Object.keys(c.byClass).length,'Classes','var(--text)','Number of distinct site classes represented among the planned activities above.')}
   </div>`;
 
   // Coverage-by-month bars
@@ -3029,7 +3045,7 @@ function renderCoveragePanel() {
     const pctM = p ? Math.round(cv/p*100) : 0;
     const w = Math.round(p/maxP*100);
     const barCol = !p ? 'var(--surf2)' : pctM===100 ? 'var(--success)' : pctM>=50 ? 'var(--warn)' : 'var(--danger)';
-    monthBars += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:11px">
+    monthBars += `<div title="${MONTHS[i-1]}: ${cv} of ${p} planned activit${p===1?'y':'ies'} covered${p?` (${pctM}%)`:''}" style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:11px;cursor:default">
       <div style="width:30px;color:var(--muted)">${MONTHS[i-1]}</div>
       <div style="flex:1;background:var(--surf2);border-radius:3px;height:16px;position:relative;overflow:hidden">
         <div style="position:absolute;height:100%;width:${w}%;background:var(--surf3);opacity:.4"></div>
@@ -3046,7 +3062,7 @@ function renderCoveragePanel() {
     if (!v.planned) return;
     const pctC = Math.round(v.covered/v.planned*100);
     const col = pctC>=95?'var(--success)':pctC>=80?'var(--warn)':'var(--danger)';
-    classRows += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:11px">
+    classRows += `<div title="Class ${esc(cls)}: ${v.covered} of ${v.planned} planned activit${v.planned===1?'y':'ies'} covered (${pctC}%)" style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:11px;cursor:default">
       <div style="width:40px"><span class="cls-badge ${clsClass(cls)}">${cls}</span></div>
       <div style="flex:1;background:var(--surf2);border-radius:3px;height:16px;overflow:hidden">
         <div style="height:100%;width:${pctC}%;background:${col}"></div>
@@ -3059,7 +3075,7 @@ function renderCoveragePanel() {
   el.innerHTML = `
     <div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <h3 style="margin:0">QOP Coverage Compliance — full year</h3>
+        <h3 style="margin:0" title="A planned activity counts as covered only when a QOP outage exists for that site/month AND its Trip Activity matches the planned activity — same rule the Coverage Check page uses.">QOP Coverage Compliance — full year</h3>
         <button class="btn btn-ghost" style="font-size:11px" onclick="showTab('tripplanner');if(!_tripCoverage)toggleCoverageView();">Open Coverage Check →</button>
       </div>
       <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">${donut}${tiles}</div>
@@ -3096,31 +3112,31 @@ function renderDashboard() {
 
   // Stat cards
   document.getElementById("stat-row").innerHTML = `
-    <div class="stat-card total">
+    <div class="stat-card total" title="All scheduled maintenance activities across the year${_districtFilter ? ' for ' + titleCaseDistrict(_districtFilter) : ''}.">
       <div class="num">${total}</div>
       <div class="lbl">Total Activities</div>
       <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="width:100%"></div></div></div>
     </div>
-    <div class="stat-card conf">
+    <div class="stat-card conf" title="${conf} of ${total} activities have a confirmed date in the Annual Schedule (${pct(conf)}%).">
       <div class="num">${conf}</div>
       <div class="lbl">Dates Confirmed</div>
       <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--success);width:${pct(conf)}%"></div></div></div>
     </div>
-    <div class="stat-card unconf">
+    <div class="stat-card unconf" title="${unconf} activit${unconf===1?'y still needs':'ies still need'} a confirmed date.">
       <div class="num">${unconf}</div>
       <div class="lbl">Still Needed</div>
       <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--warn);width:${pct(unconf)}%"></div></div></div>
     </div>
-    <div class="stat-card ph">
+    <div class="stat-card ph" title="Activities whose confirmed (or, if unconfirmed, suggested) date falls on a public holiday.">
       <div class="num">${ph}</div>
       <div class="lbl">PH Conflicts</div>
       <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--danger);width:${pct(ph)}%"></div></div></div>
     </div>
-    <div class="stat-card" style="">
+    <div class="stat-card" style="" title="Activities marked Completed in the Annual Schedule.">
       <div class="num" style="color:var(--success)">${completed}</div>
       <div class="lbl">Completed</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" title="Share of all activities with a confirmed date — ${conf} of ${total}.">
       <div class="num" style="color:var(--text)">${pct(conf)}%</div>
       <div class="lbl">Schedule Progress</div>
     </div>
@@ -3135,7 +3151,7 @@ function renderDashboard() {
     const tw = Math.round(t/maxTotal*100);
     const cw = t > 0 ? Math.round(c/t*100) : 0;
     chartHtml += `
-      <div class="chart-row">
+      <div class="chart-row" title="${MONTHS[i-1]}: ${t} total activit${t===1?'y':'ies'}, ${c} confirmed${t?` (${cw}%)`:''}">
         <div class="mlbl">${MONTHS[i-1]}</div>
         <div class="chart-bar-wrap">
           <div class="chart-bar" style="width:${tw}%;position:absolute"></div>
