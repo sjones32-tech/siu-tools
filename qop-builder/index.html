@@ -621,7 +621,7 @@ select option:checked, select option:hover {
     <div>
       <div style="font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px">
         Annual Maintenance Planner
-        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.55</span>
+        <span id="app-version" title="App version" style="font-size:10px;font-weight:600;color:#8fb8d8;background:rgba(0,153,204,.16);border:1px solid rgba(0,153,204,.35);border-radius:8px;padding:1px 7px;letter-spacing:.3px">v3.56</span>
       </div>
       <div class="sub">Sydney SIU · 2026</div>
     </div>
@@ -3087,6 +3087,7 @@ function renderDashboard() {
     else if (r.phOnSug && !rd.confirmedDate) ph++;
   }
   const unconf = total - conf;
+  const pct = (n) => total ? Math.round(n/total*100) : 0;   // guard against 0-row districts/empty state (avoids "NaN%")
 
   // Update badges
   document.getElementById("badge-unconf").textContent = unconf;
@@ -3103,24 +3104,24 @@ function renderDashboard() {
     <div class="stat-card conf">
       <div class="num">${conf}</div>
       <div class="lbl">Dates Confirmed</div>
-      <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--success);width:${Math.round(conf/total*100)}%"></div></div></div>
+      <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--success);width:${pct(conf)}%"></div></div></div>
     </div>
     <div class="stat-card unconf">
       <div class="num">${unconf}</div>
       <div class="lbl">Still Needed</div>
-      <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--warn);width:${Math.round(unconf/total*100)}%"></div></div></div>
+      <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--warn);width:${pct(unconf)}%"></div></div></div>
     </div>
     <div class="stat-card ph">
       <div class="num">${ph}</div>
       <div class="lbl">PH Conflicts</div>
-      <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--danger);width:${Math.round(ph/total*100)}%"></div></div></div>
+      <div style="margin-top:8px;"><div class="prog-wrap"><div class="prog-fill" style="background:var(--danger);width:${pct(ph)}%"></div></div></div>
     </div>
     <div class="stat-card" style="">
       <div class="num" style="color:var(--success)">${completed}</div>
       <div class="lbl">Completed</div>
     </div>
     <div class="stat-card">
-      <div class="num" style="color:var(--text)">${Math.round(conf/total*100)}%</div>
+      <div class="num" style="color:var(--text)">${pct(conf)}%</div>
       <div class="lbl">Schedule Progress</div>
     </div>
   `;
